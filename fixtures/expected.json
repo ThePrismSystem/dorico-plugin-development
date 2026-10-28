@@ -584,5 +584,11 @@
    "bar": 4,
    "name": "G7"
   }
- ]
+ ],
+ "styled": {
+  "player": "Trumpet Zoë (B{@flat@})",
+  "pos": 0,
+  "notehead": "noteheadset.diamondNoteheads",
+  "colour": "#ffc80000"
+ }
 }

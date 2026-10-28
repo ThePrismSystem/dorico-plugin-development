@@ -25,6 +25,12 @@ def header(text):
     return "\n".join(lines)
 
 
+def code_only(text):
+    """The text with its "--" comments taken out, so that a comment naming a command isn't read as using it. Close
+    enough for these files, which put no "--" inside a string."""
+    return "\n".join(line.split("--", 1)[0] for line in text.splitlines())
+
+
 def blocks(text):
     return {m.group(1): m.group(2) for m in BLOCK.finditer(text)}
 
@@ -38,7 +44,8 @@ def problems(root):
         own = blocks(text)
         if "guard" not in own:
             found.append(f"{name}: no guard helper (the no-project check)")
-        if "EventEdit.Select" in text and ("blockIdOf" not in own or re.search(r"-\s*1000\b", text)):
+        code = code_only(text)
+        if "EventEdit.Select" in code and ("blockIdOf" not in own or re.search(r"-\s*1000\b", code)):
             found.append(f"{name}: selects without the blockIdOf helper")
         head = header(text)
         for line in HEADER_LINES:
@@ -86,6 +93,10 @@ class RuleTests(unittest.TestCase):
     def test_selects_use_block_ids_from_block_instances(self):
         self.write("bad.lua", GOOD + 'app:doCommand("EventEdit.Select?EventBlockID=" .. (instance - 1000))\n')
         self.assertEqual(problems(self.root), ["examples/bad.lua: selects without the blockIdOf helper"])
+
+    def test_a_select_named_in_a_comment_is_not_a_select(self):
+        self.write("good.lua", GOOD + "-- EventEdit.Select needs the block id\n")
+        self.assertEqual(problems(self.root), [])
 
     def test_changing_examples_say_how_to_undo(self):
         self.write("bad.lua", GOOD.replace("-- Undo: nothing to undo.\n", ""))

@@ -1,0 +1,147 @@
+-- The examples' helper blocks, loaded out of the examples that teach them, with lines copied from real dumps and
+-- text exports of the sample.
+local helpers = require("helpers")
+
+local READ_NOTES = "examples/fundamentals/03-read-notes.lua"
+local NAMES = "examples/fundamentals/05-names-from-the-text-export.lua"
+local HELLO = "examples/fundamentals/01-hello.lua"
+
+local function parse(lines)
+  return helpers.load(READ_NOTES, "dump").parse(table.concat(lines, "\n") .. "\n")
+end
+
+local HEADER = '"Path","ID","FlowNumber","FlowName","Instrument","Page","Bar","Type","Text","Hidden"'
+local PATH = '"C:/Users/calli/AppData/Local/Temp/dorico-examples-run/scratch.dorico"'
+
+local function records(rows)
+  return helpers.load(NAMES, "export").parse(table.concat(rows, "\r\n") .. "\r\n")
+end
+
+-- Runs fn with DoApp standing in for Dorico's and print recorded; gives back what was printed.
+local function withDorico(app, fn)
+  local printed, realPrint, realApp = {}, print, DoApp
+  print = function(...) printed[#printed + 1] = table.concat({ ... }, "\t") end
+  DoApp = { DoApp = function() return app end }
+  local ok, err = pcall(fn)
+  print, DoApp = realPrint, realApp
+  if not ok then error(err, 2) end
+  return printed
+end
+
+return {
+  dump_reads_notes_rests_and_grace_notes = function(t)
+    local ev = parse({
+      "Start block id: 1061 position: 0",
+      "0 (0) dur: 1: kNoteEvent (id:7932) at 0, duration 1  E5 (ends 1)",
+      "0 (0) dur: 1: kRestEvent (id:216) at 0, duration 1  ",
+      "8 (8): kGraceNoteEvent (id:200) at 8  secondary pos -1/2 (-0.5), notated duration: 1/2 (0.5), B6 ",
+      "1.5 (3/2 (1.5)) dur: 1/2 (0.5): kNoteEvent (id:2884) at 3/2 (1.5), duration 1/2 (0.5)  Eb4 (ends 2)",
+      "0 (0): kLyricEvent (id:3) at 0  element ID = 0,  duration 0",
+    }).events
+    t:eq(#ev, 5)
+    t:eq(ev[1].kind, "note")
+    t:eq(ev[1].id, 7932)
+    t:eq(ev[1].spelling, "E5")
+    t:eq(ev[1].pos, 0)
+    t:eq(ev[1].duration, 1)
+    t:eq(ev[2].kind, "rest")
+    t:eq(ev[3].kind, "grace")
+    t:eq(ev[3].grace, true)
+    t:eq(ev[3].spelling, "B6")
+    t:eq(ev[3].pos, 8)
+    t:eq(ev[3].duration, nil, "a grace note takes no time")
+    t:eq(ev[4].pos, 1.5, "a fraction")
+    t:eq(ev[4].duration, 0.5)
+    t:eq(ev[4].spelling, "Eb4")
+    t:eq(ev[5].kind, "other")
+    local notes = helpers.load(READ_NOTES, "dump").notes({ events = ev })
+    t:eq(#notes, 3, "notes and grace notes, not the rest or the lyric")
+    t:eq(notes[3].spelling, "Eb4")
+  end,
+
+  dump_keeps_each_events_instance = function(t)
+    local ev = parse({
+      "Start block id: 1061 position: 0",
+      "0 (0) dur: 1: kNoteEvent (id:7932) at 0, duration 1  E5 (ends 1)",
+      "Start block id: 1077 position: 4",
+      "4 (4) dur: 2: kNoteEvent (id:7940) at 4, duration 2  G5 (ends 6)",
+    }).events
+    t:eq(ev[1].instance, 1061)
+    t:eq(ev[2].instance, 1077)
+  end,
+
+  dump_names_each_voice_stream_by_its_player = function(t)
+    local function player(name, ...)
+      local ins = {}
+      for i, id in ipairs({ ... }) do ins[i] = { id = id } end
+      return setmetatable({ instruments = ins }, { __tostring = function() return name end })
+    end
+    local score = { players = { player("Flute", 5), player("Piano", 9) } }
+    local flow = { voiceStreams = { { id = 21 }, { id = 22 }, { id = 23 } }, instruments = { { id = 5 }, { id = 9 },
+      { id = 9 } } }
+    local owners = helpers.load(READ_NOTES, "dump").owners(score, flow)
+    t:eq(owners[21], "Flute")
+    t:eq(owners[22], "Piano")
+    t:eq(owners[23], "Piano", "a second voice belongs to the same player")
+  end,
+
+  csv_reads_quoted_newlines_and_commas = function(t)
+    local rec = records({
+      HEADER,
+      PATH .. ',"0-14-328","1","Sample","Violin, solo & tutti","1","1","Staff-attached text (Default Text)","x","N"',
+      PATH .. ',"0-10-326","1","Sample","Flute","1","1","Staff-attached text (Default Text)","two\r\nlines ""quoted""","N"',
+    })
+    t:eq(#rec, 2)
+    t:eq(rec[1].Instrument, "Violin, solo & tutti")
+    t:eq(rec[1].ID, "0-14-328")
+    t:eq(rec[1].Path, "C:/Users/calli/AppData/Local/Temp/dorico-examples-run/scratch.dorico")
+    t:eq(rec[2].Text, 'two\r\nlines "quoted"')
+    t:eq(rec[2].Hidden, "N", "the row goes on after the quoted newline")
+  end,
+
+  csv_reads_a_missing_column_as_empty = function(t)
+    local rec = records({
+      '"Path","ID","Instrument","Type","Text"',
+      PATH .. ',"","","Flow Info (Title)","Sample"',
+      "",
+    })
+    t:eq(#rec, 1, "a blank line is no record")
+    t:eq(rec[1].Text, "Sample")
+    t:eq(rec[1].FlowNumber, "", "a column the export left out")
+    t:eq(rec[1].Bar, "")
+  end,
+
+  csv_skips_a_byte_order_mark = function(t)
+    local rec = helpers.load(NAMES, "export").parse("\239\187\191" .. HEADER .. "\n" .. PATH
+      .. ',"","","","","","","Project Info (Title)","Sample","N"\n')
+    t:eq(rec[1].Path, "C:/Users/calli/AppData/Local/Temp/dorico-examples-run/scratch.dorico")
+    t:eq(rec[1].Type, "Project Info (Title)")
+  end,
+
+  guard_says_to_open_a_project_when_none_is_open = function(t)
+    local guard = helpers.load(HELLO, "guard")
+    local app, score
+    local printed = withDorico({ currentScore = nil }, function() app, score = guard() end)
+    t:eq(score, nil)
+    t:ok(app ~= nil, "the app comes back either way")
+    t:eq(printed[1], "Open a project first, then run this script again.")
+  end,
+
+  guard_treats_an_error_as_no_project = function(t)
+    local guard = helpers.load(HELLO, "guard")
+    local hub = setmetatable({}, { __index = function() error("No such property: currentScore") end })
+    local score
+    local printed = withDorico(hub, function() _, score = guard() end)
+    t:eq(score, nil)
+    t:eq(printed[1], "Open a project first, then run this script again.")
+  end,
+
+  guard_returns_the_open_project = function(t)
+    local guard = helpers.load(HELLO, "guard")
+    local project = { flows = {} }
+    local app, score
+    local printed = withDorico({ currentScore = project }, function() app, score = guard() end)
+    t:eq(score, project)
+    t:eq(#printed, 0, "nothing printed")
+  end,
+}

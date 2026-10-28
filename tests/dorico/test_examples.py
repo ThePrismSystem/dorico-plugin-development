@@ -26,6 +26,13 @@ def row(name, example, twice=False, args=None):
                      "args": args or {}})
 
 
+row("hello", FUNDAMENTALS + "01-hello.lua", twice=True)
+row("walk_the_score", FUNDAMENTALS + "02-walk-the-score.lua", twice=True)
+row("read_notes", FUNDAMENTALS + "03-read-notes.lua", twice=True)
+row("noteheads_and_colours", FUNDAMENTALS + "04-noteheads-and-colours.lua", twice=True)
+row("names_from_the_text_export", FUNDAMENTALS + "05-names-from-the-text-export.lua", twice=True)
+
+
 class Examples(unittest.TestCase):
     pass
 

@@ -15,6 +15,18 @@ Everything here was seen on Dorico 6.2.30 (build 6245) on Windows 11.
   became `Trumpet♭ (B)`.
 - A MusicXML part's key is its written key, so a B♭ trumpet in a C major piece is written in D major.
 
+## The text export
+
+Probe: `export_names.lua`, which puts a marker text in every voice stream, exports, and deletes the markers.
+
+- The `ID` column is `<flow>-<stream>-<event>`, counting flows from 0. `FlowNumber` counts them from 1.
+- A marker's row names its instrument in the `Instrument` column, without the transposition Dorico adds to the
+  player's name: the trumpet's rows say `Trumpet Zoë`, where `tostring(player)` gives `Trumpet Zoë (B{@flat@})`.
+  `Violin, solo & tutti` comes through whole, in quotes.
+- The `Project Info (Title)` row holds the project's title, and a `Flow Info (Title)` row each flow's, with its
+  `FlowNumber`.
+- Lyrics and dynamics have rows of their own, each naming its instrument.
+
 ## S3: what the dump says
 
 Probes: `s3_dump_details.lua`, `s3_gap.lua`, `s3_element_tables.lua`.
@@ -48,7 +60,9 @@ Probe: `s6_print.lua`, driven by `s6_print.py`.
 closed are kept and appear when it opens. `io.write` output appears nowhere. A script can open the console itself
 with `app:doCommand("Script.ShowConsole")`. The console opens with "Always on top" ticked.
 
-So the examples report with `print` and open the console first.
+`Script.ShowConsole` toggles the console (`s6_console_toggle.py`: open, closed, open, closed), so a script that
+opened it on every run would close it on every second run. The examples report with `print` and leave the console
+alone, and their headers say to open it.
 
 ## S8: reading and setting note properties
 
@@ -62,9 +76,10 @@ Probes: `s8_properties.lua`, `s8_colour_read.lua`.
 - **Setting a colour through the property table works too,** on an event object from `stream.events`:
   `propertyTable:set("kEventColour", DoCore.Variant.createString("#ff8000ff"), ctx)`. It's not in the undo history,
   and it needs the event object, which a stream holding lyrics or slurs can't give.
-- **A colour set by command can't be read back.** The property is listed, but its Variant has `type` -1 and
-  `valid` false, and `tostring` gives "". A colour set from Lua reads back as the string it was set to. So a script
-  can tell that a note has a colour, but not which one, unless a script set it.
+- **A colour set by command can't be read back.** The property is listed, but its Variant has `type` -1 and `valid`
+  false, and `tostring` gives "". A colour set from Lua reads back as the string it was set to, and still does after
+  the project is saved and reopened and in a pasted copy (fundamental 04 reads the sample's). So a script can tell
+  that a note has a colour, but not which one, unless a script set it.
 - `UI.InvokePropertyChangeValue?Type=kNoteheadSetOverride&Value=string: "noteheadset.diamondNoteheads"` changed
   nothing.
 

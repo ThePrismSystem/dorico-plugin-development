@@ -48,6 +48,9 @@ class SampleTests(unittest.TestCase):
                                                    {"bar": 3, "name": "F"}, {"bar": 4, "name": "G7"}])
         self.assertEqual(self.expected["parallelFifths"], [{"player": "Piano", "bar": 6, "beat": 1}])
 
+    def test_one_styled_note(self):
+        self.assertEqual(self.expected["styled"]["notehead"], "noteheadset.diamondNoteheads")
+
     def test_the_second_flow(self):
         self.assertEqual(self.expected["flows"][1]["title"], sample_data.SECOND_FLOW_TITLE)
         self.assertEqual([n["spelling"] for n in self.notes("Flute", 1)], ["C5", "D5", "E5", "F5"])

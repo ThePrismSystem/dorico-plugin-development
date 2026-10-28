@@ -92,6 +92,11 @@ PARTS = [FLUTE, TRUMPET, VIOLIN, PIANO]
 # Made by fixtures/finish_sample.lua: a second flow, with four flute notes (sounding) in it.
 SECOND_FLOW_FLUTE = ["C5", "D5", "E5", "F5"]
 
+# Set by fixtures/finish_sample.lua through the trumpet's property table (its stream lists events, having no lyrics or
+# slurs): one note with a notehead and a colour for fundamental 04 to find.
+STYLED = {"player": "Trumpet Zoë (B{@flat@})", "pos": 0, "notehead": "noteheadset.diamondNoteheads",
+          "colour": "#ffc80000"}
+
 # What the recipes should find.
 OUT_OF_RANGE = [{"player": "Flute", "spelling": "A3", "bar": 2, "beat": 3}]
 PARALLEL_FIFTHS = [{"player": "Piano", "bar": 6, "beat": 1}]

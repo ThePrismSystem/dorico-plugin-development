@@ -174,7 +174,7 @@ def expected():
                                       for i, s in enumerate(sample_data.SECOND_FLOW_FLUTE)]
          if p is sample_data.FLUTE else []} for p in sample_data.PARTS]}
     return {"flows": [first, second], "outOfRange": sample_data.OUT_OF_RANGE,
-            "parallelFifths": sample_data.PARALLEL_FIFTHS, "chords": sample_data.CHORDS}
+            "parallelFifths": sample_data.PARALLEL_FIFTHS, "chords": sample_data.CHORDS, "styled": sample_data.STYLED}
 
 
 def main():

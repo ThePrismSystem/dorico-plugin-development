@@ -1,5 +1,6 @@
--- Finishes the imported sample on its scratch copy: adds a second flow with four flute notes. MusicXML holds one
--- flow, so the second is made here. fixtures/build_sample.py runs it.
+-- Finishes the imported sample on its scratch copy: gives the trumpet's first note a diamond notehead and a colour
+-- (through its property table), and adds a second flow with four flute notes, since MusicXML holds one flow.
+-- fixtures/build_sample.py runs it.
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
 local mine = here .. "?.lua;" .. here .. "../spikes/lib/?.lua"
 for name in pairs(package.loaded) do
@@ -14,6 +15,21 @@ local SECOND_FLOW_FLUTE = { "C5", "D5", "E5", "F5" }
 probe.run("finish_sample", function(p)
   local app = DoApp.DoApp()
   local score = app.currentScore
+  -- the trumpet is the second player; its voice stream holds only notes, so stream.events lists them
+  local trumpetId = score.players[2].instruments[1].id
+  local flow = score.flows[1]
+  local ctx = DoCore.PropertyContext()
+  for i, s in ipairs(flow.voiceStreams) do
+    if flow.instruments[i].id == trumpetId then
+      for _, e in ipairs(s.events) do
+        if tostring(e):match("^kNoteEvent") and tonumber(tostring(e):match(" at (%d+)")) == 0 then
+          p:check("notehead set", e.propertyTable:set("kNoteheadSetOverride",
+            DoCore.Variant.createString("noteheadset.diamondNoteheads"), ctx))
+          p:check("colour set", e.propertyTable:set("kEventColour", DoCore.Variant.createString("#ffc80000"), ctx))
+        end
+      end
+    end
+  end
   local before = {}
   for _, f in ipairs(score.flows) do before[f.id] = true end
   app:doCommand("Project.Flow.New")
