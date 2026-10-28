@@ -112,6 +112,9 @@ row("ask_and_cancel", FUNDAMENTALS + "12-ask-and-report.lua", check=CHECKS + "12
 row("undo", FUNDAMENTALS + "13-undo.lua", before={"case": "case_edit.lua"})
 row("key_command", FUNDAMENTALS + "14-key-command.lua",
     after=[then_check("14-key-command.again.lua", FUNDAMENTALS + "14-key-command.lua")])
+row("colour_by_pitch", RECIPES + "colour-by-pitch.lua",
+    after=[then_check("colour-by-pitch.coloured.lua", READ_COLOURS), then_command("Edit.Undo"),
+           then_check("08-select-by-id.undone.lua", READ_COLOURS)])
 
 
 class Examples(unittest.TestCase):
