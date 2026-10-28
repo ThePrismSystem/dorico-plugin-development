@@ -14,9 +14,11 @@
 -- pitches, wide enough for a confident player; narrow them for young players.
 --
 -- Lua can't read time signatures either, so it can't count bars. The export can: every text's row has the bar it's
--- in. For each finding the script puts markers at the finding and at each of the sixteen quarter notes before it,
--- exports once more, and takes the bar's start to be the first of those markers in the same bar. Beats are counted in
--- quarter notes from there, so in 6/8 the second dotted-quarter beat shows as beat 2.5.
+-- in. For each finding the script puts markers at the finding and at each of the sixteen quarter notes before it, and
+-- exports, which finds the first whole quarter note in the finding's bar. A second round of markers, every 1/24 of a
+-- quarter note in the gap before that, finds where the bar really starts, which can be between quarter notes after a
+-- pickup or in 3/8. Beats are counted in quarter notes from there, so in 6/8 the second dotted-quarter beat shows as
+-- beat 2.5. A bar longer than sixteen quarter notes gives a beat counted from a later point.
 --
 -- The parallels check compares the top note of each voice wherever either voice moves, and reports two voices that
 -- both move the same way from a fifth to a fifth, or from an octave (or unison) to an octave. It doesn't look across
@@ -261,6 +263,41 @@ local function midi(spelling)
 end
 -- end helper: midi
 
+-- helper: bars
+-- Where a bar starts, from marker texts: the text export gives each marker's bar, and the bar starts at the earliest
+-- marked position in the same bar. Mark in two rounds:
+--   bars.coarse(pos) -> whole quarter notes to mark first: pos rounded down, and up to 16 before it
+--   bars.fine(start) -> points to mark next, every 1/24 of a quarter note between the whole quarter before start and
+--                       start, since a bar can begin between whole quarters (after a pickup, or in 3/8)
+--   bars.start(pos, barAt) -> the earliest marked position in pos's bar; barAt is {[position] = bar} for every
+--                             marker placed, pos's own included
+local bars = {}
+do
+  function bars.coarse(pos)
+    local out = {}
+    for q = math.floor(pos), math.max(0, math.floor(pos) - 16), -1 do out[#out + 1] = q end
+    return out
+  end
+
+  function bars.fine(start)
+    local out = {}
+    for k = 1, 23 do
+      local q = start - 1 + k / 24
+      if q >= 0 then out[#out + 1] = q end
+    end
+    return out
+  end
+
+  function bars.start(pos, barAt)
+    local bar, start = barAt[pos], pos
+    for q, b in pairs(barAt) do
+      if b == bar and q < start then start = q end
+    end
+    return start
+  end
+end
+-- end helper: bars
+
 local app, score = guard()
 if not score then return end
 
@@ -382,24 +419,36 @@ table.sort(findings, function(x, y)
   return x.text < y.text
 end)
 
--- Bars and beats: markers at each finding and at the sixteen quarter notes before it.
-points = {}
-for f, finding in ipairs(findings) do
-  points[#points + 1] = { stream = finding.stream, pos = finding.pos, key = f .. "@" }
-  for q = math.floor(finding.pos), math.max(0, math.floor(finding.pos) - 16), -1 do
-    points[#points + 1] = { stream = finding.stream, pos = q, key = f .. "@" .. q }
+-- Bars and beats, in two rounds of markers (see the bars helper). barAt[f] is {[position] = bar} for finding f.
+local barAt = {}
+local function markRound(round) -- round: a list of {finding number, position}
+  local pts = {}
+  for i, r in ipairs(round) do pts[i] = { stream = findings[r[1]].stream, pos = r[2], key = i } end
+  local got = #pts > 0 and marked(pts) or {}
+  for i, r in ipairs(round) do
+    barAt[r[1]] = barAt[r[1]] or {}
+    if got[i] then barAt[r[1]][r[2]] = got[i].Bar end
   end
 end
-rows = #points > 0 and marked(points) or {}
+
+local round = {}
+for f, finding in ipairs(findings) do
+  round[#round + 1] = { f, finding.pos }
+  for _, q in ipairs(bars.coarse(finding.pos)) do round[#round + 1] = { f, q } end
+end
+markRound(round)
+round = {}
+for f, finding in ipairs(findings) do
+  if barAt[f] and barAt[f][finding.pos] then
+    for _, q in ipairs(bars.fine(bars.start(finding.pos, barAt[f]))) do round[#round + 1] = { f, q } end
+  end
+end
+markRound(round)
 
 for f, finding in ipairs(findings) do
-  local here = rows[f .. "@"]
-  local bar = here and here.Bar or "?"
-  local start = finding.pos
-  for q = math.floor(finding.pos), math.max(0, math.floor(finding.pos) - 16), -1 do
-    local row = rows[f .. "@" .. q]
-    if row and row.Bar == bar then start = q end
-  end
+  local at = barAt[f] or {}
+  local bar = at[finding.pos] or "?"
+  local start = at[finding.pos] and bars.start(finding.pos, at) or finding.pos
   print(string.format("%d bar %s beat %s: %s", finding.flow, bar, tostring(finding.pos - start + 1), finding.text))
 end
 print(#findings .. (#findings == 1 and " finding" or " findings"))

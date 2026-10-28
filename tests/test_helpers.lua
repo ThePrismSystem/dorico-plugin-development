@@ -9,6 +9,7 @@ local COMMANDS = "examples/fundamentals/06-commands.lua"
 local SELECTION = "examples/fundamentals/07-act-on-the-selection.lua"
 local BY_ID = "examples/fundamentals/08-select-by-id.lua"
 local CHORDS = "examples/recipes/chord-symbols.lua"
+local PROOFREAD = "examples/recipes/proofread.lua"
 
 local function parse(lines)
   return helpers.load(READ_NOTES, "dump").parse(table.concat(lines, "\n") .. "\n")
@@ -225,6 +226,30 @@ return {
     t:eq(chords.name({ "C4" }), nil)
     t:eq(chords.name({}), nil)
     t:eq(chords.name({ "C4", "D4", "E4" }), nil, "a cluster no template fits")
+  end,
+
+  bars_find_a_bar_that_starts_between_quarter_notes = function(t)
+    local bars = helpers.load(PROOFREAD, "bars")
+    -- What the text export would say: the bar at each position, given where bars start.
+    local function barOf(starts)
+      return function(q)
+        local bar = 0
+        for i, s in ipairs(starts) do
+          if q >= s then bar = i end
+        end
+        return bar
+      end
+    end
+    local function startOf(pos, bar)
+      local at = { [pos] = bar(pos) }
+      for _, q in ipairs(bars.coarse(pos)) do at[q] = bar(q) end
+      for _, q in ipairs(bars.fine(bars.start(pos, at))) do at[q] = bar(q) end
+      return bars.start(pos, at)
+    end
+    t:eq(startOf(6, barOf({ 0, 4, 8 })), 4, "4/4")
+    t:eq(startOf(6, barOf({ 0, 0.5, 4.5, 8.5 })), 4.5, "4/4 after an eighth-note pickup")
+    t:eq(startOf(5, barOf({ 0, 1.5, 3, 4.5, 6 })), 4.5, "3/8")
+    t:eq(startOf(0, barOf({ 0, 4 })), 0, "the first bar")
   end,
 
   guard_returns_the_open_project = function(t)
