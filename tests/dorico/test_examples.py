@@ -122,6 +122,13 @@ row("chord_symbols", RECIPES + "chord-symbols.lua",
     + [then_command("Edit.Undo")] * 10 + [then_check("chord-symbols.undone.lua")])
 row("proofread", RECIPES + "proofread.lua", twice=True)
 row("instrument_report", RECIPES + "instrument-report.lua", twice=True)
+HOTKEY = RECIPES + "hotkey-colour-cycle.lua"
+row("hotkey_colour_cycle", HOTKEY,
+    before={"case": "case_select.lua", "args": {"player": "Violin, solo & tutti", "pos": 0, "extend": 1}},
+    after=[then_rerun_last(), then_rerun_last(),
+           then_check("hotkey-colour-cycle.third.lua"), then_python(lambda test, client, printed: time.sleep(4)),
+           then_check("hotkey-colour-cycle.restart.lua", HOTKEY),
+           then_check("hotkey-colour-cycle.coloured.lua", READ_COLOURS)])
 
 
 class Examples(unittest.TestCase):
