@@ -126,7 +126,9 @@ local ok, score = pcall(function() return app.currentScore end)   -- nil, or an 
 ```
 
 Every example starts with that check, as its `guard` helper, so it says "Open a project first" instead of failing
-([01-hello.lua](../examples/fundamentals/01-hello.lua)).
+([01-hello.lua](../examples/fundamentals/01-hello.lua)). Every class and member a scan of Lua's registry found is in
+[the reference](reference/README.md), each marked verified, failing or not tried; the table here is the short
+version.
 
 | Object | What we used | What it doesn't have |
 | ------ | ------------ | -------------------- |

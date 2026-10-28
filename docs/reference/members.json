@@ -1,0 +1,819 @@
+{
+ "classes": {
+  "DoApp.DoApp": {
+   "instance": [
+    "__init",
+    "__len",
+    "__tostring",
+    "currentLayoutID",
+    "currentScore",
+    "doCommand",
+    "open",
+    "save",
+    "versionString"
+   ],
+   "static": [
+    "__init"
+   ]
+  },
+  "DoCore.AccidentalType": {},
+  "DoCore.BarDivisionData": {
+   "static": [
+    "createForSingleTimeSignature"
+   ]
+  },
+  "DoCore.BarDivisionElement": {},
+  "DoCore.BarDivisionEvent": {
+   "instance": [
+    "__eq",
+    "__len",
+    "__tostring",
+    "duration",
+    "endPosition",
+    "id",
+    "position",
+    "propertyTable"
+   ]
+  },
+  "DoCore.BarDivisionTable": {
+   "instance": [
+    "__len",
+    "__tostring",
+    "createBarDivisionElement",
+    "elements"
+   ]
+  },
+  "DoCore.BarRestEvent": {
+   "instance": [
+    "__eq",
+    "__len",
+    "__tostring",
+    "duration",
+    "endPosition",
+    "id",
+    "position",
+    "propertyTable"
+   ]
+  },
+  "DoCore.BreakEvent": {
+   "instance": [
+    "__eq",
+    "__len",
+    "__tostring",
+    "duration",
+    "endPosition",
+    "id",
+    "isFrameBreak",
+    "isSystemBreak",
+    "layoutID",
+    "position",
+    "propertyTable"
+   ]
+  },
+  "DoCore.BrushStyleCollectionEntity": {},
+  "DoCore.BrushStyleLibrary": {},
+  "DoCore.CaretLocation": {
+   "instance": [
+    "__len",
+    "__tostring",
+    "advance",
+    "flowInstrument",
+    "instrumentStaveIndex",
+    "position",
+    "voiceNumber"
+   ]
+  },
+  "DoCore.ClefCollectionEntity": {},
+  "DoCore.ClefEvent": {
+   "instance": [
+    "__eq",
+    "__len",
+    "__tostring",
+    "duration",
+    "endPosition",
+    "id",
+    "nonTransposingClefEntity",
+    "position",
+    "propertyTable",
+    "transposingClefEntity"
+   ]
+  },
+  "DoCore.ClefLibrary": {},
+  "DoCore.Dynamic": {},
+  "DoCore.DynamicGroupElement": {
+   "instance": [
+    "__eq",
+    "__len",
+    "__tostring",
+    "createEvent",
+    "createImmediateChange",
+    "events",
+    "id",
+    "propertyTable",
+    "subElements"
+   ]
+  },
+  "DoCore.DynamicGroupEvent": {
+   "instance": [
+    "__eq",
+    "__len",
+    "__tostring",
+    "duration",
+    "endPosition",
+    "id",
+    "position",
+    "propertyTable"
+   ]
+  },
+  "DoCore.DynamicIntensity": {
+   "static": [
+    "__init",
+    "create"
+   ]
+  },
+  "DoCore.DynamicTable": {
+   "instance": [
+    "__len",
+    "__tostring",
+    "createDynamicGroup",
+    "elements"
+   ]
+  },
+  "DoCore.EnsembleCollectionEntity": {},
+  "DoCore.EnsembleLibrary": {},
+  "DoCore.Event": {
+   "instance": [
+    "__eq",
+    "__len",
+    "__tostring",
+    "duration",
+    "endPosition",
+    "id",
+    "position",
+    "propertyTable"
+   ]
+  },
+  "DoCore.EventBlock": {
+   "instance": [
+    "__eq",
+    "__len",
+    "__tostring",
+    "events",
+    "id"
+   ]
+  },
+  "DoCore.EventBlockInstance": {
+   "instance": [
+    "__eq",
+    "__len",
+    "__tostring",
+    "block",
+    "events",
+    "id",
+    "position"
+   ]
+  },
+  "DoCore.EventPropertyEntry": {
+   "instance": [
+    "__init",
+    "__len",
+    "__tostring",
+    "context",
+    "name",
+    "value"
+   ],
+   "static": [
+    "__init"
+   ]
+  },
+  "DoCore.EventPropertyTable": {
+   "instance": [
+    "__len",
+    "__tostring",
+    "get",
+    "getPropertyNames",
+    "set"
+   ]
+  },
+  "DoCore.EventStream": {
+   "instance": [
+    "__eq",
+    "__len",
+    "__tostring",
+    "addBlockInstance",
+    "blockInstances",
+    "copyRange",
+    "copyRangeLinked",
+    "createBarDivision",
+    "createBarRest",
+    "createClef",
+    "createDynamicGroup",
+    "createFrameBreak",
+    "createGraceNote",
+    "createNote",
+    "createOttavaLine",
+    "createRest",
+    "createSystemBreak",
+    "createText",
+    "createTonalityDivision",
+    "createTransposingClef",
+    "createTuplet",
+    "delete",
+    "deleteEventsInRange",
+    "dump",
+    "events",
+    "findBlockInstanceAtPoint",
+    "id",
+    "joinBlocks",
+    "moveRange",
+    "ossiaType",
+    "removeBlockInstance",
+    "splitStream",
+    "type",
+    "voiceDirection"
+   ]
+  },
+  "DoCore.EventStreamType": {},
+  "DoCore.Flow": {
+   "instance": [
+    "__eq",
+    "__len",
+    "__tostring",
+    "addPlayer",
+    "allStreams",
+    "elementTables",
+    "id",
+    "instruments",
+    "playerStreams",
+    "players",
+    "removePlayer",
+    "staveStreams",
+    "timebaseStreams",
+    "voiceStreams"
+   ]
+  },
+  "DoCore.FlowElements": {
+   "instance": [
+    "__len",
+    "__tostring",
+    "barDivisions",
+    "dynamics",
+    "tonalityDivisions"
+   ]
+  },
+  "DoCore.FlowInstrument": {
+   "instance": [
+    "__eq",
+    "__len",
+    "__tostring",
+    "id",
+    "name",
+    "streams"
+   ]
+  },
+  "DoCore.FontStyleCollectionEntity": {},
+  "DoCore.FontStyleLibrary": {},
+  "DoCore.GraceNoteEvent": {
+   "instance": [
+    "__eq",
+    "__len",
+    "__tostring",
+    "duration",
+    "endPosition",
+    "id",
+    "pitchWithSpelling",
+    "position",
+    "propertyTable",
+    "secondaryPosition"
+   ]
+  },
+  "DoCore.ImmediateChangeDynamic": {},
+  "DoCore.Instrument": {
+   "instance": [
+    "__eq",
+    "__len",
+    "__tostring",
+    "id",
+    "name"
+   ]
+  },
+  "DoCore.InstrumentCollectionEntity": {},
+  "DoCore.InstrumentLibrary": {},
+  "DoCore.Interval": {
+   "instance": [
+    "__eq",
+    "__init",
+    "__len",
+    "__lt",
+    "__tostring",
+    "enforceSimpleInterval",
+    "isPerfectInSimplestForm",
+    "numDiatonicSteps",
+    "numDiatonicStepsWithinOctave",
+    "numOctaves"
+   ],
+   "static": [
+    "__init"
+   ]
+  },
+  "DoCore.IntervalDegree": {
+   "instance": [
+    "__eq",
+    "__init",
+    "__len",
+    "__lt",
+    "__tostring",
+    "chromaticDelta",
+    "degree",
+    "isValid",
+    "type"
+   ],
+   "static": [
+    "__init"
+   ]
+  },
+  "DoCore.IntervalType": {},
+  "DoCore.Layout": {
+   "instance": [
+    "__eq",
+    "__len",
+    "__tostring",
+    "addFlow",
+    "addPlayer",
+    "id",
+    "players",
+    "removeFlow",
+    "removePlayer"
+   ]
+  },
+  "DoCore.LayoutTransposition": {},
+  "DoCore.LengthUtils": {},
+  "DoCore.LogDuration": {},
+  "DoCore.MIDIPitch": {
+   "static": [
+    "__init"
+   ]
+  },
+  "DoCore.MIDIPitchWithSpelling": {
+   "instance": [
+    "__eq",
+    "__init",
+    "__len",
+    "__tostring",
+    "accidentalType",
+    "multitonalFraction",
+    "noteName",
+    "octave",
+    "pitch"
+   ],
+   "static": [
+    "MiddleC",
+    "__init",
+    "fromString"
+   ]
+  },
+  "DoCore.NotatedLength": {
+   "static": [
+    "__init"
+   ]
+  },
+  "DoCore.NoteEvent": {
+   "instance": [
+    "__eq",
+    "__len",
+    "__tostring",
+    "duration",
+    "endPosition",
+    "id",
+    "pitchWithSpelling",
+    "position",
+    "propertyTable"
+   ]
+  },
+  "DoCore.NoteName": {
+   "static": [
+    "__init",
+    "fromString"
+   ]
+  },
+  "DoCore.NoteheadDuration": {
+   "static": [
+    "__init"
+   ]
+  },
+  "DoCore.OssiaType": {},
+  "DoCore.OttavaLineCollectionEntity": {},
+  "DoCore.OttavaLineEvent": {
+   "instance": [
+    "__eq",
+    "__len",
+    "__tostring",
+    "duration",
+    "endPosition",
+    "id",
+    "ottavaLineDefinitionID",
+    "position",
+    "propertyTable"
+   ]
+  },
+  "DoCore.OttavaLineLibrary": {},
+  "DoCore.PenStyleCollectionEntity": {},
+  "DoCore.PenStyleLibrary": {},
+  "DoCore.Player": {
+   "instance": [
+    "__len",
+    "__tostring",
+    "instruments"
+   ]
+  },
+  "DoCore.PropertyContext": {
+   "static": [
+    "__init"
+   ]
+  },
+  "DoCore.RestEvent": {
+   "instance": [
+    "__eq",
+    "__len",
+    "__tostring",
+    "duration",
+    "endPosition",
+    "id",
+    "position",
+    "propertyTable"
+   ]
+  },
+  "DoCore.RhythmicLength": {
+   "instance": [
+    "__add",
+    "__div",
+    "__eq",
+    "__init",
+    "__le",
+    "__len",
+    "__lt",
+    "__mul",
+    "__sub",
+    "__tostring",
+    "denominator",
+    "numerator"
+   ],
+   "static": [
+    "__init"
+   ]
+  },
+  "DoCore.ScoreElement": {},
+  "DoCore.ScoreElementTable": {},
+  "DoCore.ScoreLibraries": {
+   "instance": [
+    "__len",
+    "__tostring",
+    "brushstyles",
+    "clefs",
+    "ensembles",
+    "fontstyles",
+    "instruments",
+    "ottavaLines",
+    "penstyles"
+   ]
+  },
+  "DoCore.ScoreSubElement": {},
+  "DoCore.ScoringEngine": {},
+  "DoCore.ScriptHost": {
+   "instance": [
+    "__init",
+    "__len",
+    "__tostring",
+    "convertFolderOfScores",
+    "createNewScore",
+    "currentScore",
+    "engine",
+    "open",
+    "save",
+    "showFolderChooser"
+   ],
+   "static": [
+    "__init"
+   ]
+  },
+  "DoCore.StepTimeInput": {
+   "instance": [
+    "__len",
+    "__tostring",
+    "caret",
+    "fromText"
+   ]
+  },
+  "DoCore.TextEvent": {
+   "instance": [
+    "__eq",
+    "__len",
+    "__tostring",
+    "duration",
+    "endPosition",
+    "id",
+    "position",
+    "propertyTable",
+    "text"
+   ]
+  },
+  "DoCore.TonalityDivisionElement": {},
+  "DoCore.TonalityDivisionEvent": {
+   "instance": [
+    "__eq",
+    "__len",
+    "__tostring",
+    "duration",
+    "endPosition",
+    "id",
+    "position",
+    "propertyTable",
+    "tonalityDivisionElementID"
+   ]
+  },
+  "DoCore.TupletDefinition": {
+   "instance": [
+    "__eq",
+    "__init",
+    "__len",
+    "__tostring",
+    "duration",
+    "left",
+    "notatedDuration",
+    "right",
+    "unit"
+   ],
+   "static": [
+    "__init"
+   ]
+  },
+  "DoCore.TupletEvent": {
+   "instance": [
+    "__eq",
+    "__len",
+    "__tostring",
+    "duration",
+    "endPosition",
+    "id",
+    "position",
+    "propertyTable",
+    "tupletDef"
+   ]
+  },
+  "DoCore.Variant": {
+   "instance": [
+    "__eq",
+    "__init",
+    "__len",
+    "__tostring",
+    "toBool",
+    "toDouble",
+    "toInt",
+    "toString",
+    "type",
+    "valid"
+   ],
+   "static": [
+    "__init",
+    "createBool",
+    "createDouble",
+    "createInt",
+    "createString"
+   ]
+  },
+  "DoCore.WesternPitchTransposer": {
+   "static": [
+    "1",
+    "__add",
+    "__call",
+    "__concat",
+    "__div",
+    "__eq",
+    "__gc",
+    "__index",
+    "__le",
+    "__len",
+    "__lt",
+    "__luabind_class",
+    "__mul",
+    "__newindex",
+    "__pow",
+    "__sub",
+    "__tostring",
+    "__unm"
+   ]
+  },
+  "DoScore.Score": {
+   "instance": [
+    "__init",
+    "__len",
+    "__tostring",
+    "addEnsemble",
+    "addPlayer",
+    "flowIDs",
+    "flows",
+    "instruments",
+    "layouts",
+    "libraries",
+    "openScoreID",
+    "players",
+    "title"
+   ],
+   "static": [
+    "__init"
+   ]
+  },
+  "DoUI.DoUI": {
+   "instance": [
+    "__init",
+    "__len",
+    "__tostring",
+    "showFolderChooser"
+   ],
+   "static": [
+    "__init"
+   ]
+  }
+ },
+ "dorico": "6.2.30b6245",
+ "plainEventTables": 5,
+ "unnamed": [
+  [
+   "__add",
+   "__div",
+   "__eq",
+   "__init",
+   "__le",
+   "__len",
+   "__lt",
+   "__mul",
+   "__sub",
+   "__tostring",
+   "numerator"
+  ],
+  [
+   "__eq",
+   "__init",
+   "__len",
+   "__lt",
+   "__tostring",
+   "numDots",
+   "toNotatedLength",
+   "toRational",
+   "unit"
+  ],
+  [
+   "__eq",
+   "__init",
+   "__len",
+   "__lt",
+   "__tostring",
+   "number",
+   "toRational",
+   "unit"
+  ],
+  [
+   "__eq",
+   "__init",
+   "__len",
+   "__tostring",
+   "type"
+  ],
+  [
+   "__eq",
+   "__len",
+   "__tostring",
+   "events",
+   "id",
+   "propertyTable",
+   "subElements"
+  ],
+  [
+   "__eq",
+   "__len",
+   "__tostring",
+   "events",
+   "id",
+   "propertyTable",
+   "subElements"
+  ],
+  [
+   "__eq",
+   "__len",
+   "__tostring",
+   "events",
+   "id",
+   "propertyTable",
+   "subElements"
+  ],
+  [
+   "__eq",
+   "__len",
+   "__tostring",
+   "id",
+   "propertyTable"
+  ],
+  [
+   "__eq",
+   "__len",
+   "__tostring",
+   "id",
+   "propertyTable"
+  ],
+  [
+   "__eq",
+   "__len",
+   "__tostring",
+   "id",
+   "propertyTable"
+  ],
+  [
+   "__len",
+   "__tostring",
+   "defaultLibrary",
+   "userLibrary"
+  ],
+  [
+   "__len",
+   "__tostring",
+   "elements"
+  ],
+  [
+   "__len",
+   "__tostring",
+   "find",
+   "items"
+  ],
+  [
+   "__len",
+   "__tostring",
+   "find",
+   "items"
+  ],
+  [
+   "__len",
+   "__tostring",
+   "find",
+   "items"
+  ],
+  [
+   "__len",
+   "__tostring",
+   "find",
+   "items"
+  ],
+  [
+   "__len",
+   "__tostring",
+   "find",
+   "items"
+  ],
+  [
+   "__len",
+   "__tostring",
+   "find",
+   "items"
+  ],
+  [
+   "__len",
+   "__tostring",
+   "find",
+   "items"
+  ],
+  [
+   "__len",
+   "__tostring",
+   "id"
+  ],
+  [
+   "__len",
+   "__tostring",
+   "id"
+  ],
+  [
+   "__len",
+   "__tostring",
+   "id"
+  ],
+  [
+   "__len",
+   "__tostring",
+   "id"
+  ],
+  [
+   "__len",
+   "__tostring",
+   "id"
+  ],
+  [
+   "__len",
+   "__tostring",
+   "id"
+  ],
+  [
+   "__len",
+   "__tostring",
+   "id"
+  ]
+ ]
+}
