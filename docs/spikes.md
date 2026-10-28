@@ -106,3 +106,39 @@ Each was tried with one piano note selected by id:
   duration, text)` instead, which the handbells plug-in has used throughout.
 - `NoteInput.CreatePlayingTechnique?Definition=pizz.` made nothing.
 - Dorico also has `Edit.GenerateChordSymbolsFromSelection`, its own chord detection, not tried here.
+
+## S2: running a script from a key command
+
+Probe: `s2_counter.lua`, rerun through the Remote API.
+
+- **Run Last Script needs no setup.** Dorico binds `Script.RunLastScript` to Ctrl+Shift+Alt+R by default. Run a
+  script once with **Script > Run Script…**, and from then on the key runs it again. The probe counted its own runs
+  in a global variable: three runs (one from the runner, two through `Script.RunLastScript`) gave 1, 2 and 3, so
+  state also survives between runs.
+- **A key of its own for one script** goes in the user's key-command file, `keycommands_en.json` in
+  `%APPDATA%\Steinberg\Dorico 6` (one per language; there is none until the user changes a key command). Dorico's own
+  `C:\Program Files\Steinberg\Dorico6\keycommands_en.json` shows the shape, and that commands with parameters can
+  be bound (`"File.Open?FilterID=MusicXMLImportFilter": [ "Ctrl+Shift+O" ]`). An entry in the `kGlobal` context's
+  `shortcuts` list would be `{ "Script.RunScript?ScriptPath=C:/path/to/script.lua&ShowConsole=false": [ "Ctrl+Alt+K" ] }`.
+  ConsoleTools sets its keys up this way. **Not run here:** it means editing the user's key-command file and
+  restarting Dorico, which this repository's tests never do.
+
+## S5: working through other projects
+
+Probe: `s5_batch.lua`, on two copies in the run folder; `flow_titles.lua` read one back.
+
+A script can open, change, save and close other projects. `File.Open?File=<path>` from inside a script makes the
+opened project `app.currentScore` straight away. The probe renamed each copy's first flow, ran `File.Save` and
+`File.CloseProject?OpenScoreID=<id>&Save=false`, and the project it started in was current again afterwards. Read
+back, the copy's first flow was titled "Batched". The probe refused any path outside the run folder, as a batch
+script working on someone's own files should check its folder before touching anything.
+
+`DoCore.ScriptHost`'s names (`currentScore`, `save`, `showFolderChooser`) aren't static members of the class, and
+nothing here called them.
+
+## S7: plug-in folders with Info.lua
+
+Not run. DoricoUse found, in Dorico's binary, a second kind of script plug-in: a folder in Script Plug-ins holding
+an `Info.lua` that returns a table whose `MenuCommands` entries have a `name` and a `handler`. Like a single `.lua`
+file in that folder, it appears in the Script menu only after Dorico restarts, and this repository's tests never
+restart Dorico. The examples are single files.
