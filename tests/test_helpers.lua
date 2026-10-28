@@ -8,6 +8,7 @@ local HELLO = "examples/fundamentals/01-hello.lua"
 local COMMANDS = "examples/fundamentals/06-commands.lua"
 local SELECTION = "examples/fundamentals/07-act-on-the-selection.lua"
 local BY_ID = "examples/fundamentals/08-select-by-id.lua"
+local CHORDS = "examples/recipes/chord-symbols.lua"
 
 local function parse(lines)
   return helpers.load(READ_NOTES, "dump").parse(table.concat(lines, "\n") .. "\n")
@@ -197,6 +198,33 @@ return {
     t:eq(made[2], "3/2", "RhythmicLength(1.5) would give 0 quarters and a half lost")
     t:eq(made[3], "7/3")
     t:eq(made[4], "0/1")
+  end,
+
+  names_major_minor_and_seventh_chords = function(t)
+    local chords = helpers.load(CHORDS, "chords")
+    t:eq(chords.name({ "C3", "C4", "E4", "G4" }), "C")
+    t:eq(chords.name({ "A2", "E4", "A4", "C5" }), "Am")
+    t:eq(chords.name({ "G2", "B3", "D4", "F4" }), "G7")
+    t:eq(chords.name({ "F3", "A3", "C4", "E4" }), "Fmaj7")
+    t:eq(chords.name({ "D3", "F3", "A3", "C4" }), "Dm7")
+    t:eq(chords.name({ "B3", "D4", "F4" }), "Bdim")
+    t:eq(chords.name({ "Bb2", "D4", "F4" }), "Bb", "the root keeps its spelling")
+    t:eq(chords.name({ "F#3", "A3", "C#4" }), "F#m")
+  end,
+
+  names_inversions_by_their_root = function(t)
+    local chords = helpers.load(CHORDS, "chords")
+    t:eq(chords.name({ "E3", "G3", "C4" }), "C")
+    t:eq(chords.name({ "C4", "E4", "A4" }), "Am")
+    t:eq(chords.name({ "F3", "G3", "B3", "D4" }), "G7")
+  end,
+
+  refuses_fewer_than_three_pitch_classes = function(t)
+    local chords = helpers.load(CHORDS, "chords")
+    t:eq(chords.name({ "C3", "C4", "G4" }), nil)
+    t:eq(chords.name({ "C4" }), nil)
+    t:eq(chords.name({}), nil)
+    t:eq(chords.name({ "C4", "D4", "E4" }), nil, "a cluster no template fits")
   end,
 
   guard_returns_the_open_project = function(t)

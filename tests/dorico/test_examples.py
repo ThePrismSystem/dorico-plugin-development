@@ -117,6 +117,9 @@ row("colour_by_pitch", RECIPES + "colour-by-pitch.lua",
            then_check("08-select-by-id.undone.lua", READ_COLOURS)])
 row("label_notes", RECIPES + "label-notes.lua",
     after=[then_command("Edit.Undo"), then_check("label-notes.undone.lua")])
+row("chord_symbols", RECIPES + "chord-symbols.lua",
+    after=[then_command("Edit.Undo"), then_check("chord-symbols.one-undo.lua")]
+    + [then_command("Edit.Undo")] * 10 + [then_check("chord-symbols.undone.lua")])
 row("proofread", RECIPES + "proofread.lua", twice=True)
 
 
