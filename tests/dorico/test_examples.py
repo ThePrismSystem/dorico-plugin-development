@@ -84,6 +84,8 @@ row("hello", FUNDAMENTALS + "01-hello.lua", twice=True)
 row("walk_the_score", FUNDAMENTALS + "02-walk-the-score.lua", twice=True)
 row("read_notes", FUNDAMENTALS + "03-read-notes.lua", twice=True)
 row("noteheads_and_colours", FUNDAMENTALS + "04-noteheads-and-colours.lua", twice=True)
+row("noteheads_with_the_first_player_tacet", FUNDAMENTALS + "04-noteheads-and-colours.lua",
+    check=CHECKS + "04-noteheads-and-colours.tacet.lua", before={"case": "case_tacet.lua"})
 row("names_from_the_text_export", FUNDAMENTALS + "05-names-from-the-text-export.lua", twice=True)
 row("commands", FUNDAMENTALS + "06-commands.lua",
     after=[then_command("Edit.Undo"), then_check("06-commands.undone.lua")])

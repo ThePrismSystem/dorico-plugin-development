@@ -247,8 +247,9 @@ notes, read that, and take it away again ([04-noteheads-and-colours.lua](../exam
 2. Select the music flow's whole range: `EventEdit.Select` its first note, then `Edit.SelectToStartOfFlow`,
    `Edit.SelectAtEndOfFlow`, and `EventEdit.NavigateDownExtend` once for each staff after the first.
 3. `Filter.NotesAndChords`, then `Edit.Copy`.
-4. In the new flow, create a temporary note at position 0 of the first voice, `EventEdit.Select` it, and
-   `Edit.Paste`.
+4. In the new flow, create a temporary note at position 0 in the voice of the instrument the copied range starts
+   with, `EventEdit.Select` it, and `Edit.Paste`. That's the first voice unless the flow's first players are tacet;
+   pasting onto the first voice then puts every staff's notes one player too high, with no error.
 5. The filter keeps note-attached lines such as slurs, and those still stop `stream.events`. Delete each event in
    the copy whose kind has no Lua class: select it by id, then `Edit.Delete`.
 6. Now `stream.events` and `propertyTable:get` work. Skip the temporary note by its id.

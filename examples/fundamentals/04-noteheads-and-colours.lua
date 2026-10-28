@@ -240,11 +240,11 @@ local function readCopy(number, flowId)
   -- The whole flow, every staff: select its first note or rest, stretch the selection to both ends of the flow and
   -- down to the last staff, keep only notes and chords, and copy.
   local flow = flowById(flowId)
-  local first, firstStream
-  for _, stream in ipairs(flow.voiceStreams) do
+  local first, firstStream, firstInstrument
+  for i, stream in ipairs(flow.voiceStreams) do
     for _, ev in ipairs(dump.parse(stream:dump()).events) do
       if not first and (ev.kind == "note" or ev.kind == "grace" or ev.kind == "rest") then
-        first, firstStream = ev.id, stream
+        first, firstStream, firstInstrument = ev.id, stream, flow.instruments[i].id
       end
     end
     if first then break end
@@ -257,9 +257,16 @@ local function readCopy(number, flowId)
   app:doCommand("Filter.NotesAndChords")
   app:doCommand("Edit.Copy")
 
-  -- Paste onto a temporary note at the start of the copy's top staff. The note goes with the rest of the run's
-  -- edits at the script's one Edit.Undo.
-  local top = flowById(copyId).voiceStreams[1]
+  -- Paste onto a temporary note at the start of the copy's voice for the instrument the copied range starts with.
+  -- That's the top staff unless the flow's first players have nothing to play, and pasting anywhere else would put
+  -- every staff's notes one player too high. The note goes with the rest of the run's edits at the script's one
+  -- Edit.Undo.
+  local copy = flowById(copyId)
+  local top
+  for i, stream in ipairs(copy.voiceStreams) do
+    if not top and copy.instruments[i].id == firstInstrument then top = stream end
+  end
+  if not top then error("the copy of flow " .. number .. " has no voice for the first instrument") end
   local temp = top:createNote(DoCore.RhythmicLength(0), DoCore.RhythmicLength(1),
     DoCore.MIDIPitchWithSpelling.fromString("C5"))
   local tempId = temp.id
