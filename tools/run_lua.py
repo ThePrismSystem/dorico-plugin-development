@@ -145,7 +145,7 @@ def open_scratch(client, source: Path):
 
     got = wait_for(opened, 60, interval=1)
     if not got:
-        raise TimeoutError(f"{source.name} did not open within 60s — Dorico may be showing a dialog")
+        raise TimeoutError(f"{source.name} did not open within 60s; Dorico may be showing a dialog")
     # The id appears before Dorico has finished with the project: a script run at once found the text export
     # writing nothing on a large one (Steinberg's Smith example).
     client.settle()
@@ -245,7 +245,7 @@ def run(script: Path, open_file=None, keep_open=False, extra_args=None, timeout=
             titles = open_windows()
             seen = "; windows open: " + ", ".join(repr(t) for t in titles) if titles else ""
             print(f"timed out after {timeout}s waiting for result" + "".join("; " + p for p in problems) + seen
-                  + " — Dorico may be showing a dialog", file=sys.stderr)
+                  + "; Dorico may be showing a dialog", file=sys.stderr)
             if scratch_id is not None:
                 print("the scratch copy was not closed; close it in Dorico without saving", file=sys.stderr)
             return 2, None, scratch_id

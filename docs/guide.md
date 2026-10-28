@@ -479,8 +479,8 @@ Project.Flow.SetNotationOptions?Dictionary=list: {string: "barlineOptions.finalB
 ## 7. Undo, redo and saving
 
 The handbells plug-in's guide says that edits made through the object model never enter the undo history. On
-Dorico 6.2.30 they do ([spikes.md](spikes.md), Undo), and this is what was seen
-([13-undo.lua](../examples/fundamentals/13-undo.lua) shows the first three):
+Dorico 6.2.30 they do ([spikes.md](spikes.md#undo)). This is what was seen;
+[13-undo.lua](../examples/fundamentals/13-undo.lua) shows the second point.
 
 - Everything a script run changes is one undo step, whether by command or through the object model (`createNote`,
   `createText`, `stream:delete`, `propertyTable:set`). Edit > Undo afterwards takes the whole run back. Options set

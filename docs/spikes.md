@@ -71,20 +71,20 @@ Probes: `players_and_options.lua` with its driver `players_and_options.py`, and 
 
 Probes: `s3_dump_details.lua`, `s3_gap.lua`, `s3_element_tables.lua`.
 
-- **Streams.** Each flow has a timebase stream, a stave stream per staff, a player stream per player (empty in the
+- Each flow has a timebase stream, a stave stream per staff, a player stream per player (empty in the
   sample) and a voice stream per voice.
-- **Voice streams** hold notes, grace notes, slurs (`kSlurEvent`, with a duration) and lyrics (`kLyricEvent`).
+- Voice streams hold notes, grace notes, slurs (`kSlurEvent`, with a duration) and lyrics (`kLyricEvent`).
   Positions and durations are in quarter notes from the start of the flow.
-- **Stave streams** hold clefs (`kClefEvent`, with a line naming the clef, such as `clef.treble`) and dynamics
+- Stave streams hold clefs (`kClefEvent`, with a line naming the clef, such as `clef.treble`) and dynamics
   (`kDynamicGroupEvent`).
-- **The timebase stream** holds a `kBarDivisionEvent` for each time signature and a `kTonalityDivisionEvent` for
+- The timebase stream holds a `kBarDivisionEvent` for each time signature and a `kTonalityDivisionEvent` for
   each key signature. Each names only an element id.
-- **Ties** aren't events: a tied note is one note with the whole length.
-- **Implicit rests** aren't listed. Rests the music has as events (from note input, or `createRest`) are.
-- **Removed rests leave no trace.** After `Edit.RemoveRests` on the trumpet's bar 5, the page shows the gap, but
+- Ties aren't events: a tied note is one note with the whole length.
+- Implicit rests aren't listed. Rests the music has as events (from note input, or `createRest`) are.
+- Removed rests leave no trace. After `Edit.RemoveRests` on the trumpet's bar 5, the page shows the gap, but
   every stream's dump is the same as before. A script can't tell a bar with removed rests from one with implicit
   rests, so the proofreading recipe has no incomplete-bar check.
-- **`flow.elementTables`** has `barDivisions`, `dynamics` and `tonalityDivisions`:
+- `flow.elementTables` has `barDivisions`, `dynamics` and `tonalityDivisions`:
   - Dynamics can be read. Each dynamic's sub-element has `kDynamicImmediateChangeBasicType` (0 for the sample's
     mf, 1 for its p) and `kDynamicImmediateChangeIsMezzo` (true, false). The intensity itself fails with "Invalid
     conversion".
@@ -96,7 +96,7 @@ Probes: `s3_dump_details.lua`, `s3_gap.lua`, `s3_element_tables.lua`.
 
 Probe: `s6_print.lua`, driven by `s6_print.py`.
 
-`print` writes to Dorico's Script Console (**Script > Show Script Console**). Lines printed while the console is
+`print` writes to Dorico's Script Console (Script > Show Script Console). Lines printed while the console is
 closed are kept and appear when it opens. `io.write` output appears nowhere. A script can open the console itself
 with `app:doCommand("Script.ShowConsole")`. The console opens with "Always on top" ticked.
 
@@ -110,18 +110,18 @@ Probes: `s8_properties.lua`, `s8_colour_read.lua`.
 
 - A note's property table lists only the properties it has: `kEventPosition`, `kEventDuration`, `kNotePitch`
   (the MIDI number) and a few more, until something sets another.
-- **Setting a colour by command works on the selected notes:** `UI.InvokePropertyChangeValue?Type=kEventColour&Value=`
+- Setting a colour by command works on the selected notes: `UI.InvokePropertyChangeValue?Type=kEventColour&Value=`
   followed by `#ffff0000`, `string: "#ffff0000"` or `string: "#0000ff"`. All three coloured their note. The change
   is a command, so Edit > Undo takes it back.
-- **Setting a colour through the property table works too,** on an event object from `stream.events`:
+- Setting a colour through the property table works too, on an event object from `stream.events`:
   `propertyTable:set("kEventColour", DoCore.Variant.createString("#ff8000ff"), ctx)`. Edit > Undo takes it back
   like any other edit (see Undo, below). It needs the event object, which a stream holding lyrics or slurs can't
   give.
-- **A colour set by command can't be read back.** The property is listed, but its Variant has `type` -1 and `valid`
+- A colour set by command can't be read back. The property is listed, but its Variant has `type` -1 and `valid`
   false, and `tostring` gives "". A colour set from Lua reads back as the string it was set to, and still does after
   the project is saved and reopened and in a pasted copy (fundamental 04 reads the sample's). So a script can tell
   that a note has a colour, but not which one, unless a script set it.
-- **A property-table read can lag the page.** The sample's first trumpet note has a colour set through its property
+- A property-table read can lag the page. The sample's first trumpet note has a colour set through its property
   table. After the colour-by-pitch recipe coloured it by command, the page showed the new colour, but Lua still
   read the old one.
 - `UI.InvokePropertyChangeValue?Type=kNoteheadSetOverride&Value=string: "noteheadset.diamondNoteheads"` changed
@@ -158,16 +158,16 @@ with `application.log` read for the commands they ran).
 
 Each was tried with one piano note selected by id:
 
-- **Chord symbols:** `NoteInput.StartChordSymbolInput`, then
+- Chord symbols: `NoteInput.StartChordSymbolInput`, then
   `NoteInput.AcceptCurrentChordSymbolTextInput?Definition=C7&ChordSymbolEntryAdvanceType=kEndInput`. This is what
   the chord symbol popover runs. It makes a `kChordSymbolEvent` in the timebase stream, and the dump names it
   (`kChordSymbolEvent (id:326) at 0  C  0`). The accept command alone makes nothing. Later, the chord-symbols
   recipe's dump named its chords in full (`Am`, `G7`). These commands don't join a run's one undo step:
   `chord_undo.py` found three undo steps for each chord symbol, so the recipe's four took eleven presses of
   Edit > Undo.
-- **Dynamics:** `NoteInput.CreateDynamic?Definition=mf` makes a `kDynamicGroupEvent` in the stave stream.
+- Dynamics: `NoteInput.CreateDynamic?Definition=mf` makes a `kDynamicGroupEvent` in the stave stream.
   `Dynamic=ff` makes nothing.
-- **Staff text: never by command.** `NoteInput.CreateText` opens Dorico's text editor at the note and waits for
+- Staff text: never by command. `NoteInput.CreateText` opens Dorico's text editor at the note and waits for
   typing, and while it is open Dorico runs no scripts at all. Escape sent with an Alt press (to bring the window
   forward) only toggles the menu bar; clicking empty paper closes the editor. Use `stream:createText(position,
   duration, text)` instead, which the handbells plug-in has used throughout.
@@ -196,19 +196,19 @@ the run has done, and a run changes nothing after its one undo.
 
 Probe: `s2_counter.lua`, rerun through the Remote API.
 
-- **Run Last Script needs no setup.** Dorico binds `Script.RunLastScript` to Ctrl+Shift+Alt+R by default. Run a
-  script once with **Script > Run Script…**, and from then on the key runs it again. The probe counted its own runs
+- Run Last Script needs no setup. Dorico binds `Script.RunLastScript` to Ctrl+Shift+Alt+R by default. Run a
+  script once with Script > Run Script, and from then on the key runs it again. The probe counted its own runs
   in a global variable: three runs (one from the runner, two through `Script.RunLastScript`) gave 1, 2 and 3, so
   state also survives between runs.
-- **Sent through the Remote API, `Script.RunLastScript` returns before the rerun.** The hotkey recipe's test sent
+- Sent through the Remote API, `Script.RunLastScript` returns before the rerun. The hotkey recipe's test sent
   it twice and went straight on, and a rerun Dorico hadn't reached yet ran nested inside the next script's
   commands, one launcher inside another. Waiting for each rerun's result before the next step fixed it.
-- **A key of its own for one script** goes in the user's key-command file, `keycommands_en.json` in
+- A key of its own for one script goes in the user's key-command file, `keycommands_en.json` in
   `%APPDATA%\Steinberg\Dorico 6` (one per language; there is none until the user changes a key command). Dorico's own
   `C:\Program Files\Steinberg\Dorico6\keycommands_en.json` shows the shape, and that commands with parameters can
   be bound (`"File.Open?FilterID=MusicXMLImportFilter": [ "Ctrl+Shift+O" ]`). An entry in the `kGlobal` context's
   `shortcuts` list would be `{ "Script.RunScript?ScriptPath=C:/path/to/script.lua&ShowConsole=false": [ "Ctrl+Alt+K" ] }`.
-  ConsoleTools sets its keys up this way. **Not run here:** it means editing the user's key-command file and
+  ConsoleTools sets its keys up this way. It wasn't run here: it means editing the user's key-command file and
   restarting Dorico, which this repository's tests never do.
 
 ## S5: working through other projects
