@@ -115,6 +115,8 @@ row("key_command", FUNDAMENTALS + "14-key-command.lua",
 row("colour_by_pitch", RECIPES + "colour-by-pitch.lua",
     after=[then_check("colour-by-pitch.coloured.lua", READ_COLOURS), then_command("Edit.Undo"),
            then_check("08-select-by-id.undone.lua", READ_COLOURS)])
+row("label_notes", RECIPES + "label-notes.lua",
+    after=[then_command("Edit.Undo"), then_check("label-notes.undone.lua")])
 
 
 class Examples(unittest.TestCase):
