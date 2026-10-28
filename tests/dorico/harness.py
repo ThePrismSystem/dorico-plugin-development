@@ -18,6 +18,7 @@ SAMPLE = ROOT / "fixtures" / "sample.dorico"
 SCRATCH = run_lua.RUN_DIR / "scratch.dorico"
 CLICK = ROOT / "tools" / "click.ps1"
 PRESS = ROOT / "tools" / "press.ps1"
+FILL = ROOT / "tools" / "fill.ps1"
 
 
 def check(test, result, name):
@@ -88,6 +89,19 @@ def press(title, keys):
     proc = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(PRESS),
                            "-Title", title, "-Keys", keys], capture_output=True, text=True)
     return proc.returncode == 0
+
+
+def answer(window, button, text=None, timeout=60):
+    """Wait for a window (Dorico's or PowerShell's), type text into its text box if given, and press a button.
+    True when the button was pressed."""
+    if not run_lua.wait_for(lambda: window in run_lua.open_windows(), timeout):
+        return False
+    if text is not None:
+        proc = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(FILL),
+                               "-Window", window, "-Text", text], capture_output=True, text=True)
+        if proc.returncode != 0:
+            return False
+    return click(window, button)
 
 
 def wait_for_window(title, timeout=90):

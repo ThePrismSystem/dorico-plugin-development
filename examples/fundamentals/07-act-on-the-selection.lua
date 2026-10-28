@@ -2,21 +2,19 @@
 -- What it does: prints one line per selected note or grace note (flow number, player, position, spelling, with tabs
 -- between), and puts a staff text naming the note at its position. With nothing selected it says so and stops.
 -- Changes: adds a staff text for each selected note.
--- Undo: Edit > Undo can't take the texts back, since texts made through the stream object never enter the undo
--- history. Select them and press Delete, or use File > Revert. Don't press Edit > Redo straight afterwards either:
--- it would move the selected notes up a semitone (see below).
+-- Undo: Edit > Undo takes the texts back in one step.
 -- Builds on: 03-read-notes.lua. Select some notes, run the script, then open Script > Show Script Console to read
 -- what it prints.
 --
 -- Lua has no way to ask what's selected, but the selected notes are the ones a command moves. So the script dumps
--- every voice, moves the selection up a semitone (NoteEdit.PitchUpChromatic), dumps again, and takes the move back
--- with Edit.Undo. The notes whose spelling changed are the selection. It finds notes and grace notes only, and misses
--- a note that can't go any higher.
+-- every voice, moves the selection up an octave (NoteEdit.PitchUpOctave), dumps again, and moves it back down
+-- (NoteEdit.PitchDownOctave). The notes whose spelling changed are the selection. It finds notes and grace notes
+-- only, and misses a note that can't go an octave higher.
 --
--- That Edit.Undo is the only one a run can safely make. Inside a script it takes back that run's own commands and
--- nothing else, but once it has happened, any later command the run sends joins your last undo step, and a second
--- Edit.Undo would take back your own last edit. So after finding the selection, the script works through the object
--- model only (stream:createText here), which the undo history never sees.
+-- It moves by octaves, not semitones, because a semitone up and back down can change a spelling: G#4 comes back as
+-- Ab4. An octave keeps the letter and the accidental. Moving back instead of running Edit.Undo matters too. An undo
+-- inside a script takes back everything the run has done, but anything the run does after it joins your own last
+-- undo step, so Edit > Undo afterwards would take back the texts and your last edit together.
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. With only the Hub showing, reading
@@ -145,9 +143,16 @@ local function snapshot()
 end
 
 local before = snapshot()
-app:doCommand("NoteEdit.PitchUpChromatic")
+app:doCommand("NoteEdit.PitchUpOctave")
 local moved = snapshot()
-app:doCommand("Edit.Undo")
+app:doCommand("NoteEdit.PitchDownOctave")
+
+-- Back where they were, or the script stops before changing anything else.
+for id, note in pairs(snapshot()) do
+  if not before[id] or before[id].spelling ~= note.spelling then
+    error("the selected notes didn't come back to their pitches (" .. note.spelling .. "); use Edit > Undo")
+  end
+end
 
 local selected = {}
 for id, note in pairs(before) do

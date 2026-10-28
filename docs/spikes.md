@@ -61,9 +61,11 @@ Probes: `players_and_options.lua` with its driver `players_and_options.py`, and 
   for it. The instrument ids are the `entityID` values in `instruments.xml` in Dorico's program folder.
 - After a run that added a player, renamed players, took the new player out of a flow and added a flow, one
   Edit > Undo took all of it back.
-- Options are the exception. After fundamental 10 set a layout option and then a notation option, one Edit > Undo
-  took both back in four of six runs. In the other two (the first two) it took back only the notation option, and
-  a second undo the layout option. Nothing in the runs told them apart.
+- Options go with the rest. After fundamental 10 set a layout option and a notation option, one Edit > Undo took
+  both back, five times out of five, both read back 0.3 seconds later. Read through the Remote API straight after
+  the undo, though, the layout option can still show the new value, or a reply can leave an option out: Dorico is
+  still applying the undo. Earlier runs that read at once seemed to need a second undo for the layout option. They
+  didn't; the read was early.
 
 ## S3: what the dump says
 
@@ -112,12 +114,16 @@ Probes: `s8_properties.lua`, `s8_colour_read.lua`.
   followed by `#ffff0000`, `string: "#ffff0000"` or `string: "#0000ff"`. All three coloured their note. The change
   is a command, so Edit > Undo takes it back.
 - **Setting a colour through the property table works too,** on an event object from `stream.events`:
-  `propertyTable:set("kEventColour", DoCore.Variant.createString("#ff8000ff"), ctx)`. It's not in the undo history,
-  and it needs the event object, which a stream holding lyrics or slurs can't give.
+  `propertyTable:set("kEventColour", DoCore.Variant.createString("#ff8000ff"), ctx)`. Edit > Undo takes it back
+  like any other edit (see Undo, below). It needs the event object, which a stream holding lyrics or slurs can't
+  give.
 - **A colour set by command can't be read back.** The property is listed, but its Variant has `type` -1 and `valid`
   false, and `tostring` gives "". A colour set from Lua reads back as the string it was set to, and still does after
   the project is saved and reopened and in a pasted copy (fundamental 04 reads the sample's). So a script can tell
   that a note has a colour, but not which one, unless a script set it.
+- **A property-table read can lag the page.** The sample's first trumpet note has a colour set through its property
+  table. After the colour-by-pitch recipe coloured it by command, the page showed the new colour, but Lua still
+  read the old one.
 - `UI.InvokePropertyChangeValue?Type=kNoteheadSetOverride&Value=string: "noteheadset.diamondNoteheads"` changed
   nothing.
 
@@ -130,7 +136,7 @@ Lua has no selection API, but a script can find out which notes are selected:
 1. Dump every voice stream.
 2. Run `NoteEdit.PitchUpChromatic`, which moves only the selected notes up a semitone.
 3. Dump again. The notes whose spelling changed are the selection.
-4. Run `Edit.Undo` once. Inside a script it takes back that run's own command edits, so the music is as it was.
+4. Run `Edit.Undo` once. Inside a script it takes back everything that run has done, so the music is as it was.
 
 With one violin note selected, it found that note. With a second added (`EventEdit.NavigateRightExtend`), it found
 both. With nothing selected, it found nothing. Each time every stream's dump afterwards was identical to before.
@@ -139,6 +145,11 @@ The costs: it uses the run's one `Edit.Undo` (a second would take back the user'
 and grace notes but no other items, a note that can't go a semitone higher won't show, and Edit > Redo afterwards
 would put the semitone back. The Remote API's status (`hasSelection`, `selectedEventType`: `kNoteEvent`, `kMixed`,
 `kNone`) says what kind of thing is selected, but only to a program outside Dorico.
+
+A later probe (`pitch_up_down.lua`) found a route with no undo. `NoteEdit.PitchUpOctave` then
+`NoteEdit.PitchDownOctave` gave every note back its exact spelling, Fb4, E#4, Ebb4 and Dx4 included, where a semitone
+up and down respelled them (G#4 came back as Ab4, E#4 as F4). Fundamental 07 uses the octave route, so the run has
+no undo and its later edits stay in its own undo step.
 
 ## S4: creating items
 
@@ -150,7 +161,10 @@ Each was tried with one piano note selected by id:
 - **Chord symbols:** `NoteInput.StartChordSymbolInput`, then
   `NoteInput.AcceptCurrentChordSymbolTextInput?Definition=C7&ChordSymbolEntryAdvanceType=kEndInput`. This is what
   the chord symbol popover runs. It makes a `kChordSymbolEvent` in the timebase stream, and the dump names it
-  (`kChordSymbolEvent (id:326) at 0  C  0`). The accept command alone makes nothing.
+  (`kChordSymbolEvent (id:326) at 0  C  0`). The accept command alone makes nothing. Later, the chord-symbols
+  recipe's dump named its chords in full (`Am`, `G7`). These commands don't join a run's one undo step:
+  `chord_undo.py` found three undo steps for each chord symbol, so the recipe's four took eleven presses of
+  Edit > Undo.
 - **Dynamics:** `NoteInput.CreateDynamic?Definition=mf` makes a `kDynamicGroupEvent` in the stave stream.
   `Dynamic=ff` makes nothing.
 - **Staff text: never by command.** `NoteInput.CreateText` opens Dorico's text editor at the note and waits for
@@ -160,6 +174,24 @@ Each was tried with one piano note selected by id:
 - `NoteInput.CreatePlayingTechnique?Definition=pizz.` made nothing.
 - Dorico also has `Edit.GenerateChordSymbolsFromSelection`, its own chord detection, not tried here.
 
+## Undo
+
+Probe: `undo_object_edits.py`, driving `undo_object_edits.lua` on seven fresh copies. This corrects the handbells
+plug-in's guide, which says object-model edits never enter the undo history. On Dorico 6.2.30 they do:
+
+- A run that only made a text (`createText`) was taken back by one Edit > Undo afterwards. So was a colour set with
+  `propertyTable:set`.
+- A run that made a text, ran `Project.Flow.New` and made another text was taken back whole by one Edit > Undo
+  afterwards, and an `Edit.Undo` inside such a run took back all three edits, the text made before the command
+  included.
+- After an `Edit.Undo` inside a run, a text the run made next joined the user's previous undo step: one Edit > Undo
+  afterwards took back that text and the user's own earlier rename together.
+- A run that made a text and deleted it again still left an undo step. Edit > Undo afterwards used it up and left the
+  user's earlier edit in place.
+
+The rule the examples follow: everything a run changes is one undo step, an undo inside a run takes back everything
+the run has done, and a run changes nothing after its one undo.
+
 ## S2: running a script from a key command
 
 Probe: `s2_counter.lua`, rerun through the Remote API.
@@ -168,6 +200,9 @@ Probe: `s2_counter.lua`, rerun through the Remote API.
   script once with **Script > Run Script…**, and from then on the key runs it again. The probe counted its own runs
   in a global variable: three runs (one from the runner, two through `Script.RunLastScript`) gave 1, 2 and 3, so
   state also survives between runs.
+- **Sent through the Remote API, `Script.RunLastScript` returns before the rerun.** The hotkey recipe's test sent
+  it twice and went straight on, and a rerun Dorico hadn't reached yet ran nested inside the next script's
+  commands, one launcher inside another. Waiting for each rerun's result before the next step fixed it.
 - **A key of its own for one script** goes in the user's key-command file, `keycommands_en.json` in
   `%APPDATA%\Steinberg\Dorico 6` (one per language; there is none until the user changes a key command). Dorico's own
   `C:\Program Files\Steinberg\Dorico6\keycommands_en.json` shows the shape, and that commands with parameters can

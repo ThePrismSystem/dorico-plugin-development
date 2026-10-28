@@ -4,7 +4,8 @@
 -- "instrument <n>: <name>" line per instrument, in player order.
 -- Changes: nothing that stays. It puts a marker text in one voice of each instrument, runs File > Export > Text
 -- into the temporary folder, and deletes the markers and the exported file again.
--- Undo: nothing to undo. Texts made and deleted through the stream object never enter the undo history.
+-- Undo: nothing to undo. The markers still make an undo step, so Edit > Undo straight after this script changes
+-- nothing you can see; a second press reaches your own last edit.
 -- Builds on: 02-walk-the-score.lua. Open Script > Show Script Console to read what it prints.
 --
 -- Lua gives a flow no title, an instrument no name and the project no path. The text export lists every text in the

@@ -3,9 +3,9 @@
 -- C major scale in quarter notes, a C major chord, a quarter rest, two eighth notes and a staff text. It prints what
 -- it wrote and for which player.
 -- Changes: adds a flow, with music in it. Every player is in the new flow; the others have nothing to play there.
--- Undo: Edit > Undo takes the new flow away, and the music in it goes with it. On their own, the notes, rest and
--- text wouldn't be undoable: createNote, createRest and createText change the music directly, outside the undo
--- history. They can be undone here only because the flow they're in was made by command.
+-- Undo: Edit > Undo takes the whole run back in one step: the new flow and the music in it. Everything a script run
+-- changes goes into one undo step, made by command or through the object model (createNote, createRest,
+-- createText) alike.
 -- Builds on: 06-commands.lua. Open Script > Show Script Console to read what it prints.
 --
 -- Positions and durations are quarter notes from the start of the flow, and go in as DoCore.RhythmicLength values

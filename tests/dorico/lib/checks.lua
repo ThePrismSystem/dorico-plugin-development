@@ -88,6 +88,22 @@ function checks.notesAbove(spelling)
   return keys
 end
 
+-- The chord symbols in a flow's timebase stream (stream type 0), as "<pos>|<name>": the dump names each one after its
+-- position ("kChordSymbolEvent (id:326) at 12  G7 ...").
+function checks.chordSymbols(flowNumber)
+  local dump = checks.helper("examples/fundamentals/03-read-notes.lua", { "dump" }, "dump")
+  local out = {}
+  for _, stream in ipairs(DoApp.DoApp().currentScore.flows[flowNumber].allStreams) do
+    if stream.type == 0 then
+      for _, ev in ipairs(dump.parse(stream:dump()).events) do
+        local name = ev.raw:match("^kChordSymbolEvent %(id:%d+%) at %S+%s+(%S+)")
+        if name then out[#out + 1] = tostring(ev.pos) .. "|" .. name end
+      end
+    end
+  end
+  return out
+end
+
 -- A printed line's tab-separated columns.
 function checks.fields(line)
   local out = {}

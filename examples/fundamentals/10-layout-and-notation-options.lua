@@ -4,8 +4,7 @@
 -- barlineOptions.finalBarlineType to kDouble, prints each change, then prints the text frames that the export no
 -- longer lists, which is how a script can see that the headings went.
 -- Changes: those two options. Change the values below to set others.
--- Undo: Edit > Undo puts both options back, usually in one step. In two of six test runs it put back only the
--- barline, and the headings needed a second Edit > Undo, so look at the headings before pressing it again.
+-- Undo: Edit > Undo puts both options back in one step.
 -- Builds on: 05-names-from-the-text-export.lua and 06-commands.lua. Open Script > Show Script Console to read what
 -- it prints.
 --

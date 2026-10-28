@@ -1,6 +1,8 @@
 -- Selects notes before an example runs, as a user would. Scratch copy only (the probe confirms it).
 --   args.player, args.pos: the first note to select, in flow 1
 --   args.extend: how many notes to the right to add to it, with EventEdit.NavigateRightExtend
+--   args.renameSecondFlow: first rename flow 2 to "Edited before the run", an edit of the user's own (this run is an
+--   undo step of its own, apart from the example's)
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
 local repo = here .. "../../"
 local mine = here .. "lib/?.lua;" .. repo .. "spikes/lib/?.lua;" .. repo .. "fixtures/?.lua"
@@ -14,6 +16,9 @@ probe.run("case_select", function(p)
   local dumpparse = require("dumpparse")
   local app = DoApp.DoApp()
   local score = app.currentScore
+  if p.args.renameSecondFlow then
+    app:doCommand(string.format("Project.Flow.Rename?FlowID=%d&Name=Edited before the run", score.flows[2].id))
+  end
   local flow = score.flows[1]
   local owners = dumpparse.owners(score, flow)
   for _, s in ipairs(flow.voiceStreams) do

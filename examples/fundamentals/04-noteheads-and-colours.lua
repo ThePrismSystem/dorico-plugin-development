@@ -257,8 +257,8 @@ local function readCopy(number, flowId)
   app:doCommand("Filter.NotesAndChords")
   app:doCommand("Edit.Copy")
 
-  -- Paste onto a temporary note at the start of the copy's top staff. createNote is an object-model edit, so it
-  -- isn't in the undo history, but it goes when the flow it's in does.
+  -- Paste onto a temporary note at the start of the copy's top staff. The note goes with the rest of the run's
+  -- edits at the script's one Edit.Undo.
   local top = flowById(copyId).voiceStreams[1]
   local temp = top:createNote(DoCore.RhythmicLength(0), DoCore.RhythmicLength(1),
     DoCore.MIDIPitchWithSpelling.fromString("C5"))
