@@ -4,7 +4,7 @@
 
 The probe names the tables of static members itself. Instance members sit in tables with no name on them, so this
 names each by the members it holds, with the rules in INSTANCE below: a table is a class's when it has all of that
-class's listed members. A table no rule fits stays in "unnamed", with its members, rather than getting a guess.
+class's listed members. A table no rule fits stays in "unnamed", with its members.
 """
 import json
 import sys

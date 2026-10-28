@@ -14,9 +14,9 @@
 -- Commands that act on a player, such as Project.Player.Rename, take its player id, and Lua doesn't give players
 -- an id. The script finds it by renaming: give a candidate id a name no player has, and see which player takes it.
 -- In a project made in Dorico a player's id is usually its first instrument's id, so that's the first candidate.
--- Only when that fails does it try every id in turn, giving each player it renames on the way its name back. That
--- costs something: undoing the run later can bring back a transposing player's name in another spelling, such as
--- "Trumpet (B Flat)" for "Trumpet (B{@flat@})".
+-- Only when that fails does it try every id in turn, giving each player it renames on the way its name back. If it
+-- renames other players that way, undoing the run later can bring back a transposing player's name in another
+-- spelling, such as "Trumpet (B Flat)" for "Trumpet (B{@flat@})".
 
 local FLOW_TITLE = "Duet"
 local INSTRUMENT = "instrument.strings.violin"

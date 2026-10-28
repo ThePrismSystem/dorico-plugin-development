@@ -6,7 +6,7 @@ The script reports through spikes/lib/probe.lua, which writes %TEMP%/dorico-exam
 launcher written for the one run, which names that run's args file: a script Dorico gets to late, after the runner
 gave up on it, reads its own args and runId, never a later run's.
 With --open, FILE is copied into the run directory and the copy is opened first. The probe checks
-that the active project really is that copy before doing anything (probe.lua, args.expectScratch);
+that the active project is that copy before doing anything (probe.lua, args.expectScratch);
 the runner closes it without saving afterwards only when the probe confirmed it (unless --keep-open).
 Without --open the script runs on whatever project is active, which needs an explicit --on-active.
 Exit codes: 0 ok, 1 checks failed, 2 timeout, refusal or connection failure, 3 bad --args or an error in the

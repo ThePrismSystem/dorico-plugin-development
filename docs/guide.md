@@ -125,7 +125,7 @@ local app = DoApp.DoApp()
 local ok, score = pcall(function() return app.currentScore end)   -- nil, or an error, when no project is open
 ```
 
-Every example starts with that check, as its `guard` helper, so it says "Open a project first" instead of failing
+Every example starts with that check, as its `guard` helper, so with no project open it says "Open a project first"
 ([01-hello.lua](../examples/fundamentals/01-hello.lua)). Every class and member a scan of Lua's registry found is in
 [the reference](reference/README.md), each marked verified, failing or not tried; the table here is the short
 version.
@@ -184,7 +184,7 @@ note.propertyTable:set("kNoteHideStem", DoCore.Variant.createString("true"), ctx
 ```
 
 - `get` returns a Variant, and `tostring(variant)` gives its value. An unset property reads as `""`.
-- `getPropertyNames()` lists only the properties an event actually has.
+- `getPropertyNames()` lists only the properties an event has.
 - `set` returns `true` when Dorico took the value, which doesn't always mean anything changed (section 5).
 - A colour set by command (or in the Properties panel) is listed but reads as `""`: its Variant has `valid` false.
   A colour set through the property table reads back as the string it was set to, after a save and reopen too. But
@@ -299,7 +299,7 @@ It's the window onto several things Lua can't read:
 Quirks:
 
 - Fields can hold quoted commas, doubled quotes and newlines. Read the CSV with a quote-aware reader.
-- Read a missing column as empty rather than failing, and skip blank lines.
+- Read a missing column as empty, and skip blank lines.
 - Some projects export their flow titles with no `FlowNumber`, in alphabetical order (Steinberg's Smith example).
   Then you know only the set of titles.
 - That project exported no hidden texts at all, so don't count on finding a hidden marker.

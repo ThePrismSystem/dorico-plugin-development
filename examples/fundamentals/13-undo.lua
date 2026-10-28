@@ -6,7 +6,7 @@
 -- Builds on: 06-commands.lua and 09-add-notes-rests-text.lua. Open Script > Show Script Console to read what it
 -- prints.
 --
--- The rules this shows, which every script that changes the score has to live with:
+-- What it shows, and what follows for any script that changes the score:
 --   * Everything a script run changes is one undo step, whether it was done by command or through the object model
 --     (createNote, createRest, createText, stream:delete, propertyTable:set). Edit > Undo afterwards takes the whole
 --     run back. The exception found so far is chord symbols made with the popover's commands, which make undo

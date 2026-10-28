@@ -15,7 +15,7 @@
 -- error on any stream holding an item with no Lua class: lyrics, slurs, hairpins, playing techniques. So the script
 -- tries stream.events first, and for a flow where that fails it copies the music with Dorico's notes-and-chords
 -- filter into a new flow, deletes the few lines the filter keeps, and reads the copy. Noteheads and colours come
--- with the copied notes. One catch: the paste merges unisons in two voices on one staff into one note.
+-- with the copied notes. The paste merges unisons in two voices on one staff into one note.
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. With only the Hub showing, reading
@@ -182,7 +182,7 @@ local function eventLists(flow)
 end
 
 -- A property's value, "-" when the note doesn't have it, and "(unreadable)" when it has it but Lua reads an empty
--- value. getPropertyNames lists only the properties a note actually has.
+-- value. getPropertyNames lists only the properties a note has.
 local function property(event, has, name)
   if not has[name] then return "-" end
   local value = tostring(event.propertyTable:get(name, ctx))

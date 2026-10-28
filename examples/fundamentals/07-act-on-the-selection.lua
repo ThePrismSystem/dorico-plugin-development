@@ -11,10 +11,10 @@
 -- (NoteEdit.PitchDownOctave). The notes whose spelling changed are the selection. It finds notes and grace notes
 -- only, and misses a note that can't go an octave higher.
 --
--- It moves by octaves, not semitones, because a semitone up and back down can change a spelling: G#4 comes back as
--- Ab4. An octave keeps the letter and the accidental. Moving back instead of running Edit.Undo matters too. An undo
--- inside a script takes back everything the run has done, but anything the run does after it joins your own last
--- undo step, so Edit > Undo afterwards would take back the texts and your last edit together.
+-- A semitone up and back down can change a spelling (G#4 comes back as Ab4), and an octave keeps the letter and the
+-- accidental, so the script moves by octaves. It moves the notes back itself because of how Edit.Undo works inside a
+-- script: anything the run does after an undo joins your own last undo step, so Edit > Undo afterwards would take
+-- back the texts and your last edit together.
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. With only the Hub showing, reading
