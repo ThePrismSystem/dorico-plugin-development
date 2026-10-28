@@ -13,7 +13,6 @@ a bad call can crash Dorico.
 | Member | Kind | Status | Notes |
 | ------ | ---- | ------ | ----- |
 | `__init` | constructor | not tried |  |
-| `__init` | constructor | not tried |  |
 | `__len` | operator | not tried |  |
 | `__tostring` | operator | not tried |  |
 | `convertFolderOfScores` | member | not tried |  |

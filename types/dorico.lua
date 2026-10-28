@@ -5,7 +5,7 @@
 
 ---@class DoApp
 ---@field currentLayoutID integer
----@field currentScore Score
+---@field currentScore Score|nil
 ---@field doCommand fun(self: DoApp, command: string)
 ---@field open any
 ---@field save any

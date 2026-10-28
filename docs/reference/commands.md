@@ -74,4 +74,4 @@ Remote Control API's `getcommands` lists them all.
 | `Script.RunLastScript` | | verified | Runs the last script again; Ctrl+Shift+Alt+R by default (S2). |
 | `Script.ShowConsole` | | verified | Toggles the Script Console (S6). |
 | `Window.SwitchMode` | `WindowMode` | verified | `kWriteMode` before selecting; `kSetupMode` before deleting a flow. |
-| `View.ZoomIn` | | verified | Zooms the view in. |
+| `View.ZoomIn` | | verified | Zoomed the view in when a screenshot of a test copy was taken. Nothing in this repository runs it. |

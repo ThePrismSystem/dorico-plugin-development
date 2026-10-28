@@ -49,7 +49,8 @@ local root = here .. "My Plug-in/"
 
 The examples here are single files with no modules, so any of them runs from Script > Run Script as it is. DoricoUse
 found a second kind of plug-in in Dorico's binary, a folder holding an `Info.lua` with `MenuCommands`; it's
-described in [spikes.md](spikes.md) (S7) and wasn't tried here, since it needs a restart.
+described in [spikes.md](spikes.md) (S7) and wasn't tried here. Whether Dorico notices a new plug-in of either kind
+without a restart wasn't checked either, so restart to be sure.
 
 ### Where print goes
 
@@ -123,7 +124,7 @@ on the selection or through the object model.
 
 ```lua
 local app = DoApp.DoApp()
-local ok, score = pcall(function() return app.currentScore end)   -- nil, or an error, when no project is open
+local ok, score = pcall(function() return app.currentScore end)   -- nil, or perhaps an error, with no project open
 ```
 
 Every example starts with that check, as its `guard` helper, so with no project open it says "Open a project first"
@@ -439,7 +440,10 @@ Project.Flow.SetNotationOptions?Dictionary=list: {string: "barlineOptions.finalB
 ```
 
 - The dictionary alternates path and value items, separated by an escaped comma (`\, `). Inside an item, a
-  backslash, a quote and a comma each need a backslash of their own.
+  backslash, a quote and a comma each need a backslash of their own. Passing the whole list through the `commands`
+  helper gives commas and backslashes theirs. It can't give a quote one, since it would escape that backslash too.
+- Only single ids have been tried in list parameters such as `FlowIDArray`. Passed several, as `1,2`, the helper
+  would escape the commas between them.
 - Always give a flow's id in `FlowIDArray`. The Remote API's `setoptions` with `flowIDs` changed flow 0 instead.
 - Option paths and values are the names `getoptions` reports, such as `flowHeadingBehaviour` (`kNoFlowHeadings`,
   `kAddHeadingsAfterFirstFlow`, `kAlwaysInsertHeadings`), `flowBreakBehaviour` (`kStartNewPageForFlows`,

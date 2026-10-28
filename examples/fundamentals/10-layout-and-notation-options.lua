@@ -22,8 +22,8 @@ local LAYOUT_OPTION = { "flowHeadingBehaviour", "kNoFlowHeadings" }
 local FLOW_OPTION = { "barlineOptions.finalBarlineType", "kDouble" }
 
 -- helper: guard
--- The app and the open project, or the app and nil when no project is open. With only the Hub showing, reading
--- app.currentScore can raise an error instead of giving nil, so the read goes through pcall.
+-- The app and the open project, or the app and nil when no project is open. The read of app.currentScore goes
+-- through pcall in case it raises an error then instead of giving nil, which no run here has checked.
 local function guard()
   local app = DoApp.DoApp()
   local ok, score = pcall(function() return app.currentScore end)
@@ -37,7 +37,8 @@ end
 -- Builds a command string, "Name?key=value&key=value", for app:doCommand. Dorico reads a backslash in a value as an
 -- escape, and a bare "&" or "," ends the value, so a value's own backslashes, ampersands and commas each get a
 -- backslash in front; "=" and any other character pass as they are. A nil value is refused, since tostring would
--- send Dorico the word "nil".
+-- send Dorico the word "nil". Only single ids have been tried in list parameters such as FlowIDArray; given several,
+-- as "1,2", this would escape the commas between them.
 --   commands.value(v) -> v escaped
 --   commands.build(name, params) -> the command, params a list of {key, value} pairs
 local commands = {}
@@ -144,8 +145,9 @@ local app, score = guard()
 if not score then return end
 
 -- The list as Dorico reads it, before the commands helper escapes it: commas between the items, which the helper
--- turns into "\," as Dorico logs them. Paths and values here are plain words; one holding a quote or a comma needs
--- another level of escaping inside its braces (docs/guide.md has the details).
+-- turns into "\," as Dorico logs them. The helper escapes a comma or a backslash inside a path or value the same way,
+-- which is what Dorico wants there too. A quote inside a value needs "\"", which this can't make, since the helper
+-- would escape that backslash as well; the paths and values here have no quotes.
 local function dictionary(path, value)
   return 'list: {string: "' .. path .. '"}, {string: "' .. value .. '"}'
 end

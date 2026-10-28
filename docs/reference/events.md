@@ -56,12 +56,12 @@ a bad call can crash Dorico.
 | ------ | ---- | ------ | ----- |
 | `__eq` | operator | not tried |  |
 | `__len` | operator | not tried |  |
-| `__tostring` | operator | verified | Describes the event, as a dump line ends: `kNoteEvent (id:7932) at 0, duration 1  E5 (ends 1)`. |
+| `__tostring` | operator | not tried | As on the base event; no example reads this kind. |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
-| `id` | property | verified | What `EventEdit.Select` takes as `EventID` ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `id` | property | not tried | As on the base event; no example reads this kind. |
 | `position` | member | not tried |  |
-| `propertyTable` | property | verified | The event's properties ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `propertyTable` | property | not tried | As on the base event; no example reads this kind. |
 
 ## `DoCore.BarRestEvent`
 
@@ -69,12 +69,12 @@ a bad call can crash Dorico.
 | ------ | ---- | ------ | ----- |
 | `__eq` | operator | not tried |  |
 | `__len` | operator | not tried |  |
-| `__tostring` | operator | verified | Describes the event, as a dump line ends: `kNoteEvent (id:7932) at 0, duration 1  E5 (ends 1)`. |
+| `__tostring` | operator | not tried | As on the base event; no example reads this kind. |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
-| `id` | property | verified | What `EventEdit.Select` takes as `EventID` ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `id` | property | not tried | As on the base event; no example reads this kind. |
 | `position` | member | not tried |  |
-| `propertyTable` | property | verified | The event's properties ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `propertyTable` | property | not tried | As on the base event; no example reads this kind. |
 
 ## `DoCore.TextEvent`
 
@@ -82,12 +82,12 @@ a bad call can crash Dorico.
 | ------ | ---- | ------ | ----- |
 | `__eq` | operator | not tried |  |
 | `__len` | operator | not tried |  |
-| `__tostring` | operator | verified | Describes the event, as a dump line ends: `kNoteEvent (id:7932) at 0, duration 1  E5 (ends 1)`. |
+| `__tostring` | operator | not tried | As on the base event; no example reads this kind. |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
-| `id` | property | verified | What `EventEdit.Select` takes as `EventID` ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `id` | property | not tried | As on the base event; no example reads this kind. |
 | `position` | member | not tried |  |
-| `propertyTable` | property | verified | The event's properties ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `propertyTable` | property | not tried | As on the base event; no example reads this kind. |
 | `text` | member | not tried |  |
 
 ## `DoCore.TupletEvent`
@@ -96,12 +96,12 @@ a bad call can crash Dorico.
 | ------ | ---- | ------ | ----- |
 | `__eq` | operator | not tried |  |
 | `__len` | operator | not tried |  |
-| `__tostring` | operator | verified | Describes the event, as a dump line ends: `kNoteEvent (id:7932) at 0, duration 1  E5 (ends 1)`. |
+| `__tostring` | operator | not tried | As on the base event; no example reads this kind. |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
-| `id` | property | verified | What `EventEdit.Select` takes as `EventID` ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `id` | property | not tried | As on the base event; no example reads this kind. |
 | `position` | member | not tried |  |
-| `propertyTable` | property | verified | The event's properties ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `propertyTable` | property | not tried | As on the base event; no example reads this kind. |
 | `tupletDef` | member | not tried |  |
 
 ## `DoCore.ClefEvent`
@@ -110,13 +110,13 @@ a bad call can crash Dorico.
 | ------ | ---- | ------ | ----- |
 | `__eq` | operator | not tried |  |
 | `__len` | operator | not tried |  |
-| `__tostring` | operator | verified | Describes the event, as a dump line ends: `kNoteEvent (id:7932) at 0, duration 1  E5 (ends 1)`. |
+| `__tostring` | operator | not tried | As on the base event; no example reads this kind. |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
-| `id` | property | verified | What `EventEdit.Select` takes as `EventID` ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `id` | property | not tried | As on the base event; no example reads this kind. |
 | `nonTransposingClefEntity` | member | not tried |  |
 | `position` | member | not tried |  |
-| `propertyTable` | property | verified | The event's properties ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `propertyTable` | property | not tried | As on the base event; no example reads this kind. |
 | `transposingClefEntity` | member | not tried |  |
 
 ## `DoCore.OttavaLineEvent`
@@ -125,13 +125,13 @@ a bad call can crash Dorico.
 | ------ | ---- | ------ | ----- |
 | `__eq` | operator | not tried |  |
 | `__len` | operator | not tried |  |
-| `__tostring` | operator | verified | Describes the event, as a dump line ends: `kNoteEvent (id:7932) at 0, duration 1  E5 (ends 1)`. |
+| `__tostring` | operator | not tried | As on the base event; no example reads this kind. |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
-| `id` | property | verified | What `EventEdit.Select` takes as `EventID` ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `id` | property | not tried | As on the base event; no example reads this kind. |
 | `ottavaLineDefinitionID` | member | not tried |  |
 | `position` | member | not tried |  |
-| `propertyTable` | property | verified | The event's properties ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `propertyTable` | property | not tried | As on the base event; no example reads this kind. |
 
 ## `DoCore.BreakEvent`
 
@@ -139,15 +139,15 @@ a bad call can crash Dorico.
 | ------ | ---- | ------ | ----- |
 | `__eq` | operator | not tried |  |
 | `__len` | operator | not tried |  |
-| `__tostring` | operator | verified | Describes the event, as a dump line ends: `kNoteEvent (id:7932) at 0, duration 1  E5 (ends 1)`. |
+| `__tostring` | operator | not tried | As on the base event; no example reads this kind. |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
-| `id` | property | verified | What `EventEdit.Select` takes as `EventID` ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `id` | property | not tried | As on the base event; no example reads this kind. |
 | `isFrameBreak` | member | not tried |  |
 | `isSystemBreak` | member | not tried |  |
 | `layoutID` | member | not tried |  |
 | `position` | member | not tried |  |
-| `propertyTable` | property | verified | The event's properties ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `propertyTable` | property | not tried | As on the base event; no example reads this kind. |
 
 ## `DoCore.BarDivisionEvent`
 
@@ -155,12 +155,12 @@ a bad call can crash Dorico.
 | ------ | ---- | ------ | ----- |
 | `__eq` | operator | not tried |  |
 | `__len` | operator | not tried |  |
-| `__tostring` | operator | verified | Describes the event, as a dump line ends: `kNoteEvent (id:7932) at 0, duration 1  E5 (ends 1)`. |
+| `__tostring` | operator | not tried | As on the base event; no example reads this kind. |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
-| `id` | property | verified | What `EventEdit.Select` takes as `EventID` ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `id` | property | not tried | As on the base event; no example reads this kind. |
 | `position` | member | not tried |  |
-| `propertyTable` | property | verified | The event's properties ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `propertyTable` | property | not tried | As on the base event; no example reads this kind. |
 
 ## `DoCore.TonalityDivisionEvent`
 
@@ -168,12 +168,12 @@ a bad call can crash Dorico.
 | ------ | ---- | ------ | ----- |
 | `__eq` | operator | not tried |  |
 | `__len` | operator | not tried |  |
-| `__tostring` | operator | verified | Describes the event, as a dump line ends: `kNoteEvent (id:7932) at 0, duration 1  E5 (ends 1)`. |
+| `__tostring` | operator | not tried | As on the base event; no example reads this kind. |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
-| `id` | property | verified | What `EventEdit.Select` takes as `EventID` ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `id` | property | not tried | As on the base event; no example reads this kind. |
 | `position` | member | not tried |  |
-| `propertyTable` | property | verified | The event's properties ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `propertyTable` | property | not tried | As on the base event; no example reads this kind. |
 | `tonalityDivisionElementID` | member | not tried |  |
 
 ## `DoCore.DynamicGroupEvent`
@@ -182,9 +182,9 @@ a bad call can crash Dorico.
 | ------ | ---- | ------ | ----- |
 | `__eq` | operator | not tried |  |
 | `__len` | operator | not tried |  |
-| `__tostring` | operator | verified | Describes the event, as a dump line ends: `kNoteEvent (id:7932) at 0, duration 1  E5 (ends 1)`. |
+| `__tostring` | operator | not tried | As on the base event; no example reads this kind. |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
-| `id` | property | verified | What `EventEdit.Select` takes as `EventID` ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `id` | property | not tried | As on the base event; no example reads this kind. |
 | `position` | member | not tried |  |
-| `propertyTable` | property | verified | The event's properties ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `propertyTable` | property | not tried | As on the base event; no example reads this kind. |

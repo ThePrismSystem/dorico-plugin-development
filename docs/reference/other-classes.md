@@ -99,7 +99,6 @@ No member table was matched to this class (see [members.json](members.json)).
 | ------ | ---- | ------ | ----- |
 | `__init` | constructor | not tried |  |
 | `__eq` | operator | not tried |  |
-| `__init` | constructor | not tried |  |
 | `__len` | operator | not tried |  |
 | `__lt` | operator | not tried |  |
 | `__tostring` | operator | not tried |  |
@@ -115,7 +114,6 @@ No member table was matched to this class (see [members.json](members.json)).
 | ------ | ---- | ------ | ----- |
 | `__init` | constructor | not tried |  |
 | `__eq` | operator | not tried |  |
-| `__init` | constructor | not tried |  |
 | `__len` | operator | not tried |  |
 | `__lt` | operator | not tried |  |
 | `__tostring` | operator | not tried |  |
@@ -207,7 +205,6 @@ No member table was matched to this class (see [members.json](members.json)).
 | ------ | ---- | ------ | ----- |
 | `__init` | constructor | not tried |  |
 | `__eq` | operator | not tried |  |
-| `__init` | constructor | not tried |  |
 | `__len` | operator | not tried |  |
 | `__tostring` | operator | not tried |  |
 | `duration` | member | not tried |  |

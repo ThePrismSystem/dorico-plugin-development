@@ -111,6 +111,8 @@ row("ask_and_report", FUNDAMENTALS + "12-ask-and-report.lua", args={"answer": AN
     dialog={"window": "Ask and report", "text": ANSWER, "button": "OK"})
 row("ask_and_cancel", FUNDAMENTALS + "12-ask-and-report.lua", check=CHECKS + "12-ask-and-report.cancelled.lua",
     before=OPEN_FIRST, dialog={"window": "Ask and report", "button": "Cancel"})
+# 13 can't run twice in one script run: the second run's Edit.Undo would be the run's second, and it takes back
+# the earlier edit (seen when this row had twice=True).
 row("undo", FUNDAMENTALS + "13-undo.lua", before={"case": "case_edit.lua"})
 row("key_command", FUNDAMENTALS + "14-key-command.lua",
     after=[then_check("14-key-command.again.lua", FUNDAMENTALS + "14-key-command.lua")])

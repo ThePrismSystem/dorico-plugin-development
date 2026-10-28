@@ -19,8 +19,8 @@
 --     straight afterwards uses it up, changing nothing you can see, and a second press reaches your own last edit.
 
 -- helper: guard
--- The app and the open project, or the app and nil when no project is open. With only the Hub showing, reading
--- app.currentScore can raise an error instead of giving nil, so the read goes through pcall.
+-- The app and the open project, or the app and nil when no project is open. The read of app.currentScore goes
+-- through pcall in case it raises an error then instead of giving nil, which no run here has checked.
 local function guard()
   local app = DoApp.DoApp()
   local ok, score = pcall(function() return app.currentScore end)

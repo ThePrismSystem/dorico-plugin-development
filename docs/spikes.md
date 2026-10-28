@@ -191,6 +191,8 @@ says object-model edits never enter the undo history, but on Dorico 6.2.30 they 
   included.
 - After an `Edit.Undo` inside a run, a text the run made next joined the user's previous undo step: one Edit > Undo
   afterwards took back that text and the user's own earlier rename together.
+- Two undos in one run take back the user's own edit at the second. Fundamental 13 run twice in one script run
+  (a test tried it) undid an earlier rename of the second flow.
 - A run that made a text and deleted it again still left an undo step. Edit > Undo afterwards used it up and left the
   user's earlier edit in place.
 
@@ -233,6 +235,7 @@ nothing here called them.
 ## S7: plug-in folders with Info.lua
 
 Not run. DoricoUse found, in Dorico's binary, a second kind of script plug-in: a folder in Script Plug-ins holding
-an `Info.lua` that returns a table whose `MenuCommands` entries have a `name` and a `handler`. Like a single `.lua`
-file in that folder, it appears in the Script menu only after Dorico restarts, and this repository's tests never
-restart Dorico. The examples are single files.
+an `Info.lua` that returns a table whose `MenuCommands` entries have a `name` and a `handler`. Whether Dorico picks
+up a new plug-in of either kind without a restart wasn't checked: that would mean adding files to the user's own
+Script Plug-ins folder, and if it needed a restart, trying the plug-in would too, which this repository's tests never
+do. The examples are single files, run with Script > Run Script.

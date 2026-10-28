@@ -13,7 +13,6 @@ a bad call can crash Dorico.
 | Member | Kind | Status | Notes |
 | ------ | ---- | ------ | ----- |
 | `__init` | constructor | verified | `DoApp.DoApp()` gives the app ([01-hello](../../examples/fundamentals/01-hello.lua)). |
-| `__init` | constructor | verified | `DoApp.DoApp()` gives the app ([01-hello](../../examples/fundamentals/01-hello.lua)). |
 | `__len` | operator | not tried |  |
 | `__tostring` | operator | not tried |  |
 | `currentLayoutID` | property | verified | The id of the layout in view (`spikes/players_and_options.lua`). |
@@ -27,7 +26,6 @@ a bad call can crash Dorico.
 
 | Member | Kind | Status | Notes |
 | ------ | ---- | ------ | ----- |
-| `__init` | constructor | not tried |  |
 | `__init` | constructor | not tried |  |
 | `__len` | operator | not tried |  |
 | `__tostring` | operator | not tried |  |
