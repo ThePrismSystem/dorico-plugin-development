@@ -7,8 +7,8 @@
 -- Builds on: 03-read-notes.lua and 06-commands.lua. Open Script > Show Script Console to read what it prints.
 --
 -- EventEdit.Select?FlowID=&EventID=&EventBlockID= selects one event: its flow's id, its id from the dump, and the id
--- of the block that holds it, which the blockIdOf helper looks up. Each select replaces the selection rather than
--- adding to it, so the script colours one note at a time.
+-- of the block that holds it, which the blockIdOf helper looks up. Each select replaces the selection, so the
+-- script colours one note at a time.
 --
 -- The colour goes on through UI.InvokePropertyChangeValue, the command the Properties panel uses. Colours set this
 -- way can't be read back from Lua (the property reads as empty), so a script can tell that a note has a colour but
@@ -136,8 +136,8 @@ end
 
 -- helper: blockIdOf
 -- The block id EventEdit.Select needs for an event. The dump's "Start block id" names a block instance, despite
--- its name, and the instance's block carries the id to select by. A select with any other number selects nothing,
--- and Dorico says nothing. parsed is dump.parse(stream:dump()).
+-- its name, and the instance's block carries the id to select by. A select with any other number selects nothing
+-- and raises no error. parsed is dump.parse(stream:dump()).
 local function blockIdOf(stream, eventId, parsed)
   local instance
   for _, ev in ipairs(parsed.events) do

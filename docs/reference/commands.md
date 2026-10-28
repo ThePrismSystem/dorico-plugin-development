@@ -1,9 +1,9 @@
 # Commands
 
-The commands examples, probes and the handbells plug-in have run with `app:doCommand`, with their parameters and
-what happened. A command is written `Name?key=value&key=value`, with `\`, `&` and `,` in a value escaped by a
-backslash ([the guide](../guide.md#6-commands)). `doCommand` returns nothing either way, so "verified" means the
-project was read afterwards and showed the change.
+The commands that the examples, the probes and the handbells plug-in have run with `app:doCommand`, with their
+parameters and what happened. A command is written `Name?key=value&key=value`, with `\`, `&` and `,` in a value
+escaped by a backslash ([the guide](../guide.md#6-commands)). `doCommand` returns nothing whether or not a command
+works, so "verified" means the project was read afterwards and showed the change.
 
 Dorico has hundreds more. Its own `keycommands_en.json` (in its program folder) lists the ones with default keys,
 `application.log` in `%APPDATA%\Steinberg\Dorico 6` records the command behind each menu item you use, and the

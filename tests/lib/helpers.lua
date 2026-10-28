@@ -13,8 +13,8 @@ function helpers.text(path, name)
   return body
 end
 
--- The block's value. DoApp and DoCore are left out, so a helper that needs Dorico fails when it is called, not
--- when it is loaded.
+-- The block's value. DoApp and DoCore are left out, so a helper that needs Dorico still loads and fails only when
+-- it is called.
 function helpers.load(path, name)
   local chunk = assert(load(helpers.text(path, name) .. "\nreturn " .. name, "=" .. path .. ":" .. name))
   return chunk()

@@ -1,6 +1,6 @@
--- The run folder shared with tools/run_lua.py: <temp>/dorico-examples-run/, with forward slashes. The runner's launcher
--- names it (EXAMPLES_RUN.dir), so both sides agree whatever their environments say. Otherwise TEMP on Windows; macOS and
--- Linux have TMPDIR (or nothing), so fall back in that order.
+-- The run folder shared with tools/run_lua.py: <temp>/dorico-examples-run/, with forward slashes. The runner's
+-- launcher names it (EXAMPLES_RUN.dir), so both sides agree whatever their environments say. Otherwise it comes from
+-- TEMP on Windows; macOS and Linux have TMPDIR (or nothing), so the lookup falls back in that order.
 return function()
   local run = rawget(_G, "EXAMPLES_RUN")
   if type(run) == "table" and run.dir then return run.dir end

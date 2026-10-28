@@ -18,7 +18,7 @@ a bad call can crash Dorico.
 | `__tostring` | operator | not tried |  |
 | `convertFolderOfScores` | member | not tried |  |
 | `createNewScore` | member | not tried |  |
-| `currentScore` | property | not tried | Not a static member of the class (S5); reached how isn't known. |
+| `currentScore` | property | not tried | Not a static member of the class (S5), and how to reach it isn't known. |
 | `engine` | member | not tried |  |
 | `open` | member | not tried |  |
 | `save` | method | not tried |  |

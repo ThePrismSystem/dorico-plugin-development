@@ -7,10 +7,10 @@
 -- Builds on: 02-walk-the-score.lua, for which player owns each voice. Open Script > Show Script Console to read what
 -- it prints.
 --
--- The obvious route, stream.events, raises an error on any voice that holds lyrics, slurs, hairpins, playing
--- techniques or another kind of item Lua has no class for, which is most real music. stream:dump() always works.
--- It gives text, one line per event, and the dump helper below turns that text into tables. Ties don't show: a
--- tied note is one note with the whole length. Implicit rests aren't events, so they don't show either.
+-- Reading stream.events raises an error on any voice that holds lyrics, slurs, hairpins, playing techniques or
+-- another kind of item Lua has no class for, which is most real music. stream:dump() always works. It gives text,
+-- one line per event, and the dump helper below turns that text into tables. Ties don't show: a tied note is one
+-- note with the whole length. Implicit rests aren't events, so they don't show either.
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. With only the Hub showing, reading

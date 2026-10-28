@@ -241,7 +241,8 @@ No member table was matched to this class (see [members.json](members.json)).
 
 ## Member tables with no class
 
-The scan found these tables of instance members but couldn't tell whose they are, as several classes could hold the same members. Each line is one table.
+The scan found these tables of instance members but couldn't tell whose they are, as several classes could hold the
+same members. Each line is one table.
 
 - `__add`, `__div`, `__eq`, `__init`, `__le`, `__len`, `__lt`, `__mul`, `__sub`, `__tostring`, `numerator`
 - `__eq`, `__init`, `__len`, `__lt`, `__tostring`, `numDots`, `toNotatedLength`, `toRational`, `unit`

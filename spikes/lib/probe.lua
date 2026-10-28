@@ -1,6 +1,6 @@
--- Probe harness for scripts run inside Dorico by tools/run_lua.py.
--- Reads the run's args (the file the runner's launcher names in EXAMPLES_RUN, else <run>/args.json), runs the body under
--- xpcall, and writes <run>/result.json in one go:
+-- Probe harness for scripts run inside Dorico by tools/run_lua.py. Reads the run's args (the file the runner's
+-- launcher names in EXAMPLES_RUN, else <run>/args.json), runs the body under xpcall, and writes <run>/result.json in
+-- one go:
 --   {runId, name, ok, checks=[{label, ok, detail}], facts={...}, log=[...], error?}
 local json = require("json")
 

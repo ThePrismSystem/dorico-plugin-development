@@ -108,9 +108,10 @@ on the selection or through the object model.
 
 ### Finding out what exists
 
-- The bound classes are in Lua's registry, and a script can walk it to list every class and member. The handbells
-  repository's `spike/17_api_map.lua` does, and that's how `NoteEvent.pitchWithSpelling`, `EventStream.type`,
-  `Flow.elementTables` and `Score.title` turned up. DoricoUse maps the same object model independently.
+- The bound classes are in Lua's registry, and a script can walk it to list every class and member.
+  `spikes/class_members.lua` does, and [the reference](reference/README.md) is built from what it finds; the handbells
+  repository's `spike/17_api_map.lua` found `NoteEvent.pitchWithSpelling`, `EventStream.type`, `Flow.elementTables`
+  and `Score.title` the same way. DoricoUse maps the same object model independently.
 - Command names come from Dorico's own key-command file, `keycommands_en.json` in its program folder, from
   `application.log` in `%APPDATA%\Steinberg\Dorico 6`, which records the command behind each menu item and popover
   you use, and from the Remote Control API's `getcommands`. A command string Dorico logs works from Lua as it is.
@@ -196,13 +197,14 @@ note.propertyTable:set("kNoteHideStem", DoCore.Variant.createString("true"), ctx
 
 `tostring(event)` describes an event: `kNoteEvent (id:7932) at 0, duration 1  E5 (ends 1)`. Positions and
 durations are in quarter notes from the start of the flow, as exact fractions where they need them
-(`3/2 (1.5)`). Every pitch is sounding pitch: a B-flat trumpet's written D5 is `C5` here, and nothing in Lua says how
-an instrument transposes.
+(`3/2 (1.5)`). A tuplet's notes carry their real lengths: a triplet eighth is `duration 1/3`, not the eighth it's
+written as. Every pitch is sounding pitch: a B-flat trumpet's written D5 is `C5` here, and nothing in Lua says how an
+instrument transposes.
 
 ### `stream.events` fails on real music
 
 `stream.events` gives event objects, but it raises an error on any stream that holds a kind of event with no Lua
-class: lyrics, slurs, hairpins, playing techniques. That's most real music.
+class: lyrics, slurs, hairpins, playing techniques. Most real music has at least one of those.
 
 ### `stream:dump()` always works
 
@@ -221,10 +223,10 @@ selecting an event needs it (section 5).
 
 What the dump shows and doesn't:
 
-- Voice streams hold notes, grace notes, slurs (`kSlurEvent`, with a duration) and lyrics (`kLyricEvent`). Stave
-  streams hold clefs and dynamics. The timebase stream holds a `kBarDivisionEvent` for each time signature, a
-  `kTonalityDivisionEvent` for each key signature, and chord symbols, named in full (`kChordSymbolEvent (id:326) at
-  12  G7`).
+- Voice streams hold notes, grace notes, tuplets (`kTupletEvent`, such as `3:2, unit = e`), slurs (`kSlurEvent`, with
+  a duration) and lyrics (`kLyricEvent`). Stave streams hold clefs and dynamics. The timebase stream holds a
+  `kBarDivisionEvent` for each time signature, a `kTonalityDivisionEvent` for each key signature, and chord symbols,
+  named in full (`kChordSymbolEvent (id:326) at 12  G7`).
 - Ties aren't events: a tied note is one note with the whole length.
 - Implicit rests aren't listed, and rests removed with Edit > Remove Rests leave no trace, so a script can't find
   an incomplete bar.
@@ -252,9 +254,9 @@ notes, read that, and take it away again ([04-noteheads-and-colours.lua](../exam
 6. Now `stream.events` and `propertyTable:get` work. Skip the temporary note by its id.
 7. Take the temporary flow away with one `Edit.Undo` (section 7 says why exactly one).
 
-Try `stream.events` first and copy only the flows where it fails. Three catches: the paste merges unisons in two
-voices on one staff, it lists a chord's notes in a different order each time (sort them), and it replaces the
-clipboard and the selection. Tell users that.
+Try `stream.events` first and copy only the flows where it fails. The paste merges unisons in two voices on one
+staff and lists a chord's notes in a different order each time, so sort them. It also replaces the clipboard and the
+selection, which users should be told.
 
 ### The selection
 
@@ -266,9 +268,9 @@ Lua can't ask what's selected, but the selected notes are the ones a command mov
 3. `NoteEdit.PitchDownOctave` puts them back.
 
 Use octaves. A semitone up and down (`NoteEdit.PitchUpChromatic`, `NoteEdit.PitchDownChromatic`) respells: G#4 comes
-back as Ab4. An octave keeps the letter and the accidental, Fb4 and Dx4 included. And move back rather than
-undoing: an `Edit.Undo` would take back everything the run had done, and leave anything the run did afterwards
-joined to the user's last undo step (section 7). The route finds notes and grace notes only, and misses a note that
+back as Ab4. An octave keeps the letter and the accidental, Fb4 and Dx4 included. Moving back keeps the run free of
+an `Edit.Undo`, which would take back everything the run had done and join whatever it did next to the user's last
+undo step (section 7). The route finds notes and grace notes only, and misses a note that
 can't go an octave higher. The Remote Control API's status (`hasSelection`, `selectedEventType`) says what kind of
 thing is selected, but only to a program outside Dorico.
 
@@ -369,9 +371,9 @@ The block id is the id of the block holding the event. Find the event's instance
 the dump) in `stream.blockInstances`, and take that instance's `block.id`. The `blockIdOf` helper does this
 ([08-select-by-id.lua](../examples/fundamentals/08-select-by-id.lua)).
 
-- In many projects the block id happens to be the instance id minus 1000, and it's tempting to take that for the
-  rule. In a downloaded arrangement, instance 1061 held block 36. A select given the wrong block id selects nothing
-  and reports nothing, and the commands after it act on nothing too.
+- In many projects the block id happens to be the instance id minus 1000, but in a downloaded arrangement instance
+  1061 held block 36, so look it up every time. A select given the wrong block id selects nothing and reports
+  nothing, and the commands after it act on nothing too.
 - A second `EventEdit.Select` replaces the selection. To act on several notes, select and act on each in turn, or
   select the first and extend with `EventEdit.NavigateRightExtend`.
 - Leave note input (`NoteInput.Exit`) and switch to Write mode (`Window.SwitchMode?WindowMode=kWriteMode`) before

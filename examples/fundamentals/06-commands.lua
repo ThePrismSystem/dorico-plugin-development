@@ -2,7 +2,7 @@
 -- What it does: renames the first flow to "Études & Sketches (A=440)" by command, and prints the command it sent.
 -- Change TITLE below to use another title.
 -- Changes: the first flow's title.
--- Undo: Edit > Undo puts the old title back. Every command a script run sends is one undo step together.
+-- Undo: Edit > Undo puts the old title back. All the commands a script run sends make one undo step.
 -- Builds on: 01-hello.lua. Open Script > Show Script Console to read what it prints.
 --
 -- app:doCommand(text) runs one of Dorico's commands, written "Name?key=value&key=value". It returns nothing and

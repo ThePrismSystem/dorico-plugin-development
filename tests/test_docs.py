@@ -38,7 +38,7 @@ def broken(root):
     found = []
     for path in docs(root):
         text = path.read_text(encoding="utf-8")
-        # Links inside code spans and code blocks are examples, not links.
+        # A link inside a code span or code block is an example, so it isn't checked.
         text = re.sub(r"```.*?```", "", text, flags=re.S)
         text = re.sub(r"`[^`\n]*`", "", text)
         for target in LINK.findall(text):

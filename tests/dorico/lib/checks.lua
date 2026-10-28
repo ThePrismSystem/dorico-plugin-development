@@ -12,8 +12,8 @@ function checks.expected()
   return expected
 end
 
--- Helper blocks out of an example, loaded together (a later block may use an earlier one), as the value of the one
--- named want. The same blocks the examples run, so the checks read the project the way the examples do.
+-- Loads helper blocks out of an example together (a later block may use an earlier one) and returns the value of
+-- the one named want. They are the blocks the examples run, so the checks read the project the way the examples do.
 function checks.helper(example, names, want)
   local f = assert(io.open(here .. "../../../" .. example, "rb"))
   local source = f:read("*a")

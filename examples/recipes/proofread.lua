@@ -151,8 +151,8 @@ end
 
 -- helper: export
 -- File > Export > Text from a script: Dorico writes <name>.csv beside the <name>.txt it is given, without asking
--- anything. Fields can hold quoted commas, doubled quotes and newlines, so the CSV is read with a quote-aware reader,
--- never split line by line. A column the export leaves out reads as "".
+-- anything. Fields can hold quoted commas, doubled quotes and newlines, so a row can run over several lines; the
+-- reader below keeps track of quotes to find where each field and row ends. A column the export leaves out reads as "".
 --   export.records(app, folder, name) -> the rows, as tables keyed by column name (the file is deleted afterwards)
 --   export.parse(csv) -> the same, from CSV text
 --   export.folder() -> the temporary folder, ending in a slash

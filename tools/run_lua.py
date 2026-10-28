@@ -2,15 +2,17 @@
 
     python tools/run_lua.py SCRIPT [--open FILE] [--keep-open] [--args JSON] [--timeout 120]
 
-The script reports through spikes/lib/probe.lua, which writes %TEMP%/dorico-examples-run/result.json. Dorico runs it through a
-launcher written for the one run, which names that run's args file: a script Dorico gets to late, after the runner
-gave up on it, reads its own args and runId, never a later run's.
-With --open, FILE is copied into the run directory and the copy is opened first. The probe checks
-that the active project is that copy before doing anything (probe.lua, args.expectScratch);
-the runner closes it without saving afterwards only when the probe confirmed it (unless --keep-open).
-Without --open the script runs on whatever project is active, which needs an explicit --on-active.
-Exit codes: 0 ok, 1 checks failed, 2 timeout, refusal or connection failure, 3 bad --args or an error in the
-runner itself.
+The script reports through spikes/lib/probe.lua, which writes %TEMP%/dorico-examples-run/result.json. Dorico runs
+it through a launcher written for that one run, which names the run's args file, so a script Dorico gets to late,
+after the runner gave up on it, still reads its own args and runId and never a later run's.
+
+With --open, FILE is copied into the run directory and the copy is opened first. The probe checks that the active
+project is that copy before doing anything (probe.lua, args.expectScratch), and the runner closes it without saving
+afterwards only when the probe confirmed it (unless --keep-open). Without --open the script runs on whatever project
+is active, which needs an explicit --on-active.
+
+Exit codes: 0 ok, 1 checks failed, 2 timeout, refusal or connection failure, 3 bad --args or an error in the runner
+itself.
 """
 import argparse
 import json
@@ -29,8 +31,8 @@ import dws  # noqa: E402
 
 
 def run_dir_for(env):
-    """<temp>/dorico-examples-run, finding the temp folder as spikes/lib/rundir.lua does (the launcher tells the Lua side
-    anyway)."""
+    """<temp>/dorico-examples-run, finding the temp folder as spikes/lib/rundir.lua does (the launcher tells the Lua
+    side anyway)."""
     temp = env.get("TEMP") or env.get("TMP") or env.get("TMPDIR") or "/tmp"
     return Path(temp) / "dorico-examples-run"
 
@@ -285,7 +287,7 @@ def main(argv=None):
     except (OSError, ConnectionError, TimeoutError, EOFError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
-    except Exception:  # noqa: BLE001 - told apart from failed checks (1)
+    except Exception:  # noqa: BLE001 (exit 3, so it isn't mistaken for failed checks, exit 1)
         traceback.print_exc()
         return 3
     if result is not None:

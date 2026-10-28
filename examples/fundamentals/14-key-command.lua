@@ -4,13 +4,13 @@
 -- Undo: nothing to undo.
 -- Builds on: 01-hello.lua. Open Script > Show Script Console to read what it prints.
 --
--- Running it from a key, without any setup: run it once with Script > Run Script. From then on Ctrl+Shift+Alt+R
+-- To run it from a key without any setup, start it once with Script > Run Script. From then on Ctrl+Shift+Alt+R
 -- (Script > Run Last Script, Dorico's own key command) runs it again, until you run a different script.
 --
--- A key of its own, set up by hand (not run automatically here, since it means editing Dorico's key-command file and
--- restarting Dorico): Dorico keeps the user's key commands in keycommands_en.json (one file per language) in
--- %APPDATA%\Steinberg\Dorico 6. The file appears once you change any key command in Preferences > Key Commands. In
--- its "kGlobal" context's "shortcuts" list, an entry like this binds a key to a script:
+-- A key of its own has to be set up by hand. This example doesn't do it, since that means editing Dorico's
+-- key-command file and restarting Dorico. The user's key commands are in keycommands_en.json (one file per language)
+-- in %APPDATA%\Steinberg\Dorico 6. The file appears once you change any key command in Preferences > Key Commands.
+-- In its "kGlobal" context's "shortcuts" list, an entry like this binds a key to a script:
 --   { "Script.RunScript?ScriptPath=C:/Users/you/Scripts/14-key-command.lua&ShowConsole=false": [ "Ctrl+Alt+K" ] }
 -- Quit Dorico before editing the file, keep a copy of it, and start Dorico again afterwards. The keycommands_en.json
 -- in Dorico's program folder shows the file's layout, including commands bound with parameters.

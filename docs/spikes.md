@@ -6,7 +6,8 @@ Everything here was seen on Dorico 6.2.30 (build 6245) on Windows 11.
 
 ## The sample project's import
 
-`fixtures/build_sample.py` imports MusicXML, and the import shaped the sample:
+`fixtures/build_sample.py` makes the sample by importing MusicXML, and these details of the sample come from the
+import:
 
 - A tied pair comes in as one note: the flute's C5 tied over the barline is one event lasting three beats.
 - Rests come in as implicit rests, which aren't events: no voice stream holds a `kRestEvent`.
@@ -61,11 +62,11 @@ Probes: `players_and_options.lua` with its driver `players_and_options.py`, and 
   for it. The instrument ids are the `entityID` values in `instruments.xml` in Dorico's program folder.
 - After a run that added a player, renamed players, took the new player out of a flow and added a flow, one
   Edit > Undo took all of it back.
-- Options go with the rest. After fundamental 10 set a layout option and a notation option, one Edit > Undo took
-  both back, five times out of five, both read back 0.3 seconds later. Read through the Remote API straight after
-  the undo, though, the layout option can still show the new value, or a reply can leave an option out: Dorico is
-  still applying the undo. Earlier runs that read at once seemed to need a second undo for the layout option. They
-  didn't; the read was early.
+- Options are in the run's undo step too. After fundamental 10 set a layout option and a notation option, one
+  Edit > Undo took both back in five runs out of five, with both read back 0.3 seconds after the undo. Read through
+  the Remote API straight after the undo, the layout option can still show the new value, or a reply can leave an
+  option out, because Dorico is still applying the undo. Earlier runs that read at once had read too early, which
+  made the layout option seem to need a second undo.
 
 ## S3: what the dump says
 
@@ -80,6 +81,9 @@ Probes: `s3_dump_details.lua`, `s3_gap.lua`, `s3_element_tables.lua`.
 - The timebase stream holds a `kBarDivisionEvent` for each time signature and a `kTonalityDivisionEvent` for
   each key signature. Each names only an element id.
 - Ties aren't events: a tied note is one note with the whole length.
+- A tuplet is a `kTupletEvent` in the voice stream (`kTupletEvent (id:16) at 0, duration 1  3:2, unit = e`), and its
+  notes carry their real lengths: a triplet of eighths reads `duration 1/3` at positions 0, 1/3 and 2/3, not the
+  eighth they're written as. Probe: `tuplet_and_unison.lua`, opening `tuplet.musicxml`.
 - Implicit rests aren't listed. Rests the music has as events (from note input, or `createRest`) are.
 - Removed rests leave no trace. After `Edit.RemoveRests` on the trumpet's bar 5, the page shows the gap, but
   every stream's dump is the same as before. A script can't tell a bar with removed rests from one with implicit
@@ -88,8 +92,8 @@ Probes: `s3_dump_details.lua`, `s3_gap.lua`, `s3_element_tables.lua`.
   - Dynamics can be read. Each dynamic's sub-element has `kDynamicImmediateChangeBasicType` (0 for the sample's
     mf, 1 for its p) and `kDynamicImmediateChangeIsMezzo` (true, false). The intensity itself fails with "Invalid
     conversion".
-  - Time signatures can't. A bar division element has properties such as `kBarDivisionIrregularBarLength`, but
-    `kBarDivisionTimeSignatures` fails with "Invalid conversion". A script can't read the meter.
+  - Time signatures can't, so a script has no way to read the meter. A bar division element has properties such as
+    `kBarDivisionIrregularBarLength`, but `kBarDivisionTimeSignatures` fails with "Invalid conversion".
   - Key signatures can't: reading `tonalityDivisions` raises "Trying to use unregistered class".
 
 ## S6: where print goes
@@ -138,18 +142,19 @@ Lua has no selection API, but a script can find out which notes are selected:
 3. Dump again. The notes whose spelling changed are the selection.
 4. Run `Edit.Undo` once. Inside a script it takes back everything that run has done, so the music is as it was.
 
-With one violin note selected, it found that note. With a second added (`EventEdit.NavigateRightExtend`), it found
-both. With nothing selected, it found nothing. Each time every stream's dump afterwards was identical to before.
+With one violin note selected it found that note, and with a second added (`EventEdit.NavigateRightExtend`) it found
+both. With nothing selected it found nothing. Each time, every stream's dump afterwards was identical to before.
 
-The costs: it uses the run's one `Edit.Undo` (a second would take back the user's own last edit), it finds notes
-and grace notes but no other items, a note that can't go a semitone higher won't show, and Edit > Redo afterwards
-would put the semitone back. The Remote API's status (`hasSelection`, `selectedEventType`: `kNoteEvent`, `kMixed`,
+The trick uses the run's one `Edit.Undo`, and a second would take back the user's own last edit. It finds notes and
+grace notes but no other items, it misses a note that can't go a semitone higher, and Edit > Redo afterwards would
+put the semitone back. The Remote API's status (`hasSelection`, `selectedEventType`: `kNoteEvent`, `kMixed`,
 `kNone`) says what kind of thing is selected, but only to a program outside Dorico.
 
 A later probe (`pitch_up_down.lua`) found a route with no undo. `NoteEdit.PitchUpOctave` then
 `NoteEdit.PitchDownOctave` gave every note back its exact spelling, Fb4, E#4, Ebb4 and Dx4 included, where a semitone
 up and down respelled them (G#4 came back as Ab4, E#4 as F4). Fundamental 07 uses the octave route, so the run has
-no undo and its later edits stay in its own undo step.
+no undo and its later edits stay in its own undo step. Moving a chord's C4 up an octave onto the chord's own C5 left
+two C5s, not one merged note, and moving it back down restored both (`tuplet_and_unison.lua`).
 
 ## S4: creating items
 
@@ -176,8 +181,8 @@ Each was tried with one piano note selected by id:
 
 ## Undo
 
-Probe: `undo_object_edits.py`, driving `undo_object_edits.lua` on seven fresh copies. This corrects the handbells
-plug-in's guide, which says object-model edits never enter the undo history. On Dorico 6.2.30 they do:
+Probe: `undo_object_edits.py`, driving `undo_object_edits.lua` on seven fresh copies. The handbells plug-in's guide
+says object-model edits never enter the undo history, but on Dorico 6.2.30 they do:
 
 - A run that only made a text (`createText`) was taken back by one Edit > Undo afterwards. So was a colour set with
   `propertyTable:set`.
@@ -189,8 +194,8 @@ plug-in's guide, which says object-model edits never enter the undo history. On 
 - A run that made a text and deleted it again still left an undo step. Edit > Undo afterwards used it up and left the
   user's earlier edit in place.
 
-The rule the examples follow: everything a run changes is one undo step, an undo inside a run takes back everything
-the run has done, and a run changes nothing after its one undo.
+The examples follow the rule that everything a run changes is one undo step, that an undo inside a run takes back
+everything the run has done, and that a run changes nothing after its one undo.
 
 ## S2: running a script from a key command
 
@@ -207,7 +212,8 @@ Probe: `s2_counter.lua`, rerun through the Remote API.
   `%APPDATA%\Steinberg\Dorico 6` (one per language; there is none until the user changes a key command). Dorico's own
   `C:\Program Files\Steinberg\Dorico6\keycommands_en.json` shows the shape, and that commands with parameters can
   be bound (`"File.Open?FilterID=MusicXMLImportFilter": [ "Ctrl+Shift+O" ]`). An entry in the `kGlobal` context's
-  `shortcuts` list would be `{ "Script.RunScript?ScriptPath=C:/path/to/script.lua&ShowConsole=false": [ "Ctrl+Alt+K" ] }`.
+  `shortcuts` list would be
+  `{ "Script.RunScript?ScriptPath=C:/path/to/script.lua&ShowConsole=false": [ "Ctrl+Alt+K" ] }`.
   ConsoleTools sets its keys up this way. It wasn't run here: it means editing the user's key-command file and
   restarting Dorico, which this repository's tests never do.
 

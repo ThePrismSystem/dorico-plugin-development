@@ -2,6 +2,10 @@
 --   "mixed-undo": text A, then Project.Flow.New, then text B, then Edit.Undo inside the run
 --   "mixed": text A, Project.Flow.New, text B, and no undo (the driver undoes afterwards)
 --   "text-only": text C and nothing else (the driver undoes afterwards)
+--   "undo-then-text": Project.Flow.New, Edit.Undo, then text D (the driver undoes afterwards)
+--   "text-and-delete": text E made and deleted in the same run
+--   "property": a colour set on the trumpet's second note through its property table
+--   "user-edit": renames flow 2 by command, standing in for the user's own edit before a run
 --   "report": nothing
 -- Every step reports which of the texts flow 1's first voice holds, and how many flows there are.
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
