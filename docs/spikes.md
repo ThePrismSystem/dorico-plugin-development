@@ -67,3 +67,42 @@ Probes: `s8_properties.lua`, `s8_colour_read.lua`.
   can tell that a note has a colour, but not which one, unless a script set it.
 - `UI.InvokePropertyChangeValue?Type=kNoteheadSetOverride&Value=string: "noteheadset.diamondNoteheads"` changed
   nothing.
+
+## S1: reading the selection
+
+Probes: `s1_read_selection.lua`, driven by `s1_selection.py`; `select_note.lua` makes the selections.
+
+Lua has no selection API, but a script can find out which notes are selected:
+
+1. Dump every voice stream.
+2. Run `NoteEdit.PitchUpChromatic`, which moves only the selected notes up a semitone.
+3. Dump again. The notes whose spelling changed are the selection.
+4. Run `Edit.Undo` once. Inside a script it takes back that run's own command edits, so the music is as it was.
+
+With one violin note selected, it found that note. With a second added (`EventEdit.NavigateRightExtend`), it found
+both. With nothing selected, it found nothing. Each time every stream's dump afterwards was identical to before.
+
+The costs: it uses the run's one `Edit.Undo` (a second would take back the user's own last edit), it finds notes
+and grace notes but no other items, a note that can't go a semitone higher won't show, and Edit > Redo afterwards
+would put the semitone back. The Remote API's status (`hasSelection`, `selectedEventType`: `kNoteEvent`, `kMixed`,
+`kNone`) says what kind of thing is selected, but only to a program outside Dorico.
+
+## S4: creating items
+
+Probes: `s4_create.lua` (commands sent from Lua), `s4_record.py` (Dorico's popovers, typed into the scratch window,
+with `application.log` read for the commands they ran).
+
+Each was tried with one piano note selected by id:
+
+- **Chord symbols:** `NoteInput.StartChordSymbolInput`, then
+  `NoteInput.AcceptCurrentChordSymbolTextInput?Definition=C7&ChordSymbolEntryAdvanceType=kEndInput`. This is what
+  the chord symbol popover runs. It makes a `kChordSymbolEvent` in the timebase stream, and the dump names it
+  (`kChordSymbolEvent (id:326) at 0  C  0`). The accept command alone makes nothing.
+- **Dynamics:** `NoteInput.CreateDynamic?Definition=mf` makes a `kDynamicGroupEvent` in the stave stream.
+  `Dynamic=ff` makes nothing.
+- **Staff text: never by command.** `NoteInput.CreateText` opens Dorico's text editor at the note and waits for
+  typing, and while it is open Dorico runs no scripts at all. Escape sent with an Alt press (to bring the window
+  forward) only toggles the menu bar; clicking empty paper closes the editor. Use `stream:createText(position,
+  duration, text)` instead, which the handbells plug-in has used throughout.
+- `NoteInput.CreatePlayingTechnique?Definition=pizz.` made nothing.
+- Dorico also has `Edit.GenerateChordSymbolsFromSelection`, its own chord detection, not tried here.
