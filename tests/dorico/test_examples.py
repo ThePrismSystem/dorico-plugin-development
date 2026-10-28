@@ -122,6 +122,8 @@ row("label_notes", RECIPES + "label-notes.lua",
 row("chord_symbols", RECIPES + "chord-symbols.lua",
     after=[then_command("Edit.Undo"), then_check("chord-symbols.one-undo.lua")]
     + [then_command("Edit.Undo")] * 10 + [then_check("chord-symbols.undone.lua")])
+row("chord_symbols_beside_existing_ones", RECIPES + "chord-symbols.lua",
+    check=CHECKS + "chord-symbols.existing.lua", before={"case": "case_chord.lua"})
 row("proofread", RECIPES + "proofread.lua", twice=True)
 row("instrument_report", RECIPES + "instrument-report.lua", twice=True)
 HOTKEY = RECIPES + "hotkey-colour-cycle.lua"

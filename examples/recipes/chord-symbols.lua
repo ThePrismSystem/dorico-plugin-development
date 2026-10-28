@@ -3,7 +3,8 @@
 -- starts, names the chord all its sounding notes make (both hands of a piano, any voice). Where the chord changes,
 -- it adds a chord symbol there, through the chord symbol popover's own commands, and prints "flow <n> at <position>:
 -- <chord>". Positions are quarter notes from the start of the flow.
--- Changes: adds chord symbols, and changes the selection.
+-- Changes: adds chord symbols where the flow has none, and changes the selection. A chord symbol already in place is
+-- left as it is, since entering another there would replace it.
 -- Undo: Edit > Undo takes the chord symbols back one at a time, three presses each: the chord symbol popover's
 -- commands make undo steps of their own, unlike the rest of a run (the sample's four took eleven presses). To
 -- remove them all at once, select the passage, filter the selection to chord symbols, and press Delete.
@@ -248,6 +249,17 @@ for n, flow in ipairs(score.flows) do
   end
   table.sort(onsets)
 
+  -- Chord symbols the flow already has, by position, from its timebase stream (type 0). Entering one where one
+  -- exists replaces it, so those places are left as they are.
+  local existing = {}
+  for _, stream in ipairs(flow.allStreams) do
+    if stream.type == 0 then
+      for _, ev in ipairs(dump.parse(stream:dump()).events) do
+        if ev.raw:match("^kChordSymbolEvent") then existing[ev.pos] = true end
+      end
+    end
+  end
+
   local last
   for _, at in ipairs(onsets) do
     local sounding, starter = {}, nil
@@ -257,13 +269,18 @@ for n, flow in ipairs(score.flows) do
     end
     local name = chords.name(sounding)
     if name and name ~= last then
-      app:doCommand("Edit.SelectNone")
-      app:doCommand(commands.build("EventEdit.Select", { { "FlowID", flow.id }, { "EventID", starter.id },
-        { "EventBlockID", blockIdOf(starter.stream, starter.id, starter.parsed) } }))
-      app:doCommand("NoteInput.StartChordSymbolInput")
-      app:doCommand(commands.build("NoteInput.AcceptCurrentChordSymbolTextInput", { { "Definition", name },
-        { "ChordSymbolEntryAdvanceType", "kEndInput" } }))
-      print(string.format("flow %d at %s: %s", n, tostring(at), name))
+      if existing[at] then
+        print(string.format("flow %d at %s: %s (a chord symbol is already there, left as it is)", n, tostring(at),
+          name))
+      else
+        app:doCommand("Edit.SelectNone")
+        app:doCommand(commands.build("EventEdit.Select", { { "FlowID", flow.id }, { "EventID", starter.id },
+          { "EventBlockID", blockIdOf(starter.stream, starter.id, starter.parsed) } }))
+        app:doCommand("NoteInput.StartChordSymbolInput")
+        app:doCommand(commands.build("NoteInput.AcceptCurrentChordSymbolTextInput", { { "Definition", name },
+          { "ChordSymbolEntryAdvanceType", "kEndInput" } }))
+        print(string.format("flow %d at %s: %s", n, tostring(at), name))
+      end
       count = count + 1
     end
     last = name or last
