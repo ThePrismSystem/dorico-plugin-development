@@ -61,15 +61,21 @@ def example_args(row):
     return args
 
 
-def options(client, kind, key, ident):
-    """Layout or notation options through the Remote API: {path: current value}."""
-    client.send({"message": "getoptions", "optionsType": kind, key: ident})
+def options(client, kind, key, ident, wait=15):
+    """Layout or notation options through the Remote API: {path: current value}. Straight after an Edit.Undo, Dorico
+    can answer kCommandNotAllowed while it finishes, so that answer is retried for a few seconds."""
+    deadline = time.time() + wait
     while True:
-        reply = client.recv()
-        if reply.get("message") == "optionslist":
-            return {o["path"]: o.get("currentValue") for o in reply["options"]}
-        if reply.get("message") == "response" and reply.get("code") != "kOK":
+        client.send({"message": "getoptions", "optionsType": kind, key: ident})
+        while True:
+            reply = client.recv()
+            if reply.get("message") == "optionslist":
+                return {o["path"]: o.get("currentValue") for o in reply["options"]}
+            if reply.get("message") == "response" and reply.get("code") != "kOK":
+                break
+        if reply.get("detail") != "kCommandNotAllowed" or time.time() > deadline:
             raise RuntimeError(f"getoptions {kind} {ident}: {reply}")
+        time.sleep(0.5)
 
 
 def click(window, button):

@@ -39,6 +39,32 @@ Probe: `select_and_lengths.lua`.
 - `DoCore.RhythmicLength(n)` keeps only the whole part of n: a text made at `RhythmicLength(0.5)` sits at 0.
   `RhythmicLength(n, d)` is n/d quarter notes, so `(3, 2)` put a text at 1.5 and `(7, 3)` at 7/3.
 
+## Command values
+
+Probe: `rename_escapes.lua`, renaming a player and a flow to each candidate and reading the names back.
+
+- A bare comma ends a value: `Name=A, B` names the player `A`. The sample's `Violin, solo & tutti` became `Violin`
+  this way. `\,` is a literal comma, as `\&` is an ampersand and `\\` a backslash, so `A\, B \& C` gives
+  `A, B & C`. Quotes are kept as part of the name. A semicolon needs nothing.
+- Undoing a rename can bring a transposing player's name back spelt differently. Renamed and then undone, `Trumpet
+  Zoë (B{@flat@})` came back as `Trumpet Zoë (B Flat)`.
+
+## Players, layouts and options
+
+Probes: `players_and_options.lua` with its driver `players_and_options.py`, and `options_undo.py`.
+
+- The ids Lua gives layouts and flows are the ids the Remote API's `getoptions` takes. In the sample, layout 0 is the
+  full score (it holds every player) and layouts 1 to 4 are the parts. Flows are 0 and 1.
+- In the sample each player's id is its first instrument's id, so `Project.Player.Rename?PlayerID=4` renamed the
+  player whose first instrument is 4, the one just added.
+- `score:addPlayer("instrument.strings.violin", false, 1)` returned a player named `Violin` and made a part layout
+  for it. The instrument ids are the `entityID` values in `instruments.xml` in Dorico's program folder.
+- After a run that added a player, renamed players, took the new player out of a flow and added a flow, one
+  Edit > Undo took all of it back.
+- Options are the exception. After fundamental 10 set a layout option and then a notation option, one Edit > Undo
+  took both back in four of six runs. In the other two (the first two) it took back only the notation option, and
+  a second undo the layout option. Nothing in the runs told them apart.
+
 ## S3: what the dump says
 
 Probes: `s3_dump_details.lua`, `s3_gap.lua`, `s3_element_tables.lua`.

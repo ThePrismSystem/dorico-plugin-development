@@ -147,6 +147,12 @@ return {
       "Project.Flow.Rename?FlowID=3&Name=Études \\& Sketches")
   end,
 
+  commands_escape_commas = function(t)
+    -- spikes/rename_escapes.lua: Dorico ends a value at a bare comma, so "Violin, solo & tutti" became "Violin".
+    local commands = helpers.load(COMMANDS, "commands")
+    t:eq(commands.value("Violin, solo & tutti"), "Violin\\, solo \\& tutti")
+  end,
+
   commands_refuse_nil = function(t)
     local commands = helpers.load(COMMANDS, "commands")
     t:fails(function() commands.value(nil) end)
