@@ -121,6 +121,7 @@ row("chord_symbols", RECIPES + "chord-symbols.lua",
     after=[then_command("Edit.Undo"), then_check("chord-symbols.one-undo.lua")]
     + [then_command("Edit.Undo")] * 10 + [then_check("chord-symbols.undone.lua")])
 row("proofread", RECIPES + "proofread.lua", twice=True)
+row("instrument_report", RECIPES + "instrument-report.lua", twice=True)
 
 
 class Examples(unittest.TestCase):
