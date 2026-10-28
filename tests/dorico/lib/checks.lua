@@ -12,6 +12,82 @@ function checks.expected()
   return expected
 end
 
+-- Helper blocks out of an example, loaded together (a later block may use an earlier one), as the value of the one
+-- named want. The same blocks the examples run, so the checks read the project the way the examples do.
+function checks.helper(example, names, want)
+  local f = assert(io.open(here .. "../../../" .. example, "rb"))
+  local source = f:read("*a")
+  f:close()
+  local parts = {}
+  for _, name in ipairs(names) do
+    parts[#parts + 1] = assert(source:match("\n%-%- helper: " .. name .. "\r?\n(.-)\n%-%- end helper: " .. name),
+      "no helper " .. name .. " in " .. example)
+  end
+  return assert(load(table.concat(parts, "\n") .. "\nreturn " .. want, "=" .. example))()
+end
+
+-- {[flow number] = title}, from the text export.
+function checks.flowTitles()
+  local export = checks.helper("examples/fundamentals/05-names-from-the-text-export.lua", { "commands", "export" },
+    "export")
+  local titles = {}
+  for _, rec in ipairs(export.records(DoApp.DoApp(), export.folder(), "checks-flow-titles")) do
+    if rec.Type == "Flow Info (Title)" and tonumber(rec.FlowNumber) then titles[tonumber(rec.FlowNumber)] = rec.Text end
+  end
+  return titles
+end
+
+-- Every note's spelling, position and duration, against expected.json: whether the music is as the sample has it.
+function checks.musicUnchanged(p)
+  local dump = checks.helper("examples/fundamentals/03-read-notes.lua", { "dump" }, "dump")
+  local want = checks.expected()
+  local score = DoApp.DoApp().currentScore
+  for n, flow in ipairs(want.flows) do
+    local got, wanted = {}, {}
+    for _, stream in ipairs(score.flows[n].voiceStreams) do
+      for _, note in ipairs(dump.notes(dump.parse(stream:dump()))) do
+        got[#got + 1] = table.concat({ note.spelling, tostring(note.pos), tostring(note.duration) }, "|")
+      end
+    end
+    for _, player in ipairs(flow.players) do
+      for _, note in ipairs(player.notes) do
+        wanted[#wanted + 1] = table.concat({ note.spelling, tostring(note.pos),
+          tostring(not note.grace and note.duration or nil) }, "|")
+      end
+    end
+    p:check("flow " .. n .. "'s notes are as they were", checks.joined(got) == checks.joined(wanted),
+      "got " .. checks.joined(got))
+  end
+end
+
+-- The text events in every voice stream of a flow, as "<pos>|<text>".
+function checks.texts(flowNumber)
+  local dump = checks.helper("examples/fundamentals/03-read-notes.lua", { "dump" }, "dump")
+  local out = {}
+  for _, stream in ipairs(DoApp.DoApp().currentScore.flows[flowNumber].voiceStreams) do
+    for _, ev in ipairs(dump.parse(stream:dump()).events) do
+      if ev.kind == "text" then out[#out + 1] = tostring(ev.pos) .. "|" .. tostring(ev.text) end
+    end
+  end
+  return out
+end
+
+-- "<flow>|<player>|<pos>|<spelling>" for every note in the sample higher than spelling (sounding pitch).
+function checks.notesAbove(spelling)
+  local midi = checks.helper("examples/fundamentals/08-select-by-id.lua", { "midi" }, "midi")
+  local keys = {}
+  for n, flow in ipairs(checks.expected().flows) do
+    for _, player in ipairs(flow.players) do
+      for _, note in ipairs(player.notes) do
+        if midi(note.spelling) > midi(spelling) then
+          keys[#keys + 1] = table.concat({ n, player.name, tostring(note.pos), note.spelling }, "|")
+        end
+      end
+    end
+  end
+  return keys
+end
+
 -- A printed line's tab-separated columns.
 function checks.fields(line)
   local out = {}

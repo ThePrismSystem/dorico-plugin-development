@@ -1,6 +1,6 @@
 -- Runs one example as the Script menu would, with print recorded, then a check script that looks at what it did.
 -- Scratch copy only (the probe confirms it).
---   args.example, args.check: paths from the repository root
+--   args.example, args.check: paths from the repository root (with no example, only the check runs)
 --   args.twice: run the example a second time first, as a user might, in Dorico's one Lua state
 -- A check file returns function(p, run, args), where run = {printed, ok, err, second}.
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
@@ -25,6 +25,11 @@ local function runExample(path)
 end
 
 probe.run("case_example", function(p)
+  if not p.args.example then
+    local check = assert(loadfile(repo .. p.args.check))()
+    check(p, { printed = {}, ok = true }, p.args)
+    return
+  end
   local first = runExample(repo .. p.args.example)
   local run = first
   if p.args.twice then

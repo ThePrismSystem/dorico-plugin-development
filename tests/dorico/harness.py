@@ -54,7 +54,11 @@ def run_more(test, client, case, args=None, timeout=600, expect_ok=True):
 
 
 def example_args(row):
-    return {"example": row["example"], "check": row["check"], "twice": bool(row.get("twice")), **row.get("args", {})}
+    """case_example.lua's args for a row, or for a step with no example (then only its check runs)."""
+    args = {"check": row["check"], "twice": bool(row.get("twice")), **row.get("args", {})}
+    if row.get("example"):
+        args["example"] = row["example"]
+    return args
 
 
 def options(client, kind, key, ident):

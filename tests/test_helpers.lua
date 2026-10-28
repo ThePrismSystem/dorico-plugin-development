@@ -5,6 +5,9 @@ local helpers = require("helpers")
 local READ_NOTES = "examples/fundamentals/03-read-notes.lua"
 local NAMES = "examples/fundamentals/05-names-from-the-text-export.lua"
 local HELLO = "examples/fundamentals/01-hello.lua"
+local COMMANDS = "examples/fundamentals/06-commands.lua"
+local SELECTION = "examples/fundamentals/07-act-on-the-selection.lua"
+local BY_ID = "examples/fundamentals/08-select-by-id.lua"
 
 local function parse(lines)
   return helpers.load(READ_NOTES, "dump").parse(table.concat(lines, "\n") .. "\n")
@@ -134,6 +137,60 @@ return {
     local printed = withDorico(hub, function() _, score = guard() end)
     t:eq(score, nil)
     t:eq(printed[1], "Open a project first, then run this script again.")
+  end,
+
+  commands_escape_backslash_and_ampersand = function(t)
+    local commands = helpers.load(COMMANDS, "commands")
+    t:eq(commands.value("Handbells (P&F)"), "Handbells (P\\&F)")
+    t:eq(commands.value("C:\\Users\\me"), "C:\\\\Users\\\\me")
+    t:eq(commands.build("Project.Flow.Rename", { { "FlowID", 3 }, { "Name", "Études & Sketches" } }),
+      "Project.Flow.Rename?FlowID=3&Name=Études \\& Sketches")
+  end,
+
+  commands_refuse_nil = function(t)
+    local commands = helpers.load(COMMANDS, "commands")
+    t:fails(function() commands.value(nil) end)
+    t:fails(function() commands.build("Project.Flow.Rename", { { "FlowID", nil } }) end)
+  end,
+
+  commands_keep_equals_signs = function(t)
+    local commands = helpers.load(COMMANDS, "commands")
+    t:eq(commands.value("A=440"), "A=440")
+    t:eq(commands.build("Edit.SelectNone", {}), "Edit.SelectNone", "no parameters, no question mark")
+  end,
+
+  midi_reads_sharps_flats_and_octaves = function(t)
+    local midi = helpers.load(BY_ID, "midi")
+    t:eq(midi("C4"), 60)
+    t:eq(midi("A4"), 69)
+    t:eq(midi("F#5"), 78)
+    t:eq(midi("Eb4"), 63)
+    t:eq(midi("Bb2"), 46)
+    t:eq(midi("Cb4"), 59, "the octave goes with the letter")
+    t:eq(midi("B#3"), 60)
+    t:eq(midi("Fx4"), 67, "a double sharp")
+    t:eq(midi("Ebb4"), 62, "a double flat")
+    t:eq(midi("C-1"), 0)
+    t:eq(midi("not a note"), nil)
+  end,
+
+  length_makes_fractions_of_a_quarter_note = function(t)
+    local length = helpers.load(SELECTION, "length")
+    local made = {}
+    local realCore = DoCore
+    DoCore = { RhythmicLength = function(n, d) made[#made + 1] = n .. "/" .. tostring(d) end }
+    local ok, err = pcall(function()
+      length(4)
+      length(1.5)
+      length(7 / 3)
+      length(0)
+    end)
+    DoCore = realCore
+    if not ok then error(err, 0) end
+    t:eq(made[1], "4/1")
+    t:eq(made[2], "3/2", "RhythmicLength(1.5) would give 0 quarters and a half lost")
+    t:eq(made[3], "7/3")
+    t:eq(made[4], "0/1")
   end,
 
   guard_returns_the_open_project = function(t)

@@ -27,6 +27,18 @@ Probe: `export_names.lua`, which puts a marker text in every voice stream, expor
   `FlowNumber`.
 - Lyrics and dynamics have rows of their own, each naming its instrument.
 
+## Commands, selections and lengths
+
+Probe: `select_and_lengths.lua`.
+
+- `app:doCommand` returns nil, for a command that worked and for one Dorico doesn't know (`No.Such.Command`)
+  alike. A script learns whether a command did anything only by reading the project afterwards.
+- A second `EventEdit.Select` replaces the selection. With two violin notes selected by id one after the other, the
+  S1 trick found only the second. To select a run of notes, select the first and add the rest with
+  `EventEdit.NavigateRightExtend`.
+- `DoCore.RhythmicLength(n)` keeps only the whole part of n: a text made at `RhythmicLength(0.5)` sits at 0.
+  `RhythmicLength(n, d)` is n/d quarter notes, so `(3, 2)` put a text at 1.5 and `(7, 3)` at 7/3.
+
 ## S3: what the dump says
 
 Probes: `s3_dump_details.lua`, `s3_gap.lua`, `s3_element_tables.lua`.
