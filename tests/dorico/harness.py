@@ -16,8 +16,10 @@ import fixture_versions  # noqa: E402
 import run_lua  # noqa: E402
 
 SAMPLE = fixture_versions.newest("sample.dorico")
-# The projects an example can run on: the sample, or the reading fixture, which has one of each kind of item.
-PROJECTS = {None: SAMPLE, "reading": fixture_versions.newest("reading.dorico")}
+# The projects an example can run on: the sample, the reading fixture, which has one of each kind of item, and
+# the fixtures built for single recipes.
+PROJECTS = {None: SAMPLE, "reading": fixture_versions.newest("reading.dorico"),
+            "parallels": fixture_versions.newest("parallels.dorico")}
 SCRATCH = run_lua.RUN_DIR / "scratch.dorico"
 CLICK = ROOT / "tools" / "click.ps1"
 PRESS = ROOT / "tools" / "press.ps1"

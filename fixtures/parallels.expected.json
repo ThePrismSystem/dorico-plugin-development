@@ -1,0 +1,394 @@
+{
+ "players": [
+  "Flute",
+  "Violin",
+  "Viola",
+  "Bassoon",
+  "Cello"
+ ],
+ "notes": [
+  {
+   "player": "Flute",
+   "pos": 0,
+   "spelling": "D5",
+   "pitch": 74
+  },
+  {
+   "player": "Flute",
+   "pos": 1,
+   "spelling": "E5",
+   "pitch": 76
+  },
+  {
+   "player": "Flute",
+   "pos": 16,
+   "spelling": "G4",
+   "pitch": 67
+  },
+  {
+   "player": "Flute",
+   "pos": 17,
+   "spelling": "A4",
+   "pitch": 69
+  },
+  {
+   "player": "Flute",
+   "pos": 24,
+   "spelling": "C5",
+   "pitch": 72
+  },
+  {
+   "player": "Flute",
+   "pos": 25,
+   "spelling": "C5",
+   "pitch": 72
+  },
+  {
+   "player": "Flute",
+   "pos": 32,
+   "spelling": "D5",
+   "pitch": 74
+  },
+  {
+   "player": "Flute",
+   "pos": 34,
+   "spelling": "E5",
+   "pitch": 76
+  },
+  {
+   "player": "Flute",
+   "pos": 48,
+   "spelling": "D5",
+   "pitch": 74
+  },
+  {
+   "player": "Flute",
+   "pos": 49,
+   "spelling": "G5",
+   "pitch": 79
+  },
+  {
+   "player": "Flute",
+   "pos": 56,
+   "spelling": "C5",
+   "pitch": 72
+  },
+  {
+   "player": "Flute",
+   "pos": 57,
+   "spelling": "D5",
+   "pitch": 74
+  },
+  {
+   "player": "Violin",
+   "pos": 8,
+   "spelling": "C5",
+   "pitch": 72
+  },
+  {
+   "player": "Violin",
+   "pos": 9,
+   "spelling": "D5",
+   "pitch": 74
+  },
+  {
+   "player": "Violin",
+   "pos": 16,
+   "spelling": "G4",
+   "pitch": 67
+  },
+  {
+   "player": "Violin",
+   "pos": 17,
+   "spelling": "A4",
+   "pitch": 69
+  },
+  {
+   "player": "Violin",
+   "pos": 40,
+   "spelling": "C4",
+   "pitch": 60
+  },
+  {
+   "player": "Violin",
+   "pos": 41,
+   "spelling": "D4",
+   "pitch": 62
+  },
+  {
+   "player": "Viola",
+   "pos": 8,
+   "spelling": "C4",
+   "pitch": 60
+  },
+  {
+   "player": "Viola",
+   "pos": 9,
+   "spelling": "D4",
+   "pitch": 62
+  },
+  {
+   "player": "Viola",
+   "pos": 40,
+   "spelling": "G4",
+   "pitch": 67
+  },
+  {
+   "player": "Viola",
+   "pos": 41,
+   "spelling": "A4",
+   "pitch": 69
+  },
+  {
+   "player": "Bassoon",
+   "pos": 0,
+   "spelling": "G3",
+   "pitch": 55
+  },
+  {
+   "player": "Bassoon",
+   "pos": 1,
+   "spelling": "A3",
+   "pitch": 57
+  },
+  {
+   "player": "Bassoon",
+   "pos": 24,
+   "spelling": "F3",
+   "pitch": 53
+  },
+  {
+   "player": "Bassoon",
+   "pos": 25,
+   "spelling": "F3",
+   "pitch": 53
+  },
+  {
+   "player": "Bassoon",
+   "pos": 32,
+   "spelling": "G3",
+   "pitch": 55
+  },
+  {
+   "player": "Bassoon",
+   "pos": 34,
+   "spelling": "A3",
+   "pitch": 57
+  },
+  {
+   "player": "Bassoon",
+   "pos": 48,
+   "spelling": "A2",
+   "pitch": 45
+  },
+  {
+   "player": "Bassoon",
+   "pos": 49,
+   "spelling": "C3",
+   "pitch": 48
+  },
+  {
+   "player": "Bassoon",
+   "pos": 56,
+   "spelling": "C3",
+   "pitch": 48
+  },
+  {
+   "player": "Bassoon",
+   "pos": 57,
+   "spelling": "D2",
+   "pitch": 38
+  },
+  {
+   "player": "Bassoon",
+   "pos": 64,
+   "spelling": "C2",
+   "pitch": 36
+  },
+  {
+   "player": "Bassoon",
+   "pos": 65,
+   "spelling": "D2",
+   "pitch": 38
+  },
+  {
+   "player": "Bassoon",
+   "pos": 66,
+   "spelling": "E2",
+   "pitch": 40
+  },
+  {
+   "player": "Bassoon",
+   "pos": 67,
+   "spelling": "F2",
+   "pitch": 41
+  },
+  {
+   "player": "Bassoon",
+   "pos": 68,
+   "spelling": "G2",
+   "pitch": 43
+  },
+  {
+   "player": "Bassoon",
+   "pos": 69,
+   "spelling": "A2",
+   "pitch": 45
+  },
+  {
+   "player": "Bassoon",
+   "pos": 76,
+   "spelling": "E2",
+   "pitch": 40
+  },
+  {
+   "player": "Bassoon",
+   "pos": 77,
+   "spelling": "F2",
+   "pitch": 41
+  },
+  {
+   "player": "Cello",
+   "pos": 64,
+   "spelling": "C3",
+   "pitch": 48
+  },
+  {
+   "player": "Cello",
+   "pos": 65,
+   "spelling": "D3",
+   "pitch": 50
+  },
+  {
+   "player": "Cello",
+   "pos": 66,
+   "spelling": "E3",
+   "pitch": 52
+  },
+  {
+   "player": "Cello",
+   "pos": 67,
+   "spelling": "F3",
+   "pitch": 53
+  },
+  {
+   "player": "Cello",
+   "pos": 68,
+   "spelling": "G3",
+   "pitch": 55
+  },
+  {
+   "player": "Cello",
+   "pos": 69,
+   "spelling": "A3",
+   "pitch": 57
+  },
+  {
+   "player": "Cello",
+   "pos": 76,
+   "spelling": "E3",
+   "pitch": 52
+  },
+  {
+   "player": "Cello",
+   "pos": 77,
+   "spelling": "F3",
+   "pitch": 53
+  }
+ ],
+ "findings": {
+  "default": [
+   {
+    "kind": "fifths",
+    "pos": 1,
+    "a": "Flute",
+    "b": "Bassoon"
+   },
+   {
+    "kind": "octaves",
+    "pos": 9,
+    "a": "Violin",
+    "b": "Viola"
+   },
+   {
+    "kind": "unisons",
+    "pos": 17,
+    "a": "Flute",
+    "b": "Violin"
+   },
+   {
+    "kind": "fifths",
+    "pos": 41,
+    "a": "Violin",
+    "b": "Viola"
+   },
+   {
+    "kind": "octaves",
+    "pos": 77,
+    "a": "Bassoon",
+    "b": "Cello"
+   }
+  ],
+  "hiddenAndContrary": [
+   {
+    "kind": "hidden fifths",
+    "pos": 49,
+    "a": "Flute",
+    "b": "Bassoon"
+   },
+   {
+    "kind": "contrary octaves",
+    "pos": 57,
+    "a": "Flute",
+    "b": "Bassoon"
+   }
+  ],
+  "doublings": [
+   {
+    "kind": "octaves",
+    "pos": 65,
+    "a": "Bassoon",
+    "b": "Cello"
+   },
+   {
+    "kind": "octaves",
+    "pos": 66,
+    "a": "Bassoon",
+    "b": "Cello"
+   },
+   {
+    "kind": "octaves",
+    "pos": 67,
+    "a": "Bassoon",
+    "b": "Cello"
+   },
+   {
+    "kind": "octaves",
+    "pos": 68,
+    "a": "Bassoon",
+    "b": "Cello"
+   },
+   {
+    "kind": "octaves",
+    "pos": 69,
+    "a": "Bassoon",
+    "b": "Cello"
+   }
+  ]
+ },
+ "userColours": [
+  {
+   "player": "Flute",
+   "pos": 1,
+   "colour": "#ffff0000",
+   "how": "byId"
+  },
+  {
+   "player": "Bassoon",
+   "pos": 24,
+   "colour": "#ff00ff00",
+   "how": "panel"
+  }
+ ],
+ "mark": "#ffd81b60"
+}

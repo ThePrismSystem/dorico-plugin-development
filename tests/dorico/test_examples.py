@@ -39,6 +39,11 @@ def then_check(check, example=None):
     return {"example": example, "check": CHECKS + check}
 
 
+def then_dialog(check, example, dialog, args=None):
+    """A step that runs an example again on the same copy, answering its box, then its check."""
+    return {"example": example, "check": CHECKS + check, "dialog": dialog, "args": args or {}}
+
+
 def then_command(command):
     return {"command": command}
 
@@ -143,9 +148,40 @@ row("hotkey_colour_cycle", HOTKEY,
            then_check("hotkey-colour-cycle.restart.lua", HOTKEY),
            then_check("hotkey-colour-cycle.coloured.lua", READ_COLOURS)])
 
+PARALLELS = RECIPES + "parallel-fifths.lua"
+PARALLELS_OK = {"window": "Parallel fifths and octaves", "button": "OK", "fields": []}
+row("parallel_fifths", PARALLELS, project="parallels", before=OPEN_FIRST, dialog=PARALLELS_OK,
+    after=[then_dialog("parallel-fifths.lua", PARALLELS, PARALLELS_OK),
+           then_dialog("parallel-fifths.none.lua", PARALLELS,
+                       {"window": "Parallel fifths and octaves", "button": "OK", "fields": [("check", 6, True)]})])
+row("parallel_fifths_with_hidden_and_contrary", PARALLELS, project="parallels", before=OPEN_FIRST,
+    args={"findings": ["default", "hiddenAndContrary"]},
+    dialog={"window": "Parallel fifths and octaves", "button": "OK",
+            "fields": [("check", 0, True), ("check", 1, True)]})
+row("parallel_fifths_undone", PARALLELS, project="parallels", before=OPEN_FIRST, dialog=PARALLELS_OK,
+    after=[then_command("Edit.Undo"), then_check("parallel-fifths.none.lua")])
+row("parallel_fifths_cancelled", PARALLELS, project="parallels", before=OPEN_FIRST,
+    check=CHECKS + "parallel-fifths.none.lua", args={"cancelled": True},
+    dialog={"window": "Parallel fifths and octaves", "button": "Cancel"})
 
 class Examples(unittest.TestCase):
     pass
+
+
+def run_answering(test, client, args, box):
+    """Run case_example.lua in the background while answering the example's box, and give back the result."""
+    run = harness.Background(lambda: harness.run_more(test, client, "case_example.lua", args, timeout=180,
+                                                      expect_ok=False))
+    if "fields" in box:
+        answered = harness.answer_form(box["window"], box["button"], box["fields"])
+    else:
+        answered = harness.answer(box["window"], box["button"], box.get("text"))
+    if not answered:
+        # Dorico runs nothing else while the box is open, so close it before failing.
+        harness.click(box["window"], "Cancel")
+    result = harness.check(test, run.join(240), "case_example.lua")
+    test.assertTrue(answered, f"couldn't answer the '{box['window']}' box")
+    return result
 
 
 def make_test(spec):
@@ -155,19 +191,7 @@ def make_test(spec):
             ("case_example.lua", harness.example_args(spec))
         with harness.scratch(self, first, args=first_args, open_file=spec["project"]) as (client, result):
             if spec["dialog"]:
-                box = spec["dialog"]
-                run = harness.Background(lambda: harness.run_more(self, client, "case_example.lua",
-                                                                  harness.example_args(spec), timeout=180,
-                                                                  expect_ok=False))
-                if "fields" in box:
-                    answered = harness.answer_form(box["window"], box["button"], box["fields"])
-                else:
-                    answered = harness.answer(box["window"], box["button"], box.get("text"))
-                if not answered:
-                    # Dorico runs nothing else while the box is open, so close it before failing.
-                    harness.click(box["window"], "Cancel")
-                result = harness.check(self, run.join(240), "case_example.lua")
-                self.assertTrue(answered, f"couldn't answer the '{box['window']}' box")
+                result = run_answering(self, client, harness.example_args(spec), spec["dialog"])
             elif before:
                 result = harness.run_more(self, client, "case_example.lua", harness.example_args(spec))
             printed = (result.get("facts") or {}).get("printed") or []
@@ -176,6 +200,8 @@ def make_test(spec):
                     client.command(step["command"])
                 elif "python" in step:
                     step["python"](self, client, printed)
+                elif "dialog" in step:
+                    run_answering(self, client, harness.example_args(step), step["dialog"])
                 else:
                     harness.run_more(self, client, "case_example.lua", harness.example_args(step))
     return test

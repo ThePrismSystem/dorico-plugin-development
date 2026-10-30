@@ -21,6 +21,11 @@ function checks.reading()
   return readJson("reading.expected.json")
 end
 
+-- Any JSON file in fixtures/, by name.
+function checks.json(name)
+  return readJson(name)
+end
+
 -- The open project as the reader sees it, from a saved copy: the score, and the score and values modules.
 function checks.savedCopy()
   local lib = here .. "../../../lib/?.lua"
