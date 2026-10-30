@@ -103,9 +103,6 @@ load the reader from `lib/`, so copy the `lib` folder into Script Plug-ins besid
 | [instrument-report](examples/recipes/instrument-report.lua) | Lists each flow's players, instruments, note counts and the most playing at once. | No |
 | [hotkey-colour-cycle](examples/recipes/hotkey-colour-cycle.lua) | Colours the selection, moving to the next colour on each quick rerun. | Yes; one Edit > Undo per run |
 
-A script that makes and deletes marker texts (instrument-report) leaves the project as it was, but the markers still
-make an undo step, so one Edit > Undo straight afterwards changes nothing you can see.
-
 ## What the probes changed
 
 Some examples are smaller than planned, or work differently, because a probe showed what Dorico allows
