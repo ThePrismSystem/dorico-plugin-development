@@ -1,0 +1,9 @@
+[extend]
+useDefault = true
+
+# The generic-api-key rule reads the reader's tree lookups, such as tree.path(tr, key, "root/root/accidentalID"), as
+# a key and its value.
+[[allowlists]]
+description = "tree lookups by a key node"
+regexTarget = "match"
+regexes = ['''key, "root/root/\w+"''']
