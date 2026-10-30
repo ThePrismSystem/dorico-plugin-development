@@ -2,7 +2,9 @@
 -- What it does: reads a saved copy and asks what to find, whether to replace it, and where to look (a flow, a player,
 -- a range of bars). Find lists every match (what it is, flow, bar and beat, player, the words) and selects the first.
 -- Replace rebuilds each match with the new words, lists those it can't rebuild exactly, which it leaves as they are,
--- and reads the project back to list any change Dorico didn't make as asked.
+-- and reads the project back to list any change Dorico didn't make as asked. Bars, in the box and in what it lists,
+-- are counted from 1 at the start of each flow (an opening pickup is bar 0) and take no account of bar number
+-- changes, so after a change they differ from the numbers Dorico shows.
 -- Changes: in Replace, deletes each text or lyric it replaces and enters the new one in its place, and enters each new
 -- chord symbol over the old one. Find changes nothing in the project, though it leaves note input and switches to
 -- Write mode to select the first match.
