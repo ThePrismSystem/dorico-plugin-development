@@ -15,7 +15,9 @@ vulnerability**, and describe what you found. Please don't open a public issue f
 Most examples change the open project. Each one's opening comment lines say what it changes and how to undo it.
 
 The examples that read the whole score have Dorico save a copy of the open project into the temp folder, then read
-the copy and delete it. Saving the copy adds nothing to the project's undo history. Fundamental 15 has Dorico export
+the copy and delete it. Saving the copy doesn't change the project's own file, its path or its unsaved mark
+([probed](https://github.com/ThePrismSystem/handbells-used-chart-dorico-plugin/blob/main/spike/52_save_copy.lua) for
+the Handbells Used Chart plug-in), and adds nothing to its undo history. Fundamental 15 has Dorico export
 every text in the project as a CSV into the temp folder, then reads the CSV and deletes it.
 
 ## Programs they start
