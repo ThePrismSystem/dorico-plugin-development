@@ -69,7 +69,7 @@ do
   function bars.starts(divisions, endPos)
     local out, length = {}, nil
     local d1 = divisions[1]
-    local base = (d1 and d1.pos == 0 and d1.numerator and d1.pickup) and -1 or 0
+    local base = (d1 and d1.pos == 0 and d1.numerator and d1.pickup and d1.pickup > 0) and -1 or 0
     local function add(pos, len, offset)
       out[#out + 1] = { bar = #out + 1 + base, pos = pos, length = len, offset = offset or 0 }
     end

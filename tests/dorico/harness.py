@@ -22,6 +22,7 @@ PROJECTS = {None: SAMPLE, "reading": fixture_versions.newest("reading.dorico"),
             "parallels": fixture_versions.newest("parallels.dorico"),
             "cautionary": fixture_versions.newest("cautionary.dorico"),
             "texts": fixture_versions.newest("texts.dorico"),
+            "pickup": fixture_versions.newest("pickup.dorico"),
             "somervell": fixture_versions.newest("Somervell_Shropshire_Lad.dorico")}
 SCRATCH = run_lua.RUN_DIR / "scratch.dorico"
 CLICK = ROOT / "tools" / "click.ps1"

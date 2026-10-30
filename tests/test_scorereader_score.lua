@@ -369,6 +369,13 @@ return {
     t:eq(time.numerator, 4)
     t:eq(time.pickup and pos(time.pickup), "1", "a one-beat pickup")
     t:eq(events(load("6.2.30/reading.dorico"), "timeSignature")[1].pickup, nil, "no pickup, no field")
+    local somervell = {}
+    for _, e in ipairs(events(load("6.1.10/Somervell_Shropshire_Lad.dorico"), "timeSignature")) do
+      if e.pickup then somervell[#somervell + 1] = e.numerator .. "/" .. e.denominator .. " " .. pos(e.pickup) end
+    end
+    t:eq(table.concat(somervell, ", "), "4/4 1/2, 4/4 1, 4/4 1/2, 6/8 1/2",
+      "eighth-note pickups, and a quarter-note one, in flows 1, 5, 9 and 10")
+    t:eq(pos(events(load("6.1.0/Purcell_Remember.dorico"), "timeSignature")[1].pickup), "1", "Purcell's one beat")
   end,
   a_diminuendo_and_messa_di_voce = function(t)
     local function hairpinWith(field, v)

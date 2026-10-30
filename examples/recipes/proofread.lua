@@ -70,7 +70,7 @@ do
   function bars.starts(divisions, endPos)
     local out, length = {}, nil
     local d1 = divisions[1]
-    local base = (d1 and d1.pos == 0 and d1.numerator and d1.pickup) and -1 or 0
+    local base = (d1 and d1.pos == 0 and d1.numerator and d1.pickup and d1.pickup > 0) and -1 or 0
     local function add(pos, len, offset)
       out[#out + 1] = { bar = #out + 1 + base, pos = pos, length = len, offset = offset or 0 }
     end
@@ -147,18 +147,23 @@ local score = require("scorereader.score")
 local values = require("scorereader.values")
 
 -- Where each flow's bars start, from its time signatures, as 09 does.
+-- helper: barsOf
+-- Where a flow's bars start, through the bars helper, from the time signatures in its timebase stream. A time
+-- signature in any other stream is left out.
 local function barsOf(flow)
   local divisions, endPos = {}, 0
   for _, e in ipairs(flow.events) do
-    endPos = math.max(endPos, values.toNumber(e.position) + values.toNumber(e.duration))
-    if e.kind == "timeSignature" then
-      divisions[#divisions + 1] = { pos = values.toNumber(e.position), numerator = e.numerator,
-        denominator = e.denominator, pickup = e.pickup and values.toNumber(e.pickup) }
+    local pos = values.toNumber(e.position)
+    endPos = math.max(endPos, pos + values.toNumber(e.duration))
+    if e.kind == "timeSignature" and flow.streamById[e.streamId].type == "timebase" then
+      divisions[#divisions + 1] = { pos = pos, numerator = e.numerator, denominator = e.denominator,
+        pickup = e.pickup and values.toNumber(e.pickup) }
     end
   end
   table.sort(divisions, function(a, b) return a.pos < b.pos end)
   return bars.starts(divisions, endPos)
 end
+-- end helper: barsOf
 
 local total = 0
 for n, flow in ipairs(s.flows) do

@@ -35,6 +35,13 @@ local function spans(starts)
   return table.concat(out, " ")
 end
 
+-- The same with each bar's number, as "<bar>@<pos>+<length>".
+local function brief(starts)
+  local out = {}
+  for _, b in ipairs(starts) do out[#out + 1] = b.bar .. "@" .. b.pos .. "+" .. b.length end
+  return table.concat(out, " ")
+end
+
 local function writeFile(path, text)
   local f = assert(io.open(path, "wb"))
   f:write(text)
@@ -356,9 +363,7 @@ return {
   bars_from_time_signatures = function(t)
     local starts = helpers.load(BARS, "bars").starts({ { pos = 0, numerator = 4, denominator = 4 },
       { pos = 8, numerator = 3, denominator = 4 } }, 14)
-    local got = {}
-    for _, b in ipairs(starts) do got[#got + 1] = b.bar .. "@" .. b.pos .. "+" .. b.length end
-    t:eq(table.concat(got, " "), "1@0+4 2@4+4 3@8+3 4@11+3")
+    t:eq(brief(starts), "1@0+4 2@4+4 3@8+3 4@11+3")
   end,
 
   a_time_signature_partway_through_a_bar_cuts_it_short = function(t)
@@ -425,22 +430,44 @@ return {
   bars_after_a_pickup = function(t)
     local bars = helpers.load(BARS, "bars")
     local starts = bars.starts({ { pos = 0, numerator = 4, denominator = 4, pickup = 1 } }, 9)
-    local got = {}
-    for _, b in ipairs(starts) do got[#got + 1] = b.bar .. "@" .. b.pos .. "+" .. b.length end
-    t:eq(table.concat(got, " "), "0@0+1 1@1+4 2@5+4", "the pickup is bar 0")
+    t:eq(brief(starts), "0@0+1 1@1+4 2@5+4", "the pickup is bar 0")
     local bar, beat = bars.at(starts, 0)
     t:eq(bar .. "/" .. beat, "0/4", "a one-beat pickup is on beat 4")
     bar, beat = bars.at(starts, 1)
     t:eq(bar .. "/" .. beat, "1/1")
   end,
 
+  a_pickup_of_nothing_leaves_the_first_bar_bar_1 = function(t)
+    local starts = helpers.load(BARS, "bars").starts({ { pos = 0, numerator = 4, denominator = 4, pickup = 0 } }, 8)
+    t:eq(brief(starts), "1@0+4 2@4+4")
+  end,
+
+  bars_of_a_flow_start_with_its_pickup = function(t)
+    local values = require("scorereader.values")
+    local s = require("scorereader.score").readFile(ROOT .. "fixtures/6.2.30/pickup.dorico")
+    local barsOf = helpers.load(PROOFREAD, "barsOf", { bars = helpers.load(BARS, "bars"), values = values })
+    t:eq(brief(barsOf(s.flows[1])):match("^%S+ %S+"), "0@0+1 1@1+4", "a one-beat pickup in 4/4")
+  end,
+
+  bars_of_a_flow_leave_out_a_time_signature_outside_the_timebase_stream = function(t)
+    local values = require("scorereader.values")
+    local barsOf = helpers.load(PROOFREAD, "barsOf", { bars = helpers.load(BARS, "bars"), values = values })
+    local zero = values.position("0")
+    local flow = { streamById = { [1] = { type = "timebase" }, [2] = { type = "stave" }, [3] = { type = "voice" } },
+      events = {
+        { kind = "timeSignature", streamId = 1, position = zero, duration = zero, numerator = 4, denominator = 4 },
+        { kind = "timeSignature", streamId = 2, position = values.position("2"), duration = zero, numerator = 2,
+          denominator = 4 },
+        { kind = "note", streamId = 3, position = zero, duration = values.position("8") },
+      } }
+    t:eq(brief(barsOf(flow)), "1@0+4 2@4+4")
+  end,
+
   a_short_first_bar_after_a_later_time_signature = function(t)
     local bars = helpers.load(BARS, "bars")
     local starts = bars.starts({ { pos = 0, numerator = 4, denominator = 4 },
       { pos = 8, numerator = 3, denominator = 4, pickup = 2 } }, 15)
-    local got = {}
-    for _, b in ipairs(starts) do got[#got + 1] = b.bar .. "@" .. b.pos .. "+" .. b.length end
-    t:eq(table.concat(got, " "), "1@0+4 2@4+4 3@8+2 4@10+3 5@13+2")
+    t:eq(brief(starts), "1@0+4 2@4+4 3@8+2 4@10+3 5@13+2")
     local bar, beat = bars.at(starts, 9)
     t:eq(bar .. "/" .. beat, "3/3", "the short bar's notes count from its end")
   end,

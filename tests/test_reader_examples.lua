@@ -4,6 +4,7 @@
 local ROOT = (arg and arg[0] or ""):match("^(.*[/\\])tests[/\\]") or "./"
 local FIXTURES = ROOT .. "fixtures/6.2.30/"
 local SAMPLE, READING = FIXTURES .. "sample.dorico", FIXTURES .. "reading.dorico"
+local PICKUP = FIXTURES .. "pickup.dorico"
 local CHECKS = ROOT .. "tests/dorico/lib/?.lua;"
 
 local function copy(src, dst)
@@ -74,6 +75,10 @@ return {
 
   bars_keys_and_times = function(t)
     passes(t, "09-bars-keys-and-times.lua", READING, "09-bars-keys-and-times.lua")
+  end,
+
+  bars_after_a_pickup = function(t)
+    passes(t, "09-bars-keys-and-times.lua", PICKUP, "09-bars-keys-and-times.pickup.lua")
   end,
 
   a_time_signature_outside_the_timebase_stream_makes_no_bar = function(t)
