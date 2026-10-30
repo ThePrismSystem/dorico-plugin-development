@@ -67,6 +67,20 @@ return {
     for _ in tree.each(xml.decode(SCORE), "entry") do n = n + 1 end
     t:eq(n, 2)
   end,
+  an_empty_list_with_indentation_has_no_value = function(t)
+    local s = xml.decode('<a>\n\t<b array="true">\n\t</b>\n</a>')
+    t:eq(tree.value(s, tree.child(s, 0, "b")), "", "as score.dtn gives a list node")
+    t:eq(tree.value(xml.decode("<a><b> </b></a>"), 1), " ", "a leaf keeps its spaces")
+  end,
+  a_reference_with_no_hash = function(t) fails(t, "<a>&x41;</a>", "&x41;") end,
+  an_ampersand_that_starts_no_reference = function(t)
+    fails(t, "<a>A & B</a>", "bare &")
+    fails(t, "<a>A &amp B</a>", "no semicolon")
+  end,
+  attributes_in_another_form = function(t)
+    fails(t, "<a array='true'/>", "single quotes")
+    fails(t, "<a array>1</a>", "no value")
+  end,
   mismatched_close_tag = function(t) fails(t, "<a><b>x</c></a>", "mismatched") end,
   unclosed_element = function(t) fails(t, "<a><b>x</b>", "unclosed") end,
   text_beside_elements = function(t) fails(t, "<a>words<b>x</b></a>", "mixed content") end,
