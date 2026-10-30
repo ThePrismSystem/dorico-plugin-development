@@ -10,6 +10,7 @@ local COMMANDS = "examples/fundamentals/10-commands.lua"
 local SELECTION = "examples/fundamentals/11-act-on-the-selection.lua"
 local BY_ID = "examples/fundamentals/12-select-by-id.lua"
 local BARS = "examples/fundamentals/09-bars-keys-and-times.lua"
+local LAYOUTS = "examples/fundamentals/07-values-per-layout.lua"
 local CHORDS = "examples/recipes/chord-symbols.lua"
 local PROOFREAD = "examples/recipes/proofread.lua"
 
@@ -364,6 +365,19 @@ return {
     t:eq(#starts, 1)
     local bar, beat = bars.at(starts, 0)
     t:eq(bar .. "/" .. beat, "1/1")
+  end,
+
+  where_names_an_entry_s_context = function(t)
+    local where = helpers.load(LAYOUTS, "where")
+    local names = { [0] = "Full score", [5] = "Flute" }
+    t:eq(where({ layout = -1, instance = -1, frameChain = -1 }, names), "every layout")
+    t:eq(where({ layout = 0, instance = -1, frameChain = -1, offset = "" }, names), "layout Full score")
+    t:eq(where({ layout = -1, instance = 1014, frameChain = -1, offset = "0:0:1:0" }, names),
+      "every layout, block instance 1014", "an offset of 0 is the note's start")
+    t:eq(where({ layout = 5, instance = 12, frameChain = 3, staveType = "kCondensed", offset = "0:1:2:0" }, names),
+      "layout Flute, block instance 12, frame chain 3, condensed staves, 1/2 quarter notes into the note")
+    t:eq(where({ layout = 9, instance = -1, frameChain = -1, staveType = "kNormal" }, names), "layout 9",
+      "a layout with no name, on normal staves")
   end,
 
   read_the_saved_copy_reports_a_save_that_fails = function(t)

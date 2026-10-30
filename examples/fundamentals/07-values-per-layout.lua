@@ -1,7 +1,8 @@
 -- Read a note's properties with the layout and block instance each one applies to, and the value each layout shows.
 -- What it does: for every note with a property beyond its spelling, prints an "entry" line per stored value (player,
 -- position, spelling, property, the value as stored, and where it applies), then a "value" line per property with
--- the value the full score shows and the value the player's part shows. A "-" means none.
+-- the value the full score shows and the value the player's part shows. A "-" means none, and "no part" that no
+-- part holds that player alone. Last, a "notes with properties" line counts the notes it listed.
 -- Changes: nothing (read-only).
 -- Undo: nothing to undo.
 -- Builds on: 04-read-the-saved-copy.lua. Try it on a project where you've changed a note in a part, or put an
@@ -46,6 +47,20 @@ local function readCopy(app)
 end
 -- end helper: readCopy
 
+-- helper: where
+-- Where a property entry applies, from its context: every layout or one (named from layoutNames, {[id] = name}), a
+-- block instance, a frame chain, condensed staves, and how far into the note the value starts, in quarter notes.
+local function where(x, layoutNames)
+  local parts = { x.layout == -1 and "every layout" or ("layout " .. (layoutNames[x.layout] or x.layout)) }
+  if x.instance ~= -1 then parts[#parts + 1] = "block instance " .. x.instance end
+  if x.frameChain ~= -1 then parts[#parts + 1] = "frame chain " .. x.frameChain end
+  if x.staveType == "kCondensed" then parts[#parts + 1] = "condensed staves" end
+  local num, den = (x.offset or ""):match("^0:(%d+):(%d+):")
+  if num and num ~= "0" then parts[#parts + 1] = num .. "/" .. den .. " quarter notes into the note" end
+  return table.concat(parts, ", ")
+end
+-- end helper: where
+
 local app, project = guard()
 if not project then return end
 local s = readCopy(app)
@@ -53,21 +68,26 @@ if not s then return end
 local score = require("scorereader.score")
 local values = require("scorereader.values")
 
-local layoutNames, fullScore = {}, nil
-for _, layout in ipairs(s.layouts) do
-  layoutNames[layout.id] = layout.name
-  if not fullScore and layout.type == "kFullScoreLayout" then fullScore = layout.id end
+local function line(...) print(table.concat({ ... }, "\t")) end
+
+-- A decoded value as text: "-" for none, and a list's items joined with commas.
+local function shown(v)
+  if v == nil then return "-" end
+  if type(v) ~= "table" then return tostring(v) end
+  local items = {}
+  for i, item in ipairs(v) do items[i] = tostring(item.value) end
+  return table.concat(items, ", ")
 end
 
--- Where an entry applies, from its context.
-local function where(x)
-  local parts = { x.layout == -1 and "every layout" or ("layout " .. (layoutNames[x.layout] or x.layout)) }
-  if x.instance ~= -1 then parts[#parts + 1] = "block instance " .. x.instance end
-  local num, den = (x.offset or ""):match("^0:(%d+):(%d+):")
-  if num and num ~= "0" then parts[#parts + 1] = num .. "/" .. den .. " into the note" end
-  return table.concat(parts, ", ")
+local fullScore = score.fullScoreOf(s)
+if not fullScore then
+  print("This project has no full score layout, so there are no full score values to print.")
+  return
 end
+local layoutNames = {}
+for _, layout in ipairs(s.layouts) do layoutNames[layout.id] = layout.name end
 
+local notes = 0
 for _, flow in ipairs(s.flows) do
   for _, player in ipairs(s.players) do
     local part = score.partOf(s, player)
@@ -76,17 +96,17 @@ for _, flow in ipairs(s.flows) do
         local pos, seen, order = values.positionText(e.position), {}, {}
         for _, x in ipairs(score.entries(s, e)) do
           if x.property ~= "kNoteSpelling" then
-            print(table.concat({ "entry", player.name, pos, e.spelling, x.property, x.value, where(x) }, "\t"))
+            line("entry", player.name, pos, e.spelling, x.property, x.value, where(x, layoutNames))
             if not seen[x.property] then seen[x.property], order[#order + 1] = true, x.property end
           end
         end
+        if #order > 0 then notes = notes + 1 end
         for _, property in ipairs(order) do
-          local inFull = score.value(s, e, property, fullScore)
-          local inPart = part and score.value(s, e, property, part.id)
-          print(table.concat({ "value", player.name, pos, e.spelling, property, tostring(inFull or "-"),
-            tostring(inPart or "-") }, "\t"))
+          line("value", player.name, pos, e.spelling, property, shown(score.value(s, e, property, fullScore.id)),
+            part and shown(score.value(s, e, property, part.id)) or "no part")
         end
       end
     end
   end
 end
+line("notes with properties", notes)

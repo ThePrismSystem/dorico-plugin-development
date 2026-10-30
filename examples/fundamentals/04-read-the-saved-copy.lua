@@ -2,7 +2,8 @@
 -- What it does: saves a copy of the open project to the temp folder, reads it with the reader library and deletes
 -- it. It prints the format the copy was saved in, then one line per note and grace note, with tabs between the
 -- columns: flow number, player, position, spelling at sounding pitch, notehead set and colour, as the full score
--- shows them. A "-" means the note has none of its own.
+-- shows them. A "-" means the note has none of its own. A project whose full score layout was deleted gets a
+-- line saying so instead.
 -- Changes: nothing. app:save writes the copy without touching the project, its file, its unsaved mark or its undo
 -- history.
 -- Undo: nothing to undo.
@@ -54,22 +55,26 @@ local s = readCopy(app)
 if not s then return end
 local score = require("scorereader.score")
 local values = require("scorereader.values")
-print(table.concat({ "format", s.format.fileVersion, s.format.known and "known" or "unknown" }, "\t"))
+
+local function line(...) print(table.concat({ ... }, "\t")) end
+
+line("format", s.format.fileVersion, s.format.known and "known" or "unknown")
 
 -- A value set for one layout shows only there, so ask for the full score's. Layout ids are the ones the Remote API
 -- and LayoutIDArray take.
-local fullScore
-for _, layout in ipairs(s.layouts) do
-  if not fullScore and layout.type == "kFullScoreLayout" then fullScore = layout.id end
+local fullScore = score.fullScoreOf(s)
+if not fullScore then
+  print("This project has no full score layout, so there are no full score values to print.")
+  return
 end
 
 for n, flow in ipairs(s.flows) do
   for _, player in ipairs(s.players) do
     for _, e in ipairs(score.eventsOf(s, flow, player)) do
       if e.kind == "note" or e.kind == "grace" then
-        print(table.concat({ n, player.name, values.toNumber(e.position), e.spelling,
-          score.value(s, e, "kNoteheadSetOverride", fullScore) or "-",
-          score.value(s, e, "kEventColour", fullScore) or "-" }, "\t"))
+        line(n, player.name, values.toNumber(e.position), e.spelling,
+          score.value(s, e, "kNoteheadSetOverride", fullScore.id) or "-",
+          score.value(s, e, "kEventColour", fullScore.id) or "-")
       end
     end
   end

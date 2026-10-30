@@ -1,14 +1,17 @@
 -- 07-values-per-layout.lua printed each property the reading fixture's notes were given, with the value the full
 -- score and the player's part show: a value set with a part on screen shows only in that part, and one set by the
--- menu command with the full score on screen shows only in the full score.
+-- menu command with the full score on screen shows only in the full score. Its last line counts the notes it listed.
 local checks = require("checks")
 
 return function(p, run)
-  local got, entries = {}, {}
+  local got, entries, notes = {}, {}, {}
   for _, line in ipairs(run.printed) do
     local f = checks.fields(line)
     local key = table.concat({ f[2] or "", f[3] or "", f[4] or "", f[5] or "" }, "|")
-    if f[1] == "value" then got[key] = { full = f[6], part = f[7] } end
+    if f[1] == "value" then
+      got[key] = { full = f[6], part = f[7] }
+      notes[table.concat({ f[2], f[3], f[4] }, "|")] = true
+    end
     if f[1] == "entry" then entries[key] = (entries[key] or "") .. (f[7] or "") .. ";" end
   end
   for _, want in ipairs(checks.reading().props) do
@@ -23,4 +26,9 @@ return function(p, run)
   p:check("the command's entry names its block instance", command:find("block instance", 1, true) ~= nil, command)
   local part = entries["Flute|2|E5|kEventColour"] or ""
   p:check("the part's entry names the part", part:find("layout Flute", 1, true) ~= nil, part)
+
+  local listed = 0
+  for _ in pairs(notes) do listed = listed + 1 end
+  local last = run.printed[#run.printed] or ""
+  p:check("the last line counts the notes listed", last == "notes with properties\t" .. listed, last)
 end
