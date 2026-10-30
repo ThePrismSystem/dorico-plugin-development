@@ -16,6 +16,7 @@ local LAYOUTS = "examples/fundamentals/07-values-per-layout.lua"
 local CHORDS = "examples/recipes/chord-symbols.lua"
 local PROOFREAD = "examples/recipes/proofread.lua"
 local EXPORT = "examples/fundamentals/15-layout-and-notation-options.lua"
+local REPORT = "examples/recipes/instrument-report.lua"
 
 local function parse(lines)
   return helpers.load(READ_NOTES, "dump").parse(table.concat(lines, "\n") .. "\n")
@@ -390,6 +391,50 @@ return {
     t:ok(not outofrange.readable({}), "no range")
     t:ok(not outofrange.readable(nil))
     t:ok(not outofrange.readable({ standard = "C4 to A6" }), "a range it can't parse")
+  end,
+
+  most_at_once_counts_players_sounding_together = function(t)
+    local mostAtOnce = helpers.load(REPORT, "mostAtOnce")
+    t:eq(mostAtOnce({}), 0, "no notes")
+    t:eq(mostAtOnce({ a = { { 0, 2 } }, b = { { 1, 3 } } }), 2, "overlapping")
+    t:eq(mostAtOnce({ a = { { 0, 1 } }, b = { { 1, 2 } } }), 1, "one ends where the other starts")
+    t:eq(mostAtOnce({ a = { { 0, 2 }, { 0, 2 }, { 0, 1 } }, b = { { 1, 2 } } }), 2, "a chord is one player")
+    t:eq(mostAtOnce({ a = { { 0, 8 } }, b = { { 2, 3 } }, c = { { 4, 5 } } }), 2, "a held note")
+    t:eq(mostAtOnce({ a = { { 0, 1 }, { 4, 6 } }, b = { { 4, 5 } }, c = { { 4.5, 7 } } }), 3, "later")
+  end,
+
+  most_at_once_agrees_with_checking_every_start = function(t)
+    local mostAtOnce = helpers.load(REPORT, "mostAtOnce")
+    -- Pseudo-random spans on a grid of eighth notes, so starts and ends often meet.
+    local seed, notes = 7, {}
+    local function nextInt(n)
+      seed = seed * 16807 % 2147483647
+      return seed % n
+    end
+    for i = 1, 300 do
+      local player = nextInt(6)
+      local start = nextInt(200) / 2
+      notes[player] = notes[player] or {}
+      table.insert(notes[player], { start, start + (nextInt(8) + 1) / 2 })
+      if i % 50 == 0 then
+        local most = 0
+        for _, list in pairs(notes) do
+          for _, span in ipairs(list) do
+            local playing = 0
+            for _, other in pairs(notes) do
+              for _, o in ipairs(other) do
+                if o[1] <= span[1] and span[1] < o[2] then
+                  playing = playing + 1
+                  break
+                end
+              end
+            end
+            most = math.max(most, playing)
+          end
+        end
+        t:eq(mostAtOnce(notes), most, i .. " notes")
+      end
+    end
   end,
 
   guard_returns_the_open_project = function(t)

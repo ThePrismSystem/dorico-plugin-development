@@ -50,6 +50,39 @@ local function readCopy(app)
 end
 -- end helper: readCopy
 
+-- helper: mostAtOnce
+-- The most players with a note sounding at one moment. spans: {[player] = {{start, end}}}, in quarter notes; a note
+-- sounds from its start up to its end, so one that ends where another starts doesn't overlap it. It sorts every
+-- start and end once and goes through them in order, counting the players sounding, so a score twice as long takes
+-- about twice as long.
+local function mostAtOnce(spans)
+  local marks = {}
+  for player, list in pairs(spans) do
+    for _, span in ipairs(list) do
+      marks[#marks + 1] = { pos = span[1], step = 1, player = player }
+      marks[#marks + 1] = { pos = span[2], step = -1, player = player }
+    end
+  end
+  -- At the same moment, ends go first.
+  table.sort(marks, function(a, b)
+    if a.pos ~= b.pos then return a.pos < b.pos end
+    return a.step < b.step
+  end)
+  local notes, sounding, most = {}, 0, 0
+  for _, m in ipairs(marks) do
+    local before = notes[m.player] or 0
+    notes[m.player] = before + m.step
+    if before == 0 then
+      sounding = sounding + 1
+      most = math.max(most, sounding)
+    elseif notes[m.player] == 0 then
+      sounding = sounding - 1
+    end
+  end
+  return most
+end
+-- end helper: mostAtOnce
+
 local app, project = guard()
 if not project then return end
 local s = readCopy(app)
@@ -84,21 +117,5 @@ for n, flow in ipairs(s.flows) do
     print(string.format("  %s | %s | %d notes", player.name, table.concat(names, ", "), count))
   end
 
-  -- The most players sounding at once can only change where a note starts, so count at each start.
-  local most = 0
-  for _, list in pairs(spans) do
-    for _, span in ipairs(list) do
-      local at, playing = span[1], 0
-      for _, other in pairs(spans) do
-        for _, o in ipairs(other) do
-          if o[1] <= at and at < o[2] then
-            playing = playing + 1
-            break
-          end
-        end
-      end
-      if playing > most then most = playing end
-    end
-  end
-  print("  most players playing at once: " .. most)
+  print("  most players playing at once: " .. mostAtOnce(spans))
 end
