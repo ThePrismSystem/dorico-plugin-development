@@ -30,13 +30,7 @@ def main():
             if scratch is not None and verified:
                 run_lua.close_scratch(client, scratch)
             return code or 2
-        if BUILT.exists():
-            BUILT.unlink()  # SaveAs over an existing file would ask to replace it
-        client.command(f"File.SaveAs?File={run_lua.fwd(BUILT)}")
-        saved = build_sample.wait_saved(BUILT)
-        run_lua.close_scratch(client, scratch)
-        if not saved:
-            print(f"{BUILT} was not written: Dorico may be showing a dialog")
+        if not build_sample.save_as(client, scratch, BUILT):
             return 2
         target = HERE / fixture_versions.saved_by(BUILT) / "pickup.dorico"
         target.parent.mkdir(exist_ok=True)

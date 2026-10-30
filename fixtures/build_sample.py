@@ -44,16 +44,41 @@ def wait_saved(path: Path, timeout=60):
     return False
 
 
-def save_and_verify(client, scratch, built: Path, verify: Path):
-    """Save the open copy as built, close it, move the file into the folder for the Dorico version that saved it, and
-    check a copy of it with verify. Returns verify's exit code and result."""
+def close_saved(client, scratch, attempts=5):
+    """Close the copy, saved under its new name, and confirm it has gone by Dorico's status: its title no longer ends
+    " in scratch", so run_lua.close_scratch would find it gone either way. False when the close isn't confirmed."""
+    for _ in range(attempts):
+        client.command(f"File.CloseProject?OpenScoreID={scratch}&Save=false")
+        time.sleep(1)
+        status = client.status()
+        if not status.get("hasScore") or status.get("activeOpenScoreID") != scratch:
+            return True
+        time.sleep(2)
+    print("the saved copy could not be closed; close it in Dorico")
+    return False
+
+
+def save_as(client, scratch, built: Path):
+    """Save the open copy, OpenScoreID scratch, as built and close it. True when built was written and the copy
+    closed. File.SaveAs goes to the active project, so nothing is saved unless that is still the copy."""
+    if client.status().get("activeOpenScoreID") != scratch:
+        print(f"the active project is not the scratch copy (OpenScoreID {scratch}); nothing saved")
+        run_lua.close_scratch(client, scratch)
+        return False
     if built.exists():
         built.unlink()  # SaveAs over an existing file would ask to replace it
     client.command(f"File.SaveAs?File={run_lua.fwd(built)}")
     saved = wait_saved(built)
-    run_lua.close_scratch(client, scratch)
+    closed = close_saved(client, scratch)
     if not saved:
         print(f"{built} was not written: Dorico may be showing a dialog")
+    return saved and closed
+
+
+def save_and_verify(client, scratch, built: Path, verify: Path):
+    """Save the open copy as built, close it, move the file into the folder for the Dorico version that saved it, and
+    check a copy of it with verify. Returns verify's exit code and result."""
+    if not save_as(client, scratch, built):
         return 2, None
     target = HERE / fixture_versions.saved_by(built) / built.name
     target.parent.mkdir(exist_ok=True)
