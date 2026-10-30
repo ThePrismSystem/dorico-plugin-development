@@ -168,4 +168,42 @@ function checks.printed(run, line)
   return false
 end
 
+-- The texts fixture's texts, lyrics and chord symbols as the open project has them, and as texts.expected.json says
+-- they should be after a row's changes (row.texts, row.lyrics and row.chords: new words by bar), each as one string.
+function checks.textsNow(row)
+  row = row or {}
+  local want = readJson("texts.expected.json")
+  local s, score, values = checks.savedCopy()
+  local function changed(list, bar, words)
+    return list and list[tostring(bar)] or words
+  end
+  local expected = {}
+  for _, t in ipairs(want.texts) do
+    expected[#expected + 1] = string.format("text %s|%g|%s|%s|%s", t.player, t.bar, changed(row.texts, t.bar, t.words),
+      tostring(t.above), tostring(t.system))
+  end
+  for _, l in ipairs(want.lyrics) do
+    local text = (l.line == 1 and l.beat == 1) and changed(row.lyrics, l.bar, l.text) or l.text
+    expected[#expected + 1] = string.format("lyric %g|%g|%d|%s|%s", l.bar, l.beat, l.line, text, l.syllable)
+  end
+  for _, c in ipairs(want.chords) do
+    expected[#expected + 1] = string.format("chord %g|%s", c.bar, changed(row.chords, c.bar, c.name))
+  end
+  local now = {}
+  for _, e in ipairs(s.flows[1].events) do
+    local pos = values.toNumber(e.position)
+    local bar, beat = math.floor(pos / 4) + 1, pos % 4 + 1
+    if e.kind == "text" then
+      local owner = score.ownerOf(s, e)
+      now[#now + 1] = string.format("text %s|%g|%s|%s|%s", owner and owner.name or "-", bar, e.words,
+        tostring(score.above(s, e, s.layouts[1].id)), tostring(e.system))
+    elseif e.kind == "lyric" then
+      now[#now + 1] = string.format("lyric %g|%g|%d|%s|%s", bar, beat, e.line, e.text, e.syllable)
+    elseif e.kind == "chordSymbol" then
+      now[#now + 1] = string.format("chord %g|%s", bar, tostring(e.name))
+    end
+  end
+  return checks.joined(now), checks.joined(expected)
+end
+
 return checks

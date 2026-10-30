@@ -68,5 +68,12 @@
     "savedBy": "6.2.30",
     "source": "fixtures/build_sample.py",
     "credit": ""
+  },
+  {
+    "path": "6.2.30/texts.dorico",
+    "fileVersion": "1.1452",
+    "savedBy": "6.2.30",
+    "source": "fixtures/build_texts.py",
+    "credit": ""
   }
 ]

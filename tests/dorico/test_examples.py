@@ -193,6 +193,39 @@ row("cautionary_accidentals_undone", CAUTIONARY, project="cautionary", before=OP
 row("cautionary_accidentals_cancelled", CAUTIONARY, project="cautionary", before=OPEN_FIRST,
     check=CHECKS + "cautionary-accidentals.none.lua", args={"cancelled": True},
     dialog={"window": "Cautionary accidentals", "button": "Cancel"})
+FIND = RECIPES + "find-and-replace.lua"
+
+
+def find_box(*fields):
+    """The find and replace box answered with OK. Text fields: 0 find, 1 replace with, 2 from bar, 3 to bar. Tick
+    boxes: 0 match case, 1 whole words, 2 Lua pattern. Lists: 0 mode (1 is Replace), 1 flows, 2 players."""
+    return {"window": "Find and replace", "button": "OK", "fields": list(fields)}
+
+
+def selection_kept(test, client, printed):
+    test.assertTrue(client.status().get("hasSelection"), "the first match isn't selected")
+
+
+REPLACE = ("choice", 0, 1)
+row("find_and_replace_find", FIND, project="texts", before=OPEN_FIRST, args={"row": "find"},
+    dialog=find_box(("text", 0, "dolce")), after=[then_python(selection_kept)])
+row("find_and_replace_find_one_player_from_a_bar", FIND, project="texts", before=OPEN_FIRST,
+    args={"row": "findSopranoFromBar2"}, dialog=find_box(("text", 0, "dolce"), ("choice", 2, 2), ("text", 2, "2")))
+row("find_and_replace_replace", FIND, project="texts", before=OPEN_FIRST, args={"row": "replace"},
+    dialog=find_box(REPLACE, ("text", 0, "dolce"), ("text", 1, "sweet"), ("check", 1, True)),
+    after=[then_command("Edit.Undo"), then_check("find-and-replace.none.lua")])
+row("find_and_replace_pattern", FIND, project="texts", before=OPEN_FIRST, args={"row": "pattern"},
+    dialog=find_box(REPLACE, ("text", 0, "(%a+) e (%a+)"), ("text", 1, "%2 e %1"), ("check", 0, True),
+                    ("check", 2, True)))
+row("find_and_replace_chord_symbol", FIND, project="texts", before=OPEN_FIRST, args={"row": "chord"},
+    dialog=find_box(REPLACE, ("text", 0, "Am"), ("text", 1, "Dm"), ("check", 0, True), ("check", 1, True)))
+row("find_and_replace_cancelled", FIND, project="texts", before=OPEN_FIRST,
+    check=CHECKS + "find-and-replace.none.lua", args={"cancelled": True},
+    dialog={"window": "Find and replace", "button": "Cancel"})
+# Flow 10 of the Somervell project has two texts "espress.": a plain one, and one with formatting inside it.
+row("find_and_replace_leaves_formatted_text", FIND, project="somervell", before=OPEN_FIRST,
+    check=CHECKS + "find-and-replace.somervell.lua",
+    dialog=find_box(REPLACE, ("text", 0, "espress."), ("text", 1, "espressivo"), ("choice", 1, 10)))
 
 class Examples(unittest.TestCase):
     pass
