@@ -43,5 +43,5 @@ its Dorico version wrote.
 Start it with Remote Control on and run `python tools/resave_fixtures.py`. It saves the fixtures built here into a
 folder for the new version, adds them to `versions.json`, and runs the tests. If you've put copies of Steinberg's
 examples in `%TEMP%\dorico-examples-run\inputs\shipped`, it saves those too, and
-`python tools/run_tests.py --inputs` reads them again later.
+`python tools/run_tests.py --inputs` reads them again later, and fails if there are none.
 [Adding a Dorico version](../docs/file-format.md#adding-a-dorico-version) says what to do when a test fails.

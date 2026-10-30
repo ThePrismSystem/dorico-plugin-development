@@ -145,9 +145,10 @@ in `.dorico-client-name`.
 
 The tests never touch your own projects. Each copies one of the fixtures, most from the newest version's folder
 (now `fixtures/6.2.30`), into a scratch folder, `%TEMP%\dorico-examples-run`, opens the copy and closes it unsaved.
-The script inside Dorico checks that the active project is that copy before changing anything, and refuses if it
-isn't. Your own projects can stay open; Dorico goes back to them when the tests close their copy. The tests for the
-examples that ask for options answer the box themselves, and Dorico runs nothing else while a box is open.
+The script inside Dorico checks that the active project is that copy, by its path and its id, before changing
+anything, and refuses if it isn't. Your own projects can stay open; Dorico goes back to them when the tests close
+their copy. The tests for the examples that ask for options answer the box themselves, and Dorico runs nothing else
+while a box is open.
 
 ### Linting and security scans
 

@@ -626,6 +626,8 @@ local ok, how, code = os.execute(command)   -- Lua 5.2: true|nil, "exit"|"signal
 - Tell Cancel from a failure, and print why there was no box. The form helper's box writes an empty answer on
   Cancel, so no answer file at all means the program didn't start or didn't finish, as when PowerShell is
   blocked.
+- Delete the last answer file before showing the box, and stop if it can't be deleted, so an old answer is never
+  read as this box's.
 - If several runs could leave answer files, give each run an id that the box writes back, and ignore an answer
   without it.
 
@@ -709,7 +711,8 @@ you have, and Dorico sends them unasked. `tools/dws.py` is a client using only t
 
 - Run tests only on scratch copies: copy the project to a scratch folder, open the copy, and close it unsaved.
 - Confirm the active project is the copy inside the script, before changing anything: compare the text export's
-  `Path` with the copy's path, and refuse if they differ.
+  `Path` with the copy's path, and its `openScoreID` with the id the copy opened as, and refuse if either differs.
+  An imported MusicXML file has an empty path, as does any project never saved, so the id is what tells them apart.
 - Wait for a newly opened project to settle: its id shows in the status before Dorico has finished with it.
 - A script that waits on a box blocks every later script and command. If a test leaves one open, close it before
   anything else will run.

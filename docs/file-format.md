@@ -248,7 +248,9 @@ A `DynamicGroupEventDefinition` points by `dynamicGroupID` to a `DynamicGroupEle
 | crescendo hairpin | `GradualChangeDynamicDefinition`, `direction = kGradualDynamicUp`, `duration = 2` |
 
 So an immediate dynamic's intensity is: the family (0 forte, 1 piano), an empty item, whether it is mezzo, and how
-many letters. The `intensityModifier` beside it was empty for all of these.
+many letters. The `intensityModifier` beside it was empty for all of these. One combined dynamic in Novello's
+*Lilacs* (`fixtures/6.0.22`) goes up with `startIntensity = 1` and `endIntensity = 0`. What the 0 means hasn't been
+checked, and the reader names that dynamic `p`.
 
 #### Lyrics
 
