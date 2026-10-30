@@ -51,6 +51,30 @@ class SyntaxCheckTests(unittest.TestCase):
         self.assertIn("broken.lua", err)
 
 
+class FindLuacTests(unittest.TestCase):
+    def test_only_luac_5_2_is_taken(self):
+        # A 5.3 or 5.4 luac -p accepts //, & and <const>, which Dorico's 5.2 then skips without a word.
+        versions = {"luac": "Lua 5.4.6  Copyright (C) 1994-2023 Lua.org, PUC-Rio"}
+
+        def ran(command, **kwargs):
+            return subprocess.CompletedProcess(command, 0, stdout=versions[command[0]] + "\n", stderr="")
+
+        with mock.patch.object(run_lua, "LUAC_CANDIDATES", ["luac52", "luac"]), \
+                mock.patch.object(run_lua.shutil, "which", side_effect=lambda c: c if c in versions else None), \
+                mock.patch.object(run_lua.subprocess, "run", side_effect=ran):
+            self.assertIsNone(run_lua.find_luac())
+            versions["luac52"] = "Lua 5.2.4  Copyright (C) 1994-2015 Lua.org, PUC-Rio"
+            self.assertEqual(run_lua.find_luac(), "luac52")
+
+
+class OptimisedTests(unittest.TestCase):
+    def test_help_works_without_docstrings(self):
+        # python -OO drops docstrings; a crash would exit 1, which says "checks failed"
+        proc = subprocess.run([sys.executable, "-OO", str(Path(run_lua.__file__)), "--help"], capture_output=True,
+                              text=True, timeout=60)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+
+
 class ScriptHeaderTests(unittest.TestCase):
     def test_scripts_add_to_package_path_only_once(self):
         # Dorico keeps one Lua state for every script run, so a bare prepend grows package.path on each run
@@ -301,6 +325,46 @@ class RunTests(unittest.TestCase):
         self.assertEqual(run_lua.run_dir_for({"TMPDIR": "/var/T"}), Path("/var/T") / "dorico-examples-run")
         self.assertEqual(run_lua.run_dir_for({}), Path("/tmp") / "dorico-examples-run")
 
+    def test_an_open_dorico_refuses_is_reported_at_once(self):
+        # not after 60s, as "Dorico may be showing a dialog"
+        class Refusing(FakeClient):
+            def connect(self):
+                pass
+
+            def close(self):
+                pass
+
+            def command(self, cmd):
+                if cmd.startswith("File.Open"):
+                    self.commands.append(cmd)
+                    return {"message": "response", "code": "kError", "detail": "kFileNotFound"}
+                return super().command(cmd)
+
+        client = Refusing(self.run_dir, self.ok_result(True))
+        err = io.StringIO()
+        with mock.patch.object(run_lua.dws, "DoricoClient", return_value=client), \
+                mock.patch.object(run_lua, "wait_for", side_effect=lambda predicate, timeout, interval=0.5: predicate()), \
+                mock.patch.object(sys, "stderr", err):
+            self.assertEqual(run_lua.main([str(self.script), "--open", str(self.source)]), 2)
+        self.assertIn("kFileNotFound", err.getvalue())
+        self.assertFalse(any(c.startswith("Script.RunScript") for c in client.commands))
+
+    def test_a_script_run_dorico_refuses_is_reported_at_once(self):
+        class Refusing(FakeClient):
+            def command(self, cmd):
+                if cmd.startswith("Script.RunScript"):
+                    self.commands.append(cmd)
+                    return {"message": "response", "code": "kCommandNotAllowed"}
+                return super().command(cmd)
+
+        err = io.StringIO()
+        with mock.patch.object(sys, "stderr", err):
+            code, result, _ = run_lua.run(self.script, client=Refusing(self.run_dir, None), on_active=True, timeout=1)
+        self.assertEqual(code, 2)
+        self.assertIsNone(result)
+        self.assertIn("kCommandNotAllowed", err.getvalue())
+        self.assertNotIn("timed out", err.getvalue())
+
     def test_active_project_needs_explicit_opt_in(self):
         client = FakeClient(self.run_dir, self.ok_result(False))
         code, result, sid = run_lua.run(self.script, client=client)
@@ -370,6 +434,23 @@ class PromptTests(unittest.TestCase):
         self.assertEqual(clicks[0][clicks[0].index("-Window") + 1], "Dorico")
         self.assertEqual(clicks[0][clicks[0].index("-Button") + 1], "OK")
         self.assertIn("-OnlyButton", clicks[0])
+
+    def test_each_prompt_answered_is_reported(self):
+        # The "Dorico" notice could be about the user's own project, which they would then never see.
+        pressed = mock.Mock(return_value=subprocess.CompletedProcess([], 0, stdout="pressed 'OK' in 'Dorico'\r\n",
+                                                                     stderr=""))
+        err = io.StringIO()
+        with mock.patch.object(sys, "stderr", err):
+            self.answer(["Dorico"], pressed)
+        self.assertIn("pressed 'OK' in 'Dorico'", err.getvalue())
+
+    def test_a_prompt_left_alone_is_not_reported(self):
+        refused = mock.Mock(return_value=subprocess.CompletedProcess([], 3, stdout="'Dorico' has the buttons ...",
+                                                                     stderr=""))
+        err = io.StringIO()
+        with mock.patch.object(sys, "stderr", err):
+            self.answer(["Dorico"], refused)
+        self.assertEqual(err.getvalue(), "")
 
     def test_runs_nothing_while_dorico_has_no_prompt_open(self):
         # Without a window titled exactly "Dorico", click.ps1 would search Dorico's whole UI Automation tree on every

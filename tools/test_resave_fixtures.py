@@ -133,6 +133,8 @@ class MainTests(unittest.TestCase):
         how = self.how.get(Path(open_file).name)
         if how == "timeout":
             raise TimeoutError(f"{Path(open_file).name} did not open within 60s")
+        if how == "refused":
+            raise run_lua.DoricoRefused(f"Dorico would not open {Path(open_file).name}: {{'code': 'kError'}}")
         if how == "fail":
             return 2, None, None
         project(Path(extra_args["out"]), self.version, None if how == "unreadable" else "1.1500")
@@ -176,6 +178,12 @@ class MainTests(unittest.TestCase):
         self.how["reading.dorico"] = "timeout"
         self.assertEqual(r.main([]), 2)
         self.assert_nothing_kept()
+
+    def test_an_open_dorico_refuses_keeps_nothing(self):
+        self.how["reading.dorico"] = "refused"
+        self.assertEqual(r.main([]), 2)
+        self.assert_nothing_kept()
+        self.assertIn("kError", self.stdout.getvalue())
 
     def test_an_earlier_runs_file_is_not_taken_for_a_failed_save(self):
         # resave.lua can time out after app:save wrote its file
@@ -228,6 +236,13 @@ class MainTests(unittest.TestCase):
         self.assertIn("could not save " + str(shipped / "Smith.dorico"), self.stdout.getvalue())
         self.assertEqual([p.name for p in (self.run_dir / "inputs" / "6.3.0").iterdir()], ["Bach.dorico"])
         self.assertEqual(len([e for e in self.manifest() if e["savedBy"] == "6.3.0"]), 2, "the fixtures still count")
+
+
+class OptimisedTests(unittest.TestCase):
+    def test_help_works_without_docstrings(self):
+        # python -OO drops docstrings; a crash would exit 1, which says the tests failed
+        proc = subprocess.run([sys.executable, "-OO", r.__file__, "--help"], capture_output=True, text=True, timeout=60)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
 
 
 if __name__ == "__main__":

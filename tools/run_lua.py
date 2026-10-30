@@ -58,9 +58,16 @@ LUAC_CANDIDATES = ["luac52", "luac5.2", "C:/ProgramData/chocolatey/lib/lua52/too
 
 
 def find_luac():
+    """luac 5.2, Dorico's version. A plain "luac" may be 5.3 or 5.4, whose -p accepts code Dorico won't load."""
     for c in LUAC_CANDIDATES:
         found = shutil.which(c) or (c if os.path.isfile(c) else None)
-        if found:
+        if not found:
+            continue
+        try:
+            said = subprocess.run([found, "-v"], capture_output=True, text=True, timeout=30)
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        if (said.stdout + said.stderr).startswith("Lua 5.2"):
             return found
     return None
 
@@ -93,6 +100,10 @@ def syntax_error(script: Path):
         if proc.returncode != 0:
             return (proc.stderr or proc.stdout).strip()
     return None
+
+
+class DoricoRefused(Exception):
+    """Dorico answered a command with something other than kOK."""
 
 
 class WindowListError(OSError):
@@ -129,8 +140,9 @@ def open_windows(process=None):
 
 
 def answer_known_prompts():
-    """Answer the prompts Dorico's own windows show. Neither script runs unless its window is open, since click.ps1
-    searches Dorico through UI Automation, which can stall for minutes on a busy Dorico."""
+    """Answer the prompts Dorico's own windows show, and say so on stderr: a notice can be about the user's own
+    project. Neither script runs unless its window is open, since click.ps1 searches Dorico through UI Automation,
+    which can stall for minutes on a busy Dorico."""
     titles = open_windows(DORICO_PROCESS)
     for title, keys in KNOWN_PROMPTS.items():
         if title in titles:
@@ -142,10 +154,12 @@ def answer_known_prompts():
 
 def _answer(script, *args):
     try:
-        subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script), *args],
-                       capture_output=True, timeout=PROMPT_TIMEOUT)
+        proc = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script), *args],
+                              capture_output=True, text=True, timeout=PROMPT_TIMEOUT)
     except subprocess.TimeoutExpired:
-        pass  # the open polls again until its own limit
+        return  # the open polls again until its own limit
+    if proc.returncode == 0:
+        print(f"answered a Dorico prompt: {proc.stdout.strip()}", file=sys.stderr)
 
 
 def fwd(path: Path) -> str:
@@ -168,7 +182,9 @@ def open_scratch(client, source: Path):
     before = client.status().get("activeOpenScoreID")
     scratch = RUN_DIR / ("scratch" + source.suffix)
     shutil.copyfile(source, scratch)
-    client.command(f"File.Open?File={fwd(scratch)}")
+    reply = client.command(f"File.Open?File={fwd(scratch)}")
+    if reply.get("code") != "kOK":
+        raise DoricoRefused(f"Dorico would not open {source.name}: {reply}")
 
     def opened():
         st = client.status()
@@ -278,14 +294,18 @@ def run(script: Path, open_file=None, keep_open=False, extra_args=None, timeout=
             args["expectScratch"] = {"path": fwd(scratch) if scratch.suffix.lower() == ".dorico" else "",
                                      "openScoreID": scratch_id}
         launcher = write_launcher(Path(script).resolve(), args, run_id)
-        client.command(f"Script.RunScript?ScriptPath={fwd(launcher)}&ShowConsole=false")
-        problems = []
-        result = wait_for(lambda: read_result(run_id, problems), timeout)
+        reply = client.command(f"Script.RunScript?ScriptPath={fwd(launcher)}&ShowConsole=false")
+        result, problems = None, []
+        if reply.get("code") != "kOK":
+            print(f"Dorico would not run the script: {reply}", file=sys.stderr)
+        else:
+            result = wait_for(lambda: read_result(run_id, problems), timeout)
+            if result is None:
+                titles = open_windows()
+                seen = "; windows open: " + ", ".join(repr(t) for t in titles) if titles else ""
+                print(f"timed out after {timeout}s waiting for result" + "".join("; " + p for p in problems) + seen
+                      + "; Dorico may be showing a dialog", file=sys.stderr)
         if result is None:
-            titles = open_windows()
-            seen = "; windows open: " + ", ".join(repr(t) for t in titles) if titles else ""
-            print(f"timed out after {timeout}s waiting for result" + "".join("; " + p for p in problems) + seen
-                  + "; Dorico may be showing a dialog", file=sys.stderr)
             if scratch_id is not None:
                 print("the scratch copy was not closed; close it in Dorico without saving", file=sys.stderr)
             return 2, None, scratch_id
@@ -308,7 +328,7 @@ def run(script: Path, open_file=None, keep_open=False, extra_args=None, timeout=
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap = argparse.ArgumentParser(description=(__doc__ or "").split("\n")[0])  # python -OO drops docstrings
     ap.add_argument("script")
     ap.add_argument("--open", dest="open_file")
     ap.add_argument("--keep-open", action="store_true")
@@ -324,7 +344,7 @@ def main(argv=None):
     try:
         code, result, scratch_id = run(Path(ns.script), ns.open_file, ns.keep_open, extra, ns.timeout,
                                        on_active=ns.on_active)
-    except (OSError, ConnectionError, TimeoutError, EOFError) as e:
+    except (OSError, ConnectionError, TimeoutError, EOFError, DoricoRefused) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
     except Exception:  # noqa: BLE001 (exit 3, so it isn't mistaken for failed checks, exit 1)
