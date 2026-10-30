@@ -42,11 +42,14 @@ REPO = Path(__file__).resolve().parents[1]
 PRESS = Path(__file__).resolve().parent / "press.ps1"
 CLICK = Path(__file__).resolve().parent / "click.ps1"
 TITLES = Path(__file__).resolve().parent / "titles.ps1"
+DORICO_PROCESS = "Dorico6"
+PROMPT_TIMEOUT = 15  # seconds for one answer, which the 60s open waits on
 # Prompts Dorico raises when opening a scratch copy, and the key that answers each safely.
 # Matched by exact window title only; anything else is left alone and the run times out.
 KNOWN_PROMPTS = {"Activate Project for Playback": "{ESC}"}  # Esc = "Do Not Activate"
-# Prompts answered by clicking a named button. A project an older Dorico saved opens with a notice titled "Dorico"
-# whose only button is OK; other "Dorico" prompts, such as one asking to save, have no OK button and are left alone.
+# Prompts answered by clicking their one button. A project an older Dorico saved opens with a notice titled "Dorico"
+# whose only button is OK. click.ps1 -OnlyButton presses it only in a window of Dorico's own, and only when it is the
+# window's one button, so a "Dorico" prompt that offers a choice, such as one asking to save, is left alone.
 KNOWN_BUTTONS = [("Dorico", "OK")]
 
 
@@ -98,13 +101,15 @@ def window_titles():
     return [line.split("\t")[2] for line in out.splitlines() if line.count("\t") >= 2]
 
 
-def open_windows():
-    """The titles of the visible windows Dorico and PowerShell (the plug-in's dialog) have open, read through Win32,
-    which doesn't wait on a busy Dorico as capture.ps1 does. [] off Windows, or if the lookup fails."""
+def open_windows(process=None):
+    """The titles of the visible windows Dorico and PowerShell (the plug-in's dialog) have open, or only process's,
+    read through Win32, which doesn't wait on a busy Dorico as capture.ps1 does. [] off Windows, or if the lookup
+    fails."""
     if os.name != "nt":
         return []
     try:
-        out = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(TITLES)],
+        out = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(TITLES)]
+                             + (["-Process", process] if process else []),
                              capture_output=True, text=True, timeout=30).stdout
     except (OSError, subprocess.TimeoutExpired):
         return []
@@ -112,17 +117,23 @@ def open_windows():
 
 
 def answer_known_prompts():
+    """Answer the prompts Dorico's own windows show. Neither script runs unless its window is open, since click.ps1
+    searches Dorico through UI Automation, which can stall for minutes on a busy Dorico."""
+    titles = open_windows(DORICO_PROCESS)
     for title, keys in KNOWN_PROMPTS.items():
-        subprocess.run(
-            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(PRESS), "-Title", title, "-Keys", keys],
-            capture_output=True,
-        )
+        if title in titles:
+            _answer(PRESS, "-Title", title, "-Keys", keys)
     for title, button in KNOWN_BUTTONS:
-        subprocess.run(
-            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(CLICK), "-Window", title,
-             "-Button", button],
-            capture_output=True,
-        )
+        if title in titles:
+            _answer(CLICK, "-Window", title, "-Button", button, "-OnlyButton")
+
+
+def _answer(script, *args):
+    try:
+        subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script), *args],
+                       capture_output=True, timeout=PROMPT_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        pass  # the open polls again until its own limit
 
 
 def fwd(path: Path) -> str:

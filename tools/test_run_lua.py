@@ -2,6 +2,7 @@ import io
 import json
 import os
 import re
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -248,22 +249,50 @@ class RunTests(unittest.TestCase):
 
 
 class PromptTests(unittest.TestCase):
-    def test_answers_the_update_notice_by_its_ok_button(self):
-        # Opening a project an older Dorico saved shows "Dorico" with only an OK button. It is clicked by name, so a
-        # "Dorico" prompt without an OK button, such as a save prompt, is left alone.
-        with mock.patch.object(run_lua.subprocess, "run") as ran:
+    def answer(self, titles, ran=None):
+        """The calls answer_known_prompts makes while Dorico's own windows have these titles."""
+        with mock.patch.object(run_lua, "open_windows", return_value=titles) as listed, \
+                mock.patch.object(run_lua.subprocess, "run", ran or mock.Mock()) as run:
             run_lua.answer_known_prompts()
-        calls = [c.args[0] for c in ran.call_args_list]
-        clicks = [c for c in calls if str(run_lua.CLICK) in c]
+        listed.assert_called_once_with(run_lua.DORICO_PROCESS)
+        return run.call_args_list
+
+    def test_answers_the_update_notice_by_its_only_button(self):
+        # Opening a project an older Dorico saved shows "Dorico" with only an OK button. click.ps1 -OnlyButton presses
+        # it only when it is the window's one button, so a "Dorico" prompt that asks to save is left alone.
+        calls = self.answer(["Song in scratch", "Dorico"])
+        clicks = [c.args[0] for c in calls if str(run_lua.CLICK) in c.args[0]]
         self.assertEqual(len(clicks), 1)
         self.assertEqual(clicks[0][clicks[0].index("-Window") + 1], "Dorico")
         self.assertEqual(clicks[0][clicks[0].index("-Button") + 1], "OK")
+        self.assertIn("-OnlyButton", clicks[0])
+
+    def test_runs_nothing_while_dorico_has_no_prompt_open(self):
+        # Without a window titled exactly "Dorico", click.ps1 would search Dorico's whole UI Automation tree on every
+        # poll, which can stall for minutes on a busy Dorico.
+        self.assertEqual(self.answer(["Dorico Pro 6", "Song in scratch"]), [])
 
     def test_still_presses_escape_on_the_playback_prompt(self):
-        with mock.patch.object(run_lua.subprocess, "run") as ran:
-            run_lua.answer_known_prompts()
-        presses = [c.args[0] for c in ran.call_args_list if str(run_lua.PRESS) in c.args[0]]
+        calls = self.answer(["Activate Project for Playback"])
+        presses = [c.args[0] for c in calls if str(run_lua.PRESS) in c.args[0]]
         self.assertEqual(presses[0][presses[0].index("-Title") + 1], "Activate Project for Playback")
+        self.assertEqual(presses[0][presses[0].index("-Keys") + 1], "{ESC}")
+
+    def test_a_prompt_that_hangs_is_given_up(self):
+        # the open waits at most 60s, so no answer may take longer than its own limit
+        calls = self.answer(["Activate Project for Playback", "Dorico"],
+                            mock.Mock(side_effect=subprocess.TimeoutExpired("powershell", 1)))
+        self.assertEqual(len(calls), 2, "a hung answer doesn't stop the next")
+        for c in calls:
+            self.assertEqual(c.kwargs.get("timeout"), run_lua.PROMPT_TIMEOUT)
+
+    def test_lists_only_doricos_own_windows(self):
+        with mock.patch.object(run_lua.os, "name", "nt"), \
+                mock.patch.object(run_lua.subprocess, "run",
+                                  return_value=subprocess.CompletedProcess([], 0, stdout="Dorico\r\n")) as ran:
+            self.assertEqual(run_lua.open_windows(run_lua.DORICO_PROCESS), ["Dorico"])
+        command = ran.call_args.args[0]
+        self.assertEqual(command[command.index("-Process") + 1], "Dorico6")
 
 
 if __name__ == "__main__":
