@@ -33,10 +33,10 @@ a bad call can crash Dorico.
 | `createTonalityDivision` | member | not tried |  |
 | `createTransposingClef` | member | not tried |  |
 | `createTuplet` | member | not tried |  |
-| `delete` | method | verified | `delete(event)` removes an event ([05-names-from-the-text-export](../../examples/fundamentals/05-names-from-the-text-export.lua)). |
+| `delete` | method | verified | `delete(event)` removes an event ([proofread](../../examples/recipes/proofread.lua)). |
 | `deleteEventsInRange` | method | verified | `deleteEventsInRange(from, to)` clears a range (the handbells plug-in). |
 | `dump` | method | verified | Text, one line per event, on any stream ([03-read-notes](../../examples/fundamentals/03-read-notes.lua)). |
-| `events` | property | verified | Event objects, but raises an error on a stream holding lyrics, slurs or other kinds with no Lua class ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `events` | property | verified | Event objects, but raises an error on a stream holding lyrics, slurs or other kinds with no Lua class ([S8](../spikes.md#s8-reading-and-setting-note-properties)). |
 | `findBlockInstanceAtPoint` | member | not tried |  |
 | `id` | property | verified | The stream's id. |
 | `joinBlocks` | member | not tried |  |

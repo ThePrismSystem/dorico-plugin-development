@@ -37,7 +37,7 @@ end
 
 -- {[flow number] = title}, from the text export.
 function checks.flowTitles()
-  local export = checks.helper("examples/fundamentals/05-names-from-the-text-export.lua", { "commands", "export" },
+  local export = checks.helper("examples/fundamentals/15-layout-and-notation-options.lua", { "commands", "export" },
     "export")
   local titles = {}
   for _, rec in ipairs(export.records(DoApp.DoApp(), export.folder(), "checks-flow-titles")) do

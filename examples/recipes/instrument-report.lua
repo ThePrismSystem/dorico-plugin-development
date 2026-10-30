@@ -6,8 +6,8 @@
 -- and deletes them again.
 -- Undo: nothing to undo. The markers still make an undo step, so Edit > Undo straight after this script changes
 -- nothing you can see; a second press reaches your own last edit.
--- Builds on: 02-walk-the-score.lua, 03-read-notes.lua and 05-names-from-the-text-export.lua. Open Script > Show
--- Script Console to read what it prints.
+-- Builds on: 02-walk-the-score.lua, 03-read-notes.lua and 15-layout-and-notation-options.lua (the export helper).
+-- Open Script > Show Script Console to read what it prints.
 --
 -- A player's instruments are named as the export names them: one marker in a voice of each instrument, and the
 -- Instrument column of its row. An instrument with no voice in any flow can't be named this way, and shows as "?".

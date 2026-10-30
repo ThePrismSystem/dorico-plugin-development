@@ -148,7 +148,7 @@ What Lua can't read, and the way round it:
 
 | Missing | Workaround |
 | ------- | ---------- |
-| A flow's title, an instrument's name, the project's file path | The text export (section 4, [05-names-from-the-text-export.lua](../examples/fundamentals/05-names-from-the-text-export.lua)) |
+| A flow's title, an instrument's name, the project's file path | A saved copy ([05-names-and-titles.lua](../examples/fundamentals/05-names-and-titles.lua)); the file path only from the text export (section 4) |
 | A player's id, which commands need | Rename candidates to a unique token and see which player takes it ([16-flows-and-players.lua](../examples/fundamentals/16-flows-and-players.lua)) |
 | Which player a voice belongs to | `flow.instruments[i]` owns `flow.voiceStreams[i]` ([02-walk-the-score.lua](../examples/fundamentals/02-walk-the-score.lua)) |
 | The selection | Move it by command and see what moved (section 3) |
@@ -241,7 +241,7 @@ What the dump shows and doesn't:
 ### Noteheads and colours: read a pasted copy
 
 To read properties from a stream that `stream.events` refuses, copy the music into a temporary flow that holds only
-notes, read that, and take it away again ([04-noteheads-and-colours.lua](../examples/fundamentals/04-noteheads-and-colours.lua)):
+notes, read that, and take it away again (the route `docs/spikes.md` records; fundamental 04 now reads a saved copy instead):
 
 1. `Project.Flow.New` adds a flow at the end. It holds every player, so remove the players the music flow doesn't
    have with `flow:removePlayer`.
@@ -284,7 +284,7 @@ app:doCommand("File.Export.Text?File=C:/temp/out.txt&Show=false")   -- writes C:
 
 `File.Export.Text` writes a CSV of every text in the project, silently, beside the name it's given (with `.csv` in
 place of `.txt`). Its columns are `Path, ID, FlowNumber, FlowName, Instrument, Page, Bar, Type, Text, Hidden`. The
-`export` helper runs it and reads the rows ([05-names-from-the-text-export.lua](../examples/fundamentals/05-names-from-the-text-export.lua)).
+`export` helper runs it and reads the rows ([15-layout-and-notation-options.lua](../examples/fundamentals/15-layout-and-notation-options.lua)).
 It's the window onto several things Lua can't read:
 
 - The project's file path: every row's `Path`, empty until the project is saved.
@@ -664,8 +664,8 @@ example by its `-- helper:` markers, and `tests/test_helpers.lua` tests it.
 | The no-project guard, print, one Lua state | [01-hello.lua](../examples/fundamentals/01-hello.lua) |
 | Players, flows, which player owns a voice | [02-walk-the-score.lua](../examples/fundamentals/02-walk-the-score.lua) |
 | Reading notes from the dump | [03-read-notes.lua](../examples/fundamentals/03-read-notes.lua) |
-| Noteheads and colours through a pasted copy | [04-noteheads-and-colours.lua](../examples/fundamentals/04-noteheads-and-colours.lua) |
-| The text export: titles, path, instrument names | [05-names-from-the-text-export.lua](../examples/fundamentals/05-names-from-the-text-export.lua) |
+| Noteheads and colours from a saved copy | [04-read-the-saved-copy.lua](../examples/fundamentals/04-read-the-saved-copy.lua) |
+| Titles, players, instruments and layouts from a saved copy | [05-names-and-titles.lua](../examples/fundamentals/05-names-and-titles.lua) |
 | Building and escaping commands | [10-commands.lua](../examples/fundamentals/10-commands.lua) |
 | Finding the selection, acting on it | [11-act-on-the-selection.lua](../examples/fundamentals/11-act-on-the-selection.lua) |
 | Selecting by id, colouring by command | [12-select-by-id.lua](../examples/fundamentals/12-select-by-id.lua) |

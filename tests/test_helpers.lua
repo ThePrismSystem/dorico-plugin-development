@@ -3,8 +3,9 @@
 local helpers = require("helpers")
 
 local READ_NOTES = "examples/fundamentals/03-read-notes.lua"
-local NAMES = "examples/fundamentals/05-names-from-the-text-export.lua"
 local HELLO = "examples/fundamentals/01-hello.lua"
+local SAVED_COPY = "examples/fundamentals/04-read-the-saved-copy.lua"
+local ROOT = (arg and arg[0] or ""):match("^(.*[/\\])tests[/\\]") or "./"
 local COMMANDS = "examples/fundamentals/10-commands.lua"
 local SELECTION = "examples/fundamentals/11-act-on-the-selection.lua"
 local BY_ID = "examples/fundamentals/12-select-by-id.lua"
@@ -19,7 +20,7 @@ local HEADER = '"Path","ID","FlowNumber","FlowName","Instrument","Page","Bar","T
 local PATH = '"C:/Users/calli/AppData/Local/Temp/dorico-examples-run/scratch.dorico"'
 
 local function records(rows)
-  return helpers.load(NAMES, "export").parse(table.concat(rows, "\r\n") .. "\r\n")
+  return helpers.load(PROOFREAD, "export").parse(table.concat(rows, "\r\n") .. "\r\n")
 end
 
 -- Runs fn with DoApp standing in for Dorico's and print recorded; gives back what was printed.
@@ -117,7 +118,7 @@ return {
   end,
 
   csv_skips_a_byte_order_mark = function(t)
-    local rec = helpers.load(NAMES, "export").parse("\239\187\191" .. HEADER .. "\n" .. PATH
+    local rec = helpers.load(PROOFREAD, "export").parse("\239\187\191" .. HEADER .. "\n" .. PATH
       .. ',"","","","","","","Project Info (Title)","Sample","N"\n')
     t:eq(rec[1].Path, "C:/Users/calli/AppData/Local/Temp/dorico-examples-run/scratch.dorico")
     t:eq(rec[1].Type, "Project Info (Title)")
@@ -259,5 +260,25 @@ return {
     local printed = withDorico({ currentScore = project }, function() app, score = guard() end)
     t:eq(score, project)
     t:eq(#printed, 0, "nothing printed")
+  end,
+
+  reader_helper_finds_lib_in_the_repository_and_beside_the_script = function(t)
+    local dir = "C:/plugins/examples/fundamentals/"
+    local reader = assert(load(helpers.text(SAVED_COPY, "reader") .. "\nreturn reader", "@" .. dir .. "x.lua"))()
+    local before = package.path
+    package.loaded["scorereader.fake"] = true
+    reader()
+    local after = package.path
+    package.path = before
+    t:eq(after:find(dir .. "../../lib/?.lua;" .. dir .. "lib/?.lua;", 1, true), 1, after)
+    t:eq(package.loaded["scorereader.fake"], nil, "an earlier run's module is cleared")
+  end,
+
+  read_the_saved_copy_reports_a_save_that_fails = function(t)
+    local app = { currentScore = {}, save = function() return false end }
+    local printed = withDorico(app, function() dofile(ROOT .. SAVED_COPY) end)
+    t:eq(#printed, 1, table.concat(printed, " / "))
+    t:eq(printed[1], "The reader couldn't read this project: "
+      .. "scorereader: Dorico could not save a copy of the project to read")
   end,
 }

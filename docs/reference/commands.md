@@ -15,17 +15,17 @@ Remote Control API's `getcommands` lists them all.
 | ------- | ---------- | ------ | ----- |
 | `EventEdit.Select` | `FlowID`, `EventID`, `EventBlockID` | verified | Selects one event, replacing the selection. The block id comes from `stream.blockInstances` ([08](../../examples/fundamentals/12-select-by-id.lua)). |
 | `EventEdit.NavigateRightExtend` | | verified | Adds the next item to the right to the selection. |
-| `EventEdit.NavigateDownExtend` | | verified | Extends the selection one staff down ([04](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `EventEdit.NavigateDownExtend` | | verified | Extends the selection one staff down ([S8](../spikes.md#s8-reading-and-setting-note-properties)). |
 | `Edit.SelectNone` | | verified | Clears the selection. |
 | `Edit.SelectAll` | | verified | Selects everything in the flow (`spikes/pitch_up_down.lua`). |
-| `Edit.SelectToStartOfFlow`, `Edit.SelectAtEndOfFlow` | | verified | Extend the selection to the flow's ends ([04](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `Edit.SelectToStartOfFlow`, `Edit.SelectAtEndOfFlow` | | verified | Extend the selection to the flow's ends ([S8](../spikes.md#s8-reading-and-setting-note-properties)). |
 | `Filter.NotesAndChords` | | verified | Keeps only notes and chords in the selection, and the lines attached to them. |
 
 ## Editing
 
 | Command | Parameters | Status | Notes |
 | ------- | ---------- | ------ | ----- |
-| `Edit.Copy`, `Edit.Paste`, `Edit.Delete` | | verified | On the selection ([04](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `Edit.Copy`, `Edit.Paste`, `Edit.Delete` | | verified | On the selection ([S8](../spikes.md#s8-reading-and-setting-note-properties)). |
 | `Edit.Undo` | | verified | Inside a script, takes back everything the run has done so far. Only the first in a run is safe ([13](../../examples/fundamentals/18-undo.lua)). |
 | `Edit.RemoveRests` | | verified | On the selection. Leaves no trace in the dump. |
 | `Edit.HideAccidental` | | verified | On the selected note (the handbells plug-in). |
@@ -73,7 +73,7 @@ Remote Control API's `getcommands` lists them all.
 
 | Command | Parameters | Status | Notes |
 | ------- | ---------- | ------ | ----- |
-| `File.Export.Text` | `File`, `Show` | verified | Writes `<name>.csv` beside the `.txt` it's given, silently with `Show=false` ([05](../../examples/fundamentals/05-names-from-the-text-export.lua)). |
+| `File.Export.Text` | `File`, `Show` | verified | Writes `<name>.csv` beside the `.txt` it's given, silently with `Show=false` ([15](../../examples/fundamentals/15-layout-and-notation-options.lua)). |
 | `File.Open` | `File` | verified | Opens a project, which becomes `app.currentScore` straight away (S5). |
 | `File.Save` | | verified | Silent on a saved project; opens Save As on a new one. |
 | `File.CloseProject` | `OpenScoreID`, `Save` | verified | `Save=false` closes without saving (S5). |

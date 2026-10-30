@@ -10,9 +10,8 @@
 -- of the block that holds it, which the blockIdOf helper looks up. Each select replaces the selection, so the
 -- script colours one note at a time.
 --
--- The colour goes on through UI.InvokePropertyChangeValue, the command the Properties panel uses. Colours set this
--- way can't be read back from Lua (the property reads as empty), so a script can tell that a note has a colour but
--- not which; 04-noteheads-and-colours.lua prints "(unreadable)" for them.
+-- The colour goes on through UI.InvokePropertyChangeValue, the command the Properties panel uses. Dorico stores it
+-- for the layout on screen, so propertyTable:get can't read it back; 04-read-the-saved-copy.lua can.
 
 local ABOVE = "F5"
 local COLOUR = "#ffff0000" -- alpha, red, green, blue

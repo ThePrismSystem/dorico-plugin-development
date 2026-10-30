@@ -78,8 +78,8 @@ on.
 | [01-hello](examples/fundamentals/01-hello.lua) | Prints Dorico's version and the project's title and counts. | No |
 | [02-walk-the-score](examples/fundamentals/02-walk-the-score.lua) | Lists players, flows and which player each voice belongs to. | No |
 | [03-read-notes](examples/fundamentals/03-read-notes.lua) | Prints every note: flow, player, voice, position, duration, pitch. | No |
-| [04-noteheads-and-colours](examples/fundamentals/04-noteheads-and-colours.lua) | Prints each note's notehead and colour, through a pasted copy. | No, but it uses the clipboard |
-| [05-names-from-the-text-export](examples/fundamentals/05-names-from-the-text-export.lua) | Reads the title, file path, flow titles and instrument names from the text export. | No |
+| [04-read-the-saved-copy](examples/fundamentals/04-read-the-saved-copy.lua) | Prints each note's notehead and colour, read from a saved copy. | No |
+| [05-names-and-titles](examples/fundamentals/05-names-and-titles.lua) | Reads the title, flow titles, players, instruments and layouts from a saved copy. | No |
 | [10-commands](examples/fundamentals/10-commands.lua) | Renames the first flow by command, showing how to escape values. | Yes; one Edit > Undo |
 | [11-act-on-the-selection](examples/fundamentals/11-act-on-the-selection.lua) | Finds the selected notes and writes each one's name above it. | Yes; one Edit > Undo |
 | [12-select-by-id](examples/fundamentals/12-select-by-id.lua) | Selects each note above F5 by id and colours it red. | Yes; one Edit > Undo |
