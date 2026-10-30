@@ -661,6 +661,27 @@ return {
     t:eq(why2, "its answer left out words")
   end,
 
+  form_on_windows_shows_no_box_when_it_cant_delete_an_old_answer = function(t)
+    local form = helpers.load(ASK, "form")
+    local fields = { { key = "words", label = "Words", kind = "text", default = "" } }
+    local answer = TMP .. "/dorico-form.txt"
+    writeFile(answer, "words=old\n")
+    local realRemove, realExecute, ran = os.remove, os.execute, false
+    os.remove = function(path)
+      if path == answer then return nil, path .. ": Permission denied", 13 end
+      return realRemove(path)
+    end
+    os.execute = function() ran = true return true, "exit", 0 end
+    local ok, answers, why = pcall(form.windows, "Box", fields, TMP)
+    os.remove, os.execute = realRemove, realExecute
+    os.remove(answer)
+    t:ok(ok, tostring(answers))
+    t:eq(answers, nil, "the old answer isn't read as this box's")
+    t:eq(why, "couldn't delete the last answer, " .. answer)
+    t:eq(ran, false, "no box is shown")
+    t:eq(readFile(TMP .. "/dorico-form.ps1"), nil, "no script is left behind")
+  end,
+
   form_on_windows_says_why_when_it_cant_write_the_script = function(t)
     local form = helpers.load(ASK, "form")
     local folder = TMP .. "/no-such-folder-" .. os.time()
@@ -699,6 +720,8 @@ return {
     t:ok(sent[1]:find([[display dialog "it'\''s \"a\" \\ b" default answer ""]], 1, true), sent[1])
     t:ok(sent[1]:find([[with title "Zo]] .. "\195\171" .. [['\''s box"]], 1, true), sent[1])
     t:ok(sent[2]:find([[default button "No"]], 1, true), sent[2])
+    t:ok(sent[2]:find([[buttons {"Cancel", "No", "Yes"}]], 1, true), "a tick box can be cancelled: " .. sent[2])
+    t:ok(sent[2]:find([[cancel button "Cancel"]], 1, true), "Cancel raises -128 like the others: " .. sent[2])
     t:ok(sent[3]:find("-e 'if r is false then error number -128'", 1, true), sent[3])
     t:ok(sent[3]:find([[choose from list {"a", "b'\''c"}]], 1, true), sent[3])
   end,

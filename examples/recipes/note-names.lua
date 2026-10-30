@@ -183,12 +183,15 @@ do
   -- Windows paths take forward slashes too, which keeps the folder's own backslashes out of the command line.
   function form.windows(title, fields, folder)
     local script, answer = folder .. "/dorico-form.ps1", folder .. "/dorico-form.txt"
+    -- A last answer left in place would be read as this box's if PowerShell then wrote none, so no box is shown
+    -- unless it has gone. os.remove's third result is the error number, and 2 means there was no file to delete.
+    local gone, _, code = os.remove(answer)
+    if not gone and code ~= 2 then return nil, "couldn't delete the last answer, " .. answer end
     local f = io.open(script, "wb")
     if not f then return nil, "couldn't write " .. script end
     -- Windows PowerShell 5.1 reads a script with no byte order mark in the ANSI code page, which garbles accents.
     f:write("\239\187\191" .. form.script(title, fields))
     f:close()
-    os.remove(answer)
     os.execute('powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "' .. script .. '" -Out "'
       .. answer .. '"')
     local text = readFile(answer)
@@ -207,8 +210,10 @@ do
     for _, f in ipairs(fields) do
       local lines
       if f.kind == "check" then
-        lines = { '"ok:" & button returned of (display dialog ' .. apple(f.label) .. ' buttons {"No", "Yes"}'
-          .. " default button " .. apple(f.default and "Yes" or "No") .. " with title " .. apple(title) .. ")" }
+        -- A Cancel button, named as the cancel button, raises -128 as the other questions' Cancel does.
+        lines = { '"ok:" & button returned of (display dialog ' .. apple(f.label)
+          .. ' buttons {"Cancel", "No", "Yes"} default button ' .. apple(f.default and "Yes" or "No")
+          .. ' cancel button "Cancel" with title ' .. apple(title) .. ")" }
       elseif f.kind == "choice" then
         local items = {}
         for _, choice in ipairs(f.choices) do items[#items + 1] = apple(choice) end
