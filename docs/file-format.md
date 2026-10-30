@@ -302,6 +302,8 @@ A `propertyOffset` of `0:<num>:<den>:0` puts a value partway through a note, `<n
 start. In Fauré's *Dolly* a note crosses a barline with `kNoteSpelling` `E` at `0:0:1:0` and `F` at `0:1:1:0`, so it
 is written E sharp before the barline and F after it. The dump and the reader give the spelling at 0. Offsets starting
 with 1, 2 or 3 appear on lines, slurs, pauses and divisi labels, and the reader doesn't interpret them.
+`score.value` reads only a value set at the event's start (no offset, or `0:0:<den>:0`). It leaves out a value from
+later in an event, such as a pedal line's retake notch at `0:6:1:0`, and every offset starting with 1, 2 or 3.
 
 How a value was set decides its context. The reading fixture's notes were set each way, then saved and decoded:
 
