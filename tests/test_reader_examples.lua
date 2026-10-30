@@ -421,6 +421,26 @@ return {
       .. "12@23/1 2 | 12@24/1 12 | 12@28/1 1")
   end,
 
+  proofread_reports_a_grace_note_out_of_range = function(t)
+    package.preload["scorereader.dorico.savedcopy"] = changedCopy(SAMPLE, function(s)
+      local flute
+      for _, player in ipairs(s.players) do
+        if player.name == "Flute" then flute = player end
+      end
+      for _, stream in ipairs(s.flows[1].streams) do
+        if stream.type == "voice" and stream.playerId == flute.id then
+          table.insert(stream.events, { kind = "grace", id = 99999, pitch = 50, spelling = "D3",
+            position = { num = 0, den = 1 }, streamId = stream.id, flowId = stream.flowId })
+        end
+      end
+    end)
+    local ok, printed = pcall(run, "examples/recipes/proofread.lua", SAMPLE)
+    package.preload["scorereader.dorico.savedcopy"] = nil
+    t:ok(ok, tostring(printed))
+    t:eq(table.concat(printed, " / "), "1 bar 1 beat 1: Flute plays grace note D3, below its advanced range (B3 to D7)"
+      .. " / 1 bar 2 beat 3: Flute plays A3, below its advanced range (B3 to D7) / 2 findings")
+  end,
+
   -- A grace note has its main note's position, so a label there would join the main note's and read as a chord.
   label_notes_give_a_grace_note_no_label = function(t)
     local made = {}

@@ -1,7 +1,8 @@
 -- Recipe: a proofreading report of the notes outside their instrument's range, by bar and beat, without changing the
 -- music.
--- What it does: reads a saved copy and prints one line per note outside its instrument's range, "<flow> bar <n> beat
--- <b>: <finding>", then how many it found, then any pitched instrument it couldn't check for want of a range.
+-- What it does: reads a saved copy and prints one line per note or grace note outside its instrument's range,
+-- "<flow> bar <n> beat <b>: <finding>", then how many it found, then any pitched instrument it couldn't check for
+-- want of a range.
 -- Changes: nothing (read-only).
 -- Undo: nothing to undo.
 -- Builds on: 04-read-the-saved-copy.lua, 09-bars-keys-and-times.lua and 12-select-by-id.lua (the midi helper). Open
@@ -186,11 +187,13 @@ for n, flow in ipairs(s.flows) do
   local starts, findings = barsOf(flow), {}
   for _, player in ipairs(s.players) do
     for _, e in ipairs(score.eventsOf(s, flow, player)) do
-      local instrument = e.kind == "note" and s.instruments[flow.streamById[e.streamId].instrumentId]
+      local pitched = e.kind == "note" or e.kind == "grace"
+      local instrument = pitched and s.instruments[flow.streamById[e.streamId].instrumentId]
       local out = instrument and outofrange.check(e.pitch, instrument.range, midi)
       if out then
+        local note = (e.kind == "grace" and "grace note " or "") .. e.spelling
         findings[#findings + 1] = { pos = values.toNumber(e.position), text = string.format(
-          "%s plays %s, %s its %s range (%s to %s)", player.name, e.spelling, out.side, out.which, out.from, out.to) }
+          "%s plays %s, %s its %s range (%s to %s)", player.name, note, out.side, out.which, out.from, out.to) }
       end
     end
   end
