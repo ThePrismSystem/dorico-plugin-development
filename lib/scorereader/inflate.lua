@@ -2,7 +2,7 @@
 -- written for speed: a real score's score.dtn runs to a few megabytes, and a plug-in reads it while the user waits.
 local inflate = {}
 
-local byte, char, floor = string.byte, string.char, math.floor
+local byte, char, floor, unpack = string.byte, string.char, math.floor, table.unpack
 
 local POW2 = {}
 for i = 0, 31 do POW2[i] = 2 ^ i end
@@ -189,7 +189,8 @@ function inflate.raw(data, start)
         lengths[i] = s
         i = i + 1
       else
-        local value, rep = 0
+        local value = 0
+        local rep
         if s == 16 then
           if i == 0 then fail("repeat with no first length") end
           value, rep = lengths[i - 1], 3 + bitsOf(2)

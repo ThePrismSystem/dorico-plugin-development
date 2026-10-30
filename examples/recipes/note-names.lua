@@ -331,7 +331,7 @@ do
       local step, off = degree(i, alter, tonicOf(key.fifths, minor), minor and SCALES.minor or SCALES.major)
       name = symbols(off) .. step
     else
-      name = LETTERS:sub(i, i) .. symbols(alter)
+      name = spelling:sub(1, 1) .. symbols(alter)
     end
     if opts.octave then name = name .. octave end
     return name

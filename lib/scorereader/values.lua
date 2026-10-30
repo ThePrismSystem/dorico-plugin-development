@@ -7,6 +7,8 @@ local values = {}
 
 local find, sub = string.find, string.sub
 
+local LIST = "steamVariantList:list: "
+
 local function fail(raw, form)
   error("values: cannot read '" .. tostring(raw) .. "' as " .. form, 0)
 end
@@ -109,12 +111,7 @@ end
 -- {kind, value} for a typed value; kind is string, int, double, bool, null or list (value: the items).
 function values.typed(raw)
   local s = tostring(raw)
-  local prefix = "steamVariantList:list: "
-  if sub(s, 1, #prefix) == prefix then
-    local items, j = parseItems(raw, s, #prefix + 1)
-    if j <= #s then fail(raw, "a typed value") end
-    return { kind = "list", value = items }
-  end
+  if sub(s, 1, #LIST) == LIST then return { kind = "list", value = values.list(raw) } end
   local kind = s:match("^(%a+): ")
   if not kind then
     if s == "null: " then return { kind = "null" } end
@@ -133,8 +130,11 @@ end
 
 -- The items of a 'steamVariantList:list: ...' value, the form contexts and many properties use.
 function values.list(raw)
-  if sub(tostring(raw), 1, 23) ~= "steamVariantList:list: " then fail(raw, "a steamVariantList") end
-  return values.typed(raw).value
+  local s = tostring(raw)
+  if sub(s, 1, #LIST) ~= LIST then fail(raw, "a steamVariantList") end
+  local items, j = parseItems(raw, s, #LIST + 1)
+  if j <= #s then fail(raw, "a steamVariantList") end
+  return items
 end
 
 return values

@@ -1,5 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
   "runtime.version": "Lua 5.2",
-  "workspace.checkThirdParty": false
+  "workspace.checkThirdParty": false,
+  "workspace.ignoreDir": ["tests", "spikes", "fixtures", "node_modules"]
 }

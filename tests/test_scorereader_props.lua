@@ -80,6 +80,7 @@ return {
     refused(t, { { "layoutIDWithFrameChainID", "layout three" }, { "blockInstanceID", "1" } }, "layout text")
     refused(t, { { "layoutIDWithFrameChainID", "steamVariantList:list: {int: 3}" }, { "blockInstanceID", "1" } },
       "short layout list")
+    refused(t, { { "layoutIDWithFrameChainID", "null: " }, { "blockInstanceID", "1" } }, "null layout")
     refused(t, { layoutChild(3), { "blockInstanceID", "x" } }, "instance")
     refused(t, { layoutChild(3), { "blockInstanceID", "-1" }, { "assignedStaveType", "kSmall" } }, "stave type")
     refused(t, { layoutChild(3), { "blockInstanceID", "-1" }, { "voiceIndex", "1" } }, "unknown child")
