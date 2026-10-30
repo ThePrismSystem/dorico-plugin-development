@@ -4,10 +4,11 @@ A Dorico project file holds the whole score as a tree, and a Lua script can read
 format. Everything below was worked out by decoding saved projects, and each fact says how it is known. The reader
 library in [`lib/scorereader`](../lib/scorereader) implements it.
 
-The evidence is 53 projects: the fixtures in [`fixtures/`](../fixtures), copies of the 7 example projects Dorico 6
-installs, and the 39 projects published at <https://ancientgroove.co.uk/dorico/index.html>. Together they were saved
-by Dorico 6.0.22, 6.1.0, 6.1.5, 6.1.10, 6.2.0, 6.2.20 and 6.2.30. The probes are in [`spikes/`](../spikes), and
-[`spikes.md`](spikes.md) records what each one found.
+The evidence is 53 projects: the 52 of [spike F1](spikes.md#f1-what-a-saved-score-holds) and the reading fixture.
+F1's are the fixtures as they were then, copies of the 7 example projects Dorico 6 installs, and the 39 projects
+published at <https://ancientgroove.co.uk/dorico/index.html>. Together they were saved by Dorico 6.0.22, 6.1.0, 6.1.5,
+6.1.10, 6.2.0, 6.2.20 and 6.2.30. The counts below are from those 53; later fixtures aren't in them. The probes are in
+[`spikes/`](../spikes), and [`spikes.md`](spikes.md) records what each one found.
 
 ## The container
 
@@ -44,9 +45,8 @@ u32 nodeCount, then one record per node, node 0 the root:
 ```
 
 The tag's 1 bit marks a node whose children are a list. Saved files use every value in the tag's other six bits,
-and what they mean isn't known, so the reader ignores them. Each distinct value is stored once and shared. Stock Lua
-decodes a 2.5 MB `score.dtn` in about 0.1 s, and every binary file from 6.0.22 to 6.2.30 starts with the same `4, 1`
-header.
+and what they mean isn't known, so the reader ignores them. Each distinct value is stored once and shared. Every
+binary file from 6.0.22 to 6.2.30 starts with the same `4, 1` header.
 
 ### XML: `score.xml`
 
@@ -69,8 +69,7 @@ wrote a different `fileVersion`:
 | 6.2.20 | 1.1450 | binary |
 | 6.2.30 | 1.1452 | binary |
 
-The installed examples are out of order (1.1412 is lower than 6.1.0's 1.1416), which suggests an internal build saved
-them.
+The installed examples are out of order: 1.1412 is lower than 6.1.0's 1.1416.
 
 Across these versions, the parts of the tree that hold the music didn't change: events, element tables, players,
 layouts and project info have the same paths and value forms in every file. Each release only added options (about
@@ -87,7 +86,8 @@ fits, and refuses one that doesn't, naming what didn't match.
 kScore
   fileVersion          "1.1452"
   idGenerators         the next free id of each kind (event, block, blockInstance, stave, ...)
-  info                 title, subtitle, composer, lyricist, ..., createdVersion, lastSavedVersion, filePath
+  info                 title, subtitle, composer, lyricist, ..., createdVersion, lastSavedVersion, and filePath
+                       (absent from a copy app:save writes)
   scoreOptions         engravingOptions, noteInputOptions, playbackOptions, defaultNotationOptionsForFlow,
                        defaultLayoutOptionsMap, viewOptions
   library              the definitions the score uses: accidentals, noteheads and notehead sets, clefs,
@@ -105,7 +105,8 @@ kScore
 
 A `scorePlayer` has a `playerID`, `displayName` and `displayShortName` (the names Dorico shows; `displayName` is what
 `tostring(player)` gives, `{@flat@}` tokens included), `baseName`, `soloPlayer`, and `instruments`, a list of
-`instrument` nodes. Lua gives players no ids, so the `playerID` is the file's own.
+`instrument` nodes. Lua gives players no ids. Whether `playerID` is the id `Project.Player.Rename` takes hasn't
+been tried; fundamental 16 finds that id by renaming.
 
 An `instrument` has an `instrumentID` (the id Lua gives the same instrument), an `entityID` naming its definition
 (`instrument.wind.clarinet.bflat`), `numStaves`, the playing ranges `standardRange` and `advancedRange` (`D3-F6`),
@@ -142,8 +143,8 @@ A `flow` has:
 
 A stream's `streamID` is the id Lua gives the same stream (`flow.allStreams`, `voiceStreams`, `staveStreams` and
 the rest), and its `eventStreamType` matches what `tostring(stream)` says. To find a stream's events, follow its
-block instances to their blocks. In the reading fixture and in a 6.2.20 project with 8,794 notes, every event
-`stream:dump()` listed was in those blocks with the same id and position, and none was missing.
+block instances to their blocks ([matching the file to Lua](#matching-the-file-to-lua)). In every fixture each
+stream has one block instance, at position 0, so a stream with more than one, or one starting later, is untested.
 
 | Stream | `eventStreamType` | Holds |
 | ------ | ----------------- | ----- |
@@ -207,7 +208,8 @@ The rest are `AutomationEventDefinition`, `FiguredBassEventDefinition`, `TrillEv
 `GlissandoLineEventDefinition`, `StaveCountChangeEventDefinition`, `RepeatEndingLineEventDefinition`,
 `PercussionLegendEventDefinition`, `MIDITriggerEventDefinition`, `InstrumentChangeEventDefinition`,
 `VerticalLineEventDefinition`, `GenerativeSlashEventDefinition`, `CutawayEventDefinition` and
-`MultiRestEventDefinition`. The reading fixture's five chord symbols are the only ones in the 53 projects.
+`MultiRestEventDefinition`. None of the downloaded or installed projects has a chord symbol;
+the reading and texts fixtures have the only ones.
 
 ### Reading common items
 

@@ -41,8 +41,7 @@ its Dorico version wrote.
 ## When a new Dorico comes out
 
 Start it with Remote Control on and run `python tools/resave_fixtures.py`. It saves the fixtures built here into a
-folder for the new version, adds them to `versions.json`, saves copies of Steinberg's examples into the run folder,
-and runs the tests. `python tools/run_tests.py --inputs` reads those copies again later. One test,
-`every_fixture_is_a_known_format`, fails until the new `fileVersion` is added to the reader's list of known numbers.
-If any other test fails, the new version changed something the reader relies on.
-[docs/file-format.md](../docs/file-format.md) says how to do both.
+folder for the new version, adds them to `versions.json`, and runs the tests. If you've put copies of Steinberg's
+examples in `%TEMP%\dorico-examples-run\inputs\shipped`, it saves those too, and
+`python tools/run_tests.py --inputs` reads them again later.
+[Adding a Dorico version](../docs/file-format.md#adding-a-dorico-version) says what to do when a test fails.
