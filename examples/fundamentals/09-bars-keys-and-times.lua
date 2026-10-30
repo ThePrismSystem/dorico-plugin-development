@@ -9,10 +9,11 @@
 --
 -- Lua can't read a time signature or a key signature, so before the reader a script had to find bars through the text
 -- export. The saved copy has every bar division (a time signature, or a barline with no new one) in the flow's timebase
--- stream, and the bars helper counts bars from them. Beats are quarter notes from the start of the bar, counted from 1.
--- Bar numbers here count every bar from 1 and don't follow a bar number change. None of the projects this was tried on
--- had a pickup bar, so how Dorico stores one isn't known. If a pickup has no division of its own, it counts as a whole
--- bar, and every barline after it comes out early by the beats the pickup lacks.
+-- stream, and the bars helper counts bars from them. A division in any other stream is left out. Beats are quarter
+-- notes from the start of the bar, counted from 1. Bar numbers here count every bar from 1 and don't follow a bar
+-- number change. None of the projects this was tried on had a pickup bar, so how Dorico stores one isn't known. If a
+-- pickup has no division of its own, it counts as a whole bar, and every barline after it comes out early by the beats
+-- the pickup lacks.
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. The read of app.currentScore goes
@@ -58,7 +59,6 @@ end
 local bars = {}
 do
   local function beats(numerator)
-    if type(numerator) == "number" then return numerator end
     local sum = 0
     for part in tostring(numerator):gmatch("%d+") do sum = sum + tonumber(part) end
     return sum
@@ -76,10 +76,10 @@ do
       end
       local stop = divisions[i + 1] and divisions[i + 1].pos or endPos
       local pos = d.pos
-      if not length and pos < stop then add(pos, stop - pos) end
-      while length and pos < stop do
-        add(pos, math.min(length, stop - pos))
-        pos = pos + length
+      while pos < stop do
+        local len = math.min(length or stop - pos, stop - pos)
+        add(pos, len)
+        pos = pos + len
       end
     end
     if #out == 0 then add(0, endPos) end
@@ -91,7 +91,6 @@ do
     for _, b in ipairs(starts) do
       if b.pos <= pos then found = b else break end
     end
-    if not found then return 1, pos + 1 end
     return found.bar, pos - found.pos + 1
   end
 end
@@ -113,7 +112,7 @@ for n, flow in ipairs(s.flows) do
     endPos = math.max(endPos, pos + values.toNumber(e.duration))
     if e.kind == "keySignature" then
       line("key", n, values.positionText(e.position), e.fifths or "-", e.mode)
-    elseif e.kind == "timeSignature" then
+    elseif e.kind == "timeSignature" and flow.streamById[e.streamId].type == "timebase" then
       divisions[#divisions + 1] = { pos = pos, numerator = e.numerator, denominator = e.denominator }
       if e.numerator then line("time", n, values.positionText(e.position), e.numerator .. "/" .. e.denominator) end
     end

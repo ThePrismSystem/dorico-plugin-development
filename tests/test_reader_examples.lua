@@ -76,6 +76,29 @@ return {
     passes(t, "09-bars-keys-and-times.lua", READING, "09-bars-keys-and-times.lua")
   end,
 
+  a_time_signature_outside_the_timebase_stream_makes_no_bar = function(t)
+    local score = require("scorereader.score")
+    local values = require("scorereader.values")
+    local s = score.readFile(READING)
+    local flow, stave, fake = s.flows[1], nil, nil
+    for _, stream in ipairs(flow.streams) do
+      if stream.type == "stave" then stave = stave or stream end
+    end
+    for _, e in ipairs(flow.events) do
+      if e.kind == "timeSignature" then fake = fake or setmetatable({}, { __index = e }) end
+    end
+    fake.streamId, fake.position, fake.numerator, fake.denominator = stave.id, values.position("2"), 2, 4
+    flow.events[#flow.events + 1] = fake
+    -- readCopy clears the library's modules but not package.preload, so this stands in for the saved copy.
+    package.preload["scorereader.dorico.savedcopy"] = function() return { read = function() return s end } end
+    local ok, printed = pcall(run, "examples/fundamentals/09-bars-keys-and-times.lua", READING)
+    package.preload["scorereader.dorico.savedcopy"] = nil
+    t:ok(ok, tostring(printed))
+    local made, failed = check("09-bars-keys-and-times.lua", printed)
+    t:ok(made > 0, "no checks")
+    t:eq(#failed, 0, table.concat(failed, " / "))
+  end,
+
   set_a_property_by_id_sends_a_command_per_note = function(t)
     local printed, sent = run("examples/fundamentals/13-set-a-property-by-id.lua", SAMPLE)
     t:eq(#sent, 5)

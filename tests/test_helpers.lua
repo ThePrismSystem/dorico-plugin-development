@@ -25,6 +25,13 @@ local function records(rows)
   return helpers.load(PROOFREAD, "export").parse(table.concat(rows, "\r\n") .. "\r\n")
 end
 
+-- Where each bar from the bars helper starts and how long it is, as "<pos>+<length>".
+local function spans(starts)
+  local out = {}
+  for _, b in ipairs(starts) do out[#out + 1] = b.pos .. "+" .. b.length end
+  return table.concat(out, " ")
+end
+
 -- Runs fn with DoApp standing in for Dorico's and print recorded; gives back what was printed.
 local function withDorico(app, fn)
   local printed, realPrint, realApp = {}, print, DoApp
@@ -293,18 +300,14 @@ return {
   a_time_signature_partway_through_a_bar_cuts_it_short = function(t)
     local starts = helpers.load(BARS, "bars").starts({ { pos = 0, numerator = 4, denominator = 4 },
       { pos = 6, numerator = 2, denominator = 4 } }, 10)
-    local got = {}
-    for _, b in ipairs(starts) do got[#got + 1] = b.pos .. "+" .. b.length end
-    t:eq(table.concat(got, " "), "0+4 4+2 6+2 8+2")
+    t:eq(spans(starts), "0+4 4+2 6+2 8+2")
   end,
 
   an_additive_time_signature_and_a_barline_only_division = function(t)
     local bars = helpers.load(BARS, "bars")
     t:eq(bars.starts({ { pos = 0, numerator = "3+2", denominator = 8 } }, 5)[1].length, 2.5, "3+2/8")
-    local starts = bars.starts({ { pos = 0, numerator = 4, denominator = 4 }, { pos = 6 } }, 14)
-    local got = {}
-    for _, b in ipairs(starts) do got[#got + 1] = b.pos end
-    t:eq(table.concat(got, " "), "0 4 6 10", "a barline starts a bar and keeps the signature")
+    t:eq(spans(bars.starts({ { pos = 0, numerator = 4, denominator = 4 }, { pos = 6 } }, 14)), "0+4 4+2 6+4 10+4",
+      "a barline starts a bar and keeps the signature")
   end,
 
   a_flow_with_no_time_signature_is_one_bar = function(t)
@@ -341,9 +344,7 @@ return {
   a_barline_before_the_first_time_signature = function(t)
     local bars = helpers.load(BARS, "bars")
     local starts = bars.starts({ { pos = 2 }, { pos = 6, numerator = 4, denominator = 4 } }, 14)
-    local got = {}
-    for _, b in ipairs(starts) do got[#got + 1] = b.pos .. "+" .. b.length end
-    t:eq(table.concat(got, " "), "0+2 2+4 6+4 10+4")
+    t:eq(spans(starts), "0+2 2+4 6+4 10+4")
     local bar, beat = bars.at(starts, 3)
     t:eq(bar .. "/" .. beat, "2/2")
   end,
@@ -353,9 +354,7 @@ return {
     for _, numerator in ipairs({ "X", 0 }) do
       local starts = bars.starts({ { pos = 0, numerator = numerator, denominator = 4 },
         { pos = 10, numerator = 4, denominator = 4 } }, 18)
-      local got = {}
-      for _, b in ipairs(starts) do got[#got + 1] = b.pos .. "+" .. b.length end
-      t:eq(table.concat(got, " "), "0+10 10+4 14+4", "numerator " .. tostring(numerator))
+      t:eq(spans(starts), "0+10 10+4 14+4", "numerator " .. tostring(numerator))
     end
   end,
 
