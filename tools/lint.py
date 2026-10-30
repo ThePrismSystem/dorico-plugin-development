@@ -18,8 +18,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
-from urllib.parse import urlparse
-from urllib.request import url2pathname
+from urllib.parse import unquote, urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -84,6 +83,12 @@ def luacheck(exe, sarif_dir):
     return subprocess.run(argv, cwd=ROOT).returncode == 0
 
 
+def uri_path(uri):
+    """The path in a file URI. lua-language-server writes a Windows drive as /c%3A/, which url2pathname misreads."""
+    path = unquote(urlparse(uri).path)
+    return path[1:] if path[2:3] == ":" else path
+
+
 def luals(exe, sarif_dir):
     """lua-language-server's diagnostics, over a copy of the tracked files: it walks the folder itself."""
     with tempfile.TemporaryDirectory() as tmp:
@@ -99,7 +104,7 @@ def luals(exe, sarif_dir):
         # a clean run writes an empty list, and one with findings a map from file URI to diagnostics
         found = json.loads(report.read_text(encoding="utf-8")) or {}
         for uri, diagnostics in sorted(found.items()):
-            path = repo_path(url2pathname(urlparse(uri).path), source)
+            path = repo_path(uri_path(uri), source)
             for d in diagnostics:
                 print(f"{path}:{d['range']['start']['line'] + 1} {d.get('code')} {d.get('message')}")
     return proc.returncode == 0 and not found

@@ -194,7 +194,7 @@ class LuaLsTests(unittest.TestCase):
                 {"code": "undefined-global", "message": "m", "range": {"start": {"line": 4, "character": 0}}}]}
         clean, printed, _ = self.run_luals(report, 1)
         self.assertFalse(clean)
-        self.assertIn("examples/a b.lua:5 undefined-global m", printed)
+        self.assertIn("examples/a b.lua:5 undefined-global m", printed.splitlines())
 
     def test_no_report_fails(self):
         # lua-language-server writes nothing when it crashes, such as on a path it can't read
