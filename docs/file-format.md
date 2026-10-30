@@ -34,7 +34,7 @@ Both encodings hold the same tree. Each node has a name, a value (a string, ofte
 The numbers in the header are little-endian 32-bit integers; the ones after each record's tag byte are LEB128
 varints.
 
-```
+```text
 u32 4, u32 1
 u32 nameCount, then nameCount NUL-terminated node names
 u32 valueCount, then valueCount NUL-terminated values (value 0 is "")
@@ -83,7 +83,7 @@ fits, and refuses one that doesn't, naming what didn't match.
 
 ## The tree
 
-```
+```text
 kScore
   fileVersion          "1.1452"
   idGenerators         the next free id of each kind (event, block, blockInstance, stave, ...)
@@ -307,7 +307,7 @@ A node's value is one of these forms:
 | bool | `true`, `false` | flags |
 | enum | `kCommonPractice` | choices |
 | text | `Sample` | names, words, ids such as `paragraph.lyrics` |
-| typed | `string: "C"`, `int: 4`, `double: 0.2`, `bool: true`, `null: `, `list: ...`, `steamVariantList:list: {int: -1}, {int: -1}, {bool: false}` | property values and contexts |
+| typed | `string: "C"`, `int: 4`, `double: 0.2`, `bool: true`, `null:` followed by a space, `list: ...`, `steamVariantList:list: {int: -1}, {int: -1}, {bool: false}` | property values and contexts |
 
 ## Properties and contexts
 

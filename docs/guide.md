@@ -267,7 +267,7 @@ event.
 
 `stream:dump()` returns text, one line per event, on any stream:
 
-```
+```text
 Start block id: 1061 position: 0
 0 (0) dur: 1: kNoteEvent (id:7932) at 0, duration 1  E5 (ends 1)
 8 (8): kGraceNoteEvent (id:200) at 8  secondary pos -1/2 (-0.5), notated duration: 1/2 (0.5), B6
@@ -408,7 +408,7 @@ Set them with `DoCore.Variant.createString(...)` on an event from `stream.events
 
 A command changes the selected items, through the Properties panel's own route:
 
-```
+```text
 UI.InvokePropertyChangeValue?Type=kEventColour&Value=#ffff0000
 ```
 
@@ -427,7 +427,7 @@ nothing. Dorico stores a value set this way for the layout on screen, so it show
 
 ### Selecting an event for a command
 
-```
+```text
 EventEdit.Select?FlowID=<flow.id>&EventID=<event id>&EventBlockID=<block id>
 ```
 
@@ -448,7 +448,7 @@ the dump) in `stream.blockInstances`, and take that instance's `block.id`. The `
 `EventEdit.ChangeProperty` sets one property on one event without selecting it
 ([13-set-a-property-by-id.lua](../examples/fundamentals/13-set-a-property-by-id.lua)):
 
-```
+```text
 EventEdit.ChangeProperty?FlowID=<flow id>&EventID=<event id>&EventBlockID=<block id>&Type=kEventColour&Value=#ff1f78b4
 ```
 
@@ -479,7 +479,7 @@ What the W spikes found for other changes ([spikes.md](spikes.md#w1-to-w7-changi
 Both go in through the commands their popovers run, with a note selected where they should go
 ([chord-symbols.lua](../examples/recipes/chord-symbols.lua)):
 
-```
+```text
 NoteInput.StartChordSymbolInput
 NoteInput.AcceptCurrentChordSymbolTextInput?Definition=G7&ChordSymbolEntryAdvanceType=kEndInput
 NoteInput.CreateDynamic?Definition=mf
@@ -528,12 +528,12 @@ it's open Dorico runs no scripts at all. Escape doesn't close it; clicking empty
 Options are set by command, in the form Dorico logs for the Remote Control API's `setoptions`
 ([15-layout-and-notation-options.lua](../examples/fundamentals/15-layout-and-notation-options.lua)):
 
-```
+```text
 Project.Layout.SetOptions?Dictionary=list: {string: "flowHeadingBehaviour"}\, {string: "kNoFlowHeadings"}&OpenScoreID=<score.openScoreID>&LayoutIDArray=<layout id>
 Project.Flow.SetNotationOptions?Dictionary=list: {string: "barlineOptions.finalBarlineType"}\, {string: "kDouble"}&OpenScoreID=<id>&FlowIDArray=<flow id>
 ```
 
-- The dictionary alternates path and value items, separated by an escaped comma (`\, `). Inside an item, a
+- The dictionary alternates path and value items, separated by an escaped comma and a space (`\,` then a space). Inside an item, a
   backslash, a quote and a comma each need a backslash of their own. Passing the whole list through the `commands`
   helper gives commas and backslashes theirs. It can't give a quote one, since it would escape that backslash too.
 - Only single ids have been tried in list parameters such as `FlowIDArray`. Passed several, as `1,2`, the helper
@@ -632,7 +632,7 @@ local ok, how, code = os.execute(command)   -- Lua 5.2: true|nil, "exit"|"signal
 
 ### Windows: PowerShell and Windows Forms
 
-```
+```text
 powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "<box.ps1>" -Out "<answer.txt>"
 ```
 
