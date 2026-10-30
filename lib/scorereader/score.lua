@@ -231,9 +231,12 @@ function score.entries(s, e)
   return s.cache[e] or newContext(s).entries(e)
 end
 
--- The decoded value of a property that applies to an event in a layout (the event's own block instance), or nil.
+-- The decoded value of a property that applies to an event in a layout (the event's own block instance), then whether
+-- nothing applies there but a value is set for that layout and another block instance. The value is nil both when the
+-- property isn't set and when it is set to 'null: '; score.entries tells the two apart. A list value comes back as its
+-- items, each {kind, value}.
 function score.value(s, e, property, layoutId)
-  return (props.get(score.entries(s, e), property, layoutId, e.instanceId))
+  return props.get(score.entries(s, e), property, layoutId, e.instanceId)
 end
 
 -- Whether a text is above the staff in a layout. Edit.FlipItem stores the flip as kTextEventAboveOrBelow for the

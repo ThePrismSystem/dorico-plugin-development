@@ -320,6 +320,27 @@ return {
       end
     end
   end,
+  a_value_set_for_another_block_instance = function(t)
+    -- a score of its own, since this changes the cache
+    local s = score.readFile(fixtures .. "6.2.30/reading.dorico")
+    local e = find(s.flows[1].events, function(x) return x.kind == "note" end)
+    local function valueWith(entry)
+      s.cache[e] = { entry }
+      return score.value(s, e, "kEventColour", s.layouts[1].id)
+    end
+    local function entry(instance, value)
+      return { property = "kEventColour", value = value, layout = -1, frameChain = -1, instance = instance }
+    end
+    local v, elsewhere = valueWith(entry(e.instanceId + 1000, 'string: "#ff0000ff"'))
+    t:eq(v, nil, "no value here")
+    t:eq(elsewhere, true, "but one for another instance")
+    v, elsewhere = valueWith(entry(e.instanceId, 'string: "#ff0000ff"'))
+    t:eq(v, "#ff0000ff")
+    t:eq(elsewhere, false)
+    v, elsewhere = valueWith(entry(-1, "null: "))
+    t:eq(v, nil, "a null value reads as unset")
+    t:eq(elsewhere, false)
+  end,
   articulations_and_strings = function(t)
     local s = load("6.2.30/reading.dorico")
     local flute = score.eventsOf(s, s.flows[1], s.players[1])
