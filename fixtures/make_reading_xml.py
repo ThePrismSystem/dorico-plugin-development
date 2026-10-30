@@ -21,7 +21,7 @@ from pathlib import Path
 from xml.sax.saxutils import escape
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from make_sample_xml import midi, parse_spelling, spelling_of, STEPS, SEMITONES  # noqa: E402
+from make_sample_xml import _pitch_xml, midi, transposed  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 BUILD = HERE / "build"
@@ -179,28 +179,9 @@ def player_name(part):
     return part.get("player", part["name"])
 
 
-def transposed(s, interval):
-    """Written to sounding: interval = (diatonic, chromatic[, octaves]) as MusicXML's <transpose> gives it."""
-    if not interval:
-        return s
-    diatonic, chromatic = interval[0], interval[1]
-    octaves = interval[2] if len(interval) > 2 else 0
-    step, _, octave = parse_spelling(s)
-    index = STEPS.index(step) + diatonic
-    new_step, new_octave = STEPS[index % 7], octave + index // 7 + octaves
-    natural = 12 * (new_octave + 1) + SEMITONES[new_step]
-    return spelling_of(new_step, midi(s) + chromatic + 12 * octaves - natural, new_octave)
-
-
 def note_type(q):
     return {F(1, 3): ("eighth", 0), F(1, 2): ("eighth", 0), F(1): ("quarter", 0), F(2): ("half", 0),
             F(3): ("half", 1), F(4): ("whole", 0)}[q]
-
-
-def _pitch_xml(s):
-    step, alter, octave = parse_spelling(s)
-    return (f"<pitch><step>{step}</step>" + (f"<alter>{alter}</alter>" if alter else "")
-            + f"<octave>{octave}</octave></pitch>")
 
 
 def _direction_xml(item, staff):

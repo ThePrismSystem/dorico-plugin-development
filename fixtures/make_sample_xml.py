@@ -42,15 +42,16 @@ def spelling_of(step, alter, octave):
 
 
 def transposed(s, interval):
-    """Written to sounding for a part with MusicXML <transpose>: interval = (diatonic, chromatic) steps."""
+    """Written to sounding: interval = (diatonic, chromatic[, octaves]) as MusicXML's <transpose> gives it."""
     if not interval:
         return s
-    diatonic, chromatic = interval
+    diatonic, chromatic = interval[0], interval[1]
+    octaves = interval[2] if len(interval) > 2 else 0
     step, _, octave = parse_spelling(s)
     index = STEPS.index(step) + diatonic
-    new_step, new_octave = STEPS[index % 7], octave + index // 7
+    new_step, new_octave = STEPS[index % 7], octave + index // 7 + octaves
     natural = 12 * (new_octave + 1) + SEMITONES[new_step]
-    return spelling_of(new_step, midi(s) + chromatic - natural, new_octave)
+    return spelling_of(new_step, midi(s) + chromatic + 12 * octaves - natural, new_octave)
 
 
 def _pitch_xml(s):
