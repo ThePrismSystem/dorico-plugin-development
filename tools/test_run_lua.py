@@ -301,6 +301,17 @@ class WindowTitleTests(unittest.TestCase):
         with mock.patch.object(run_lua.subprocess, "run", return_value=listed):
             self.assertEqual(run_lua.window_titles(), ["Song in scratch*"])
 
+    @unittest.skipUnless(os.name == "nt", "capture.ps1 needs Windows")
+    def test_capture_lists_nothing_for_a_process_with_no_windows(self):
+        # Dorico with no project open shows no window, as after the tests close their copy when nothing else is open.
+        # This Python process has none either.
+        with tempfile.TemporaryDirectory() as folder:
+            capture = run_lua.PRESS.parent / "capture.ps1"
+            proc = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(capture),
+                                   "-All", "-Out", str(Path(folder) / "w.png"), "-ProcessId", str(os.getpid())],
+                                  capture_output=True, text=True)
+        self.assertEqual((proc.returncode, proc.stdout.strip()), (0, ""), proc.stderr)
+
 
 class PromptTests(unittest.TestCase):
     def answer(self, titles, ran=None):
