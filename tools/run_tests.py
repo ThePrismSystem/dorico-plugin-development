@@ -17,7 +17,7 @@ PY_TEST_FOLDERS = ["tools", "fixtures", "tests"]
 LUA_TESTS = ["tests/run.lua", "spikes/lib/test_json.lua"]
 LUA_CANDIDATES = ["lua52", "lua5.2", "C:/ProgramData/chocolatey/lib/lua52/tools/lua52.exe", "lua"]
 # Dorico skips a script with a syntax error without a word, so every Lua file in these folders is checked
-SYNTAX_FOLDERS = ["examples", "spikes", "tests", "fixtures", "types"]
+SYNTAX_FOLDERS = ["examples", "lib", "spikes", "tests", "fixtures", "types"]
 SAMPLE = ROOT / "fixtures" / "sample.dorico"
 
 
