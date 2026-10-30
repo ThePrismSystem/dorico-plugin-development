@@ -241,11 +241,13 @@ the `text`, a `syllableType` (`kStart`, `kMiddle`, `kEnd`, `kWholeWord`), a `lin
 
 #### Time and key signatures
 
-A `BarDivisionEventDefinition` in the timebase stream points by `barDivisionElementID`
-to `barDivisionData/timeSignature/timeSignaturesAndDivisions/timeSignatureAndDivision/timeSignature`, with
-`numerator`, `denominator` and the beat grouping. A `TonalityDivisionEventDefinition` points to
-`tonalityDivisionData/keySignature`, whose `root` has a `tonalityType` (`kKeySigMajor`) and a `root` note
-(`noteName` `G`, `accidentalID` `accidental.12et.western.natural`).
+A `BarDivisionEventDefinition` in the timebase stream points by `barDivisionElementID` to
+`barDivisionData/timeSignature/timeSignaturesAndDivisions/timeSignatureAndDivision/timeSignature`, with `numerator`,
+`denominator` and the beat grouping. A pickup is `barDivisionData/irregularBarLength`, the first bar's length in quarter
+notes: `1` for the one-beat pickup in 4/4 of `fixtures/6.2.30/pickup.dorico`, an import of `fixtures/pickup.musicxml`.
+The reader gives it as the time signature's `pickup`. A `TonalityDivisionEventDefinition` points to
+`tonalityDivisionData/keySignature`, whose `root` has a `tonalityType` (`kKeySigMajor`) and a `root` note (`noteName`
+`G`, `accidentalID` `accidental.12et.western.natural`).
 
 #### Tuplets, tempos and techniques
 

@@ -208,6 +208,12 @@ return {
     end
     t:ok(find(got, function(x) return x == "Flute|12|crescendo" end), "the hairpin")
   end,
+  a_pickup_is_the_first_bars_length = function(t)
+    local time = events(load("6.2.30/pickup.dorico"), "timeSignature")[1]
+    t:eq(time.numerator, 4)
+    t:eq(time.pickup and pos(time.pickup), "1", "a one-beat pickup")
+    t:eq(events(load("6.2.30/reading.dorico"), "timeSignature")[1].pickup, nil, "no pickup, no field")
+  end,
   keys_and_time_signatures = function(t)
     local s = load("6.2.30/reading.dorico")
     local want = readJson(fixtures .. "reading.expected.json")

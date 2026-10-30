@@ -14,6 +14,10 @@ what it holds. It has one of each kind of item the reader reads, and note proper
 (through Lua, by command on a selection, by event id, by a menu command, and with a part on screen), so the reader's
 tests can tell how Dorico stores each one.
 
+`6.2.30/parallels.dorico` is built by `build_parallels.py` from `make_parallels_xml.py`, and `parallels.expected.json`
+lists the findings the parallel fifths recipe should give, worked out by hand. `6.2.30/pickup.dorico` is an import of
+`pickup.musicxml`, a one-beat pickup in 4/4, made by `build_pickup.py`.
+
 ## From ancientgroove.co.uk
 
 The projects in `6.0.22` to `6.2.20` come from Ben Byram-Wigfield's collection at

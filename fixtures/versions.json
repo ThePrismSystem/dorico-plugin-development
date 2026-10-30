@@ -42,6 +42,13 @@
     "credit": ""
   },
   {
+    "path": "6.2.30/pickup.dorico",
+    "fileVersion": "1.1452",
+    "savedBy": "6.2.30",
+    "source": "fixtures/build_pickup.py",
+    "credit": ""
+  },
+  {
     "path": "6.2.30/reading.dorico",
     "fileVersion": "1.1452",
     "savedBy": "6.2.30",

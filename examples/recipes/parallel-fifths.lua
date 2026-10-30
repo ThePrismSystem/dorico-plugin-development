@@ -211,9 +211,11 @@ end
 -- the start of the flow. A bar is numerator * 4 / denominator quarter notes long ("3+2" counts as 5). A time
 -- signature partway through a bar starts a new bar there, and so does a barline-only division, keeping the time
 -- signature. Where there is no length to go by (before the first time signature, or an open meter with no beats), a
--- bar runs to the next division. A flow with no time signature is one bar.
---   bars.starts(divisions, endPos) -> {{bar, pos, length}}; divisions: {{pos, numerator, denominator}} in order,
---     with no numerator for a barline-only division
+-- bar runs to the next division. A flow with no time signature is one bar. A time signature's pickup makes its first
+-- bar that long; that bar's beats count back from its end, so a one-beat pickup in 4/4 is on beat 4, and a pickup at
+-- the start of the flow is bar 0.
+--   bars.starts(divisions, endPos) -> {{bar, pos, length, offset}}; divisions: {{pos, numerator, denominator,
+--     pickup}} in order, with no numerator for a barline-only division and pickup in quarter notes or nil
 --   bars.at(starts, pos) -> bar, beat (from 1)
 local bars = {}
 do
@@ -226,8 +228,12 @@ do
 
   function bars.starts(divisions, endPos)
     local out, length = {}, nil
-    local function add(pos, len) out[#out + 1] = { bar = #out + 1, pos = pos, length = len } end
-    local first = divisions[1] and divisions[1].pos or endPos
+    local d1 = divisions[1]
+    local base = (d1 and d1.pos == 0 and d1.numerator and d1.pickup) and -1 or 0
+    local function add(pos, len, offset)
+      out[#out + 1] = { bar = #out + 1 + base, pos = pos, length = len, offset = offset or 0 }
+    end
+    local first = d1 and d1.pos or endPos
     if first > 0 then add(0, first) end
     for i, d in ipairs(divisions) do
       if d.numerator then
@@ -237,6 +243,10 @@ do
       local stop = divisions[i + 1] and divisions[i + 1].pos or endPos
       local pos = d.pos
       if not length and pos < stop then add(pos, stop - pos) end
+      if length and d.numerator and d.pickup and d.pickup > 0 and pos < stop then
+        add(pos, math.min(d.pickup, stop - pos), length - d.pickup)
+        pos = pos + d.pickup
+      end
       while length and pos < stop do
         add(pos, math.min(length, stop - pos))
         pos = pos + length
@@ -252,7 +262,7 @@ do
       if b.pos <= pos then found = b else break end
     end
     if not found then return 1, pos + 1 end
-    return found.bar, pos - found.pos + 1
+    return found.bar, pos - found.pos + 1 + found.offset
   end
 end
 -- end helper: bars
@@ -505,7 +515,7 @@ local function barsOf(flow)
     endPos = math.max(endPos, values.toNumber(e.position) + values.toNumber(e.duration))
     if e.kind == "timeSignature" then
       divisions[#divisions + 1] = { pos = values.toNumber(e.position), numerator = e.numerator,
-        denominator = e.denominator }
+        denominator = e.denominator, pickup = e.pickup and values.toNumber(e.pickup) }
     end
   end
   table.sort(divisions, function(a, b) return a.pos < b.pos end)

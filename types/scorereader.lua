@@ -103,6 +103,7 @@
 ---@field denominator integer|nil timeSignature
 ---@field barlineOnly boolean|nil timeSignature
 ---@field barline string|nil timeSignature
+---@field pickup scorereader.Position|nil timeSignature: the length of a short first bar
 ---@field mode "major"|"minor"|"atonal"|"custom"|nil keySignature
 ---@field atonal boolean|nil keySignature
 ---@field fifths integer|nil keySignature

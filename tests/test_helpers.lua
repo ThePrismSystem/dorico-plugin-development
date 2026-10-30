@@ -354,6 +354,29 @@ return {
     end
   end,
 
+  bars_after_a_pickup = function(t)
+    local bars = helpers.load(BARS, "bars")
+    local starts = bars.starts({ { pos = 0, numerator = 4, denominator = 4, pickup = 1 } }, 9)
+    local got = {}
+    for _, b in ipairs(starts) do got[#got + 1] = b.bar .. "@" .. b.pos .. "+" .. b.length end
+    t:eq(table.concat(got, " "), "0@0+1 1@1+4 2@5+4", "the pickup is bar 0")
+    local bar, beat = bars.at(starts, 0)
+    t:eq(bar .. "/" .. beat, "0/4", "a one-beat pickup is on beat 4")
+    bar, beat = bars.at(starts, 1)
+    t:eq(bar .. "/" .. beat, "1/1")
+  end,
+
+  a_short_first_bar_after_a_later_time_signature = function(t)
+    local bars = helpers.load(BARS, "bars")
+    local starts = bars.starts({ { pos = 0, numerator = 4, denominator = 4 },
+      { pos = 8, numerator = 3, denominator = 4, pickup = 2 } }, 15)
+    local got = {}
+    for _, b in ipairs(starts) do got[#got + 1] = b.bar .. "@" .. b.pos .. "+" .. b.length end
+    t:eq(table.concat(got, " "), "1@0+4 2@4+4 3@8+2 4@10+3 5@13+2")
+    local bar, beat = bars.at(starts, 9)
+    t:eq(bar .. "/" .. beat, "3/3", "the short bar's notes count from its end")
+  end,
+
   bars_of_an_empty_flow = function(t)
     local bars = helpers.load(BARS, "bars")
     local starts = bars.starts({}, 0)
