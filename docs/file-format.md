@@ -133,6 +133,9 @@ A `flow` has:
   and every cautionary-accidental setting (`showCautionariesForNotesInNextBarAtSameOctave = kParenthesise` and so
   on). Every flow carries a full set; `scoreOptions/defaultNotationOptionsForFlow` holds the defaults new flows take.
   Layout options are in each layout's `layoutOptions`, with defaults in `scoreOptions/defaultLayoutOptionsMap`.
+  The reader gives each flow's accidental options as `flow.options.accidentals`: `durationBehaviour`, plus the
+  `cautionaryOptions` and `commonOptions` groups under their own names. Values are Dorico's own (`kShow`, `kHide`,
+  `kParenthesise`), with `true` and `false` turned into booleans. Every fixture so far uses `kCommonPractice`.
 
 ### Streams and what they hold
 

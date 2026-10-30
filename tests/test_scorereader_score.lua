@@ -208,6 +208,24 @@ return {
     end
     t:ok(find(got, function(x) return x == "Flute|12|crescendo" end), "the hairpin")
   end,
+  accidental_options_of_every_flow = function(t)
+    local SHOWN = { kShow = true, kHide = true, kParenthesise = true }
+    for _, entry in ipairs(readJson(fixtures .. "versions.json")) do
+      for _, flow in ipairs(load(entry.path).flows) do
+        local a = flow.options and flow.options.accidentals
+        if t:ok(a, entry.path .. " has accidental options") then
+          t:eq(a.durationBehaviour, "kCommonPractice", entry.path .. " the only duration rule seen so far")
+          for _, k in ipairs({ "showCautionariesForNotesInNextBarAtSameOctave",
+            "showCautionariesForNotesInNextBarAtDifferentOctaves", "showCautionariesForNotesInSameBarAtDifferentOctaves",
+            "showCautionariesAtTiesOnSystemBreaks" }) do
+            t:ok(SHOWN[a.cautionary[k]], entry.path .. " " .. k .. " = " .. tostring(a.cautionary[k]))
+          end
+          t:eq(type(a.cautionary.suppressCautionariesAlreadyStatedInBar), "boolean", entry.path)
+          t:eq(type(a.common.restateAccidentalsForEachPlayer), "boolean", entry.path)
+        end
+      end
+    end
+  end,
   a_pickup_is_the_first_bars_length = function(t)
     local time = events(load("6.2.30/pickup.dorico"), "timeSignature")[1]
     t:eq(time.numerator, 4)

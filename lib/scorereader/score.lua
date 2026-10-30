@@ -88,12 +88,31 @@ local function elementsOf(ctx, flowNode)
   return out
 end
 
+-- The flow's accidental options with Dorico's own names and values, and "true" and "false" turned into booleans:
+-- {durationBehaviour, cautionary = {...}, common = {...}}. Nil when the flow has none.
+local function accidentalOptions(ctx, flowNode)
+  local n = tree.path(ctx.t, flowNode, "notationOptions/accidentalStateCalcOptions")
+  if not n then return nil end
+  local function group(path)
+    local out = {}
+    for _, c in ipairs(children(ctx, n, path)) do
+      local v = tree.value(ctx.t, c)
+      if v == "true" then v = true elseif v == "false" then v = false end
+      out[tree.name(ctx.t, c)] = v
+    end
+    return out
+  end
+  return { durationBehaviour = ctx.opt(n, "durationBehaviour"), cautionary = group("cautionaryOptions"),
+    common = group("commonOptions") }
+end
+
 local function readFlow(ctx, flowNode)
   local t = ctx.t
   local flow = { id = ctx.int(flowNode, "flowID"), title = ctx.text(flowNode, "flowName"), streams = {},
     streamById = {}, events = {}, info = {} }
   for _, c in ipairs(children(ctx, flowNode, "flowInfo")) do flow.info[tree.name(t, c)] = tree.value(t, c) end
   flow.elements = elementsOf(ctx, flowNode)
+  flow.options = { accidentals = accidentalOptions(ctx, flowNode) }
 
   for _, sNode in ipairs(children(ctx, flowNode, "eventStreams/array")) do
     local raw = ctx.text(sNode, "eventStreamType")

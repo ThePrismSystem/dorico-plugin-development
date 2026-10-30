@@ -57,6 +57,7 @@
 ---@field info table<string, string>
 ---@field streams scorereader.Stream[]
 ---@field streamById table<integer, scorereader.Stream>
+---@field options {accidentals: {durationBehaviour: string|nil, cautionary: table<string, string|boolean>, common: table<string, string|boolean>}|nil}
 ---@field events scorereader.Event[]
 
 ---@class scorereader.Dynamic
