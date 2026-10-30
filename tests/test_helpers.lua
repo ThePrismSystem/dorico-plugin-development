@@ -194,13 +194,14 @@ return {
     t:eq(printed[1], "Open a project first, then run this script again.")
   end,
 
-  guard_treats_an_error_as_no_project = function(t)
+  guard_treats_an_error_as_no_project_and_prints_it = function(t)
     local guard = helpers.load(HELLO, "guard")
-    local hub = setmetatable({}, { __index = function() error("No such property: currentScore") end })
+    local hub = setmetatable({}, { __index = function() error("No such property: currentScore", 0) end })
     local score
     local printed = withDorico(hub, function() score = select(2, guard()) end)
     t:eq(score, nil)
-    t:eq(printed[1], "Open a project first, then run this script again.")
+    t:eq(printed[1], "Open a project first, then run this script again. Reading the open project gave an error: "
+      .. "No such property: currentScore")
   end,
 
   commands_escape_backslash_and_ampersand = function(t)
@@ -368,6 +369,27 @@ return {
     t:eq(package.loaded["scorereader.fake"], nil, "an earlier run's module is cleared")
     t:eq(printed[1], "The reader couldn't read this project: "
       .. "scorereader: Dorico could not save a copy of the project to read")
+  end,
+
+  read_copy_says_to_copy_the_lib_folder_when_the_library_is_missing = function(t)
+    local readCopy = assert(load(helpers.text(SAVED_COPY, "readCopy") .. "\nreturn readCopy", "@C:/nowhere/x.lua"))()
+    local before, s = package.path, nil
+    package.path = "C:/nowhere/other/?.lua;"
+    local ok, printed = pcall(withDorico, {}, function() s = readCopy({ currentScore = {} }) end)
+    package.path = before
+    t:ok(ok, tostring(printed))
+    t:eq(s, nil)
+    t:eq(#printed, 1)
+    t:eq(printed[1], "Couldn't find the reader library: copy the lib folder beside this script, then run it again.")
+  end,
+
+  read_copy_leaves_a_broken_library_s_error_to_end_the_script = function(t)
+    local readCopy = helpers.load(SAVED_COPY, "readCopy")
+    package.preload["scorereader.dorico.savedcopy"] = function() error("broken library", 0) end
+    local ok, err = pcall(withDorico, {}, function() readCopy({ currentScore = {} }) end)
+    package.preload["scorereader.dorico.savedcopy"] = nil
+    t:ok(not ok, "the error isn't put down to the project")
+    t:ok(tostring(err):find("broken library", 1, true), tostring(err))
   end,
 
   bars_from_time_signatures = function(t)
