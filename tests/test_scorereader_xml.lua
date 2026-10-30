@@ -1,6 +1,9 @@
 -- score.xml, the encoding Steinberg's shipped examples use: the same tree as score.dtn, written as XML.
 local xml = require("scorereader.xml")
 local tree = require("scorereader.tree")
+local project = require("scorereader.project")
+local score = require("scorereader.score")
+local values = require("scorereader.values")
 
 local function errorOf(fn)
   local ok, err = pcall(fn)
@@ -10,6 +13,51 @@ end
 local function fails(t, text, label)
   local err = errorOf(function() return xml.decode(text) end)
   t:ok(err and err:find("xml: ", 1, true), label .. ": " .. tostring(err))
+end
+
+local ESCAPES = { ["&"] = "&amp;", ["<"] = "&lt;", [">"] = "&gt;", ['"'] = "&quot;" }
+
+-- A decoded tree written back as score.xml would hold it.
+local function toXml(t)
+  local out = { '<?xml version="1.0" encoding="utf-8"?>\n' }
+  local function write(id)
+    local name, kids = tree.name(t, id), tree.children(t, id)
+    local open = "<" .. name .. (tree.isArray(t, id) and ' array="true"' or "")
+    local v = tree.value(t, id)
+    if #kids > 0 then
+      assert(v == "", name .. " #" .. id .. " has children and a value, which XML can't hold")
+      out[#out + 1] = open .. ">"
+      for _, k in ipairs(kids) do write(k) end
+      out[#out + 1] = "</" .. name .. ">"
+    elseif v == "" then
+      out[#out + 1] = open .. "/>"
+    else
+      out[#out + 1] = open .. ">" .. v:gsub('[&<>"]', ESCAPES) .. "</" .. name .. ">"
+    end
+  end
+  write(0)
+  return table.concat(out)
+end
+
+-- Where a and b differ, leaving out node ids, which depend on the order the encoding lists nodes, and the tree and
+-- cache; nil when they don't.
+local SKIP = { node = true, tree = true, cache = true }
+local function difference(a, b, path, seen)
+  if type(a) ~= "table" or type(b) ~= "table" then
+    if a ~= b then return path .. ": " .. tostring(a) .. " vs " .. tostring(b) end
+    return nil
+  end
+  if seen[a] then return nil end
+  seen[a] = true
+  for k, v in pairs(a) do
+    if not SKIP[k] then
+      local d = difference(v, b[k], path .. "." .. tostring(k), seen)
+      if d then return d end
+    end
+  end
+  for k in pairs(b) do
+    if not SKIP[k] and a[k] == nil then return path .. "." .. tostring(k) .. ": only in the second" end
+  end
 end
 
 local SCORE = '<?xml version="1.0" encoding="utf-8"?>\n<kScore>\n\t<fileVersion>1.1412</fileVersion>\n'
@@ -71,6 +119,18 @@ return {
     local s = xml.decode('<a>\n\t<b array="true">\n\t</b>\n</a>')
     t:eq(tree.value(s, tree.child(s, 0, "b")), "", "as score.dtn gives a list node")
     t:eq(tree.value(xml.decode("<a><b> </b></a>"), 1), " ", "a leaf keeps its spaces")
+  end,
+  a_score_reads_the_same_from_either_encoding = function(t)
+    local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])") or "./"
+    local dtnTree = project.readFile(here .. "../fixtures/6.2.30/reading.dorico").tree
+    local fromDtn = score.read(dtnTree)
+    local fromXml = score.read(xml.decode(toXml(dtnTree)))
+    t:eq(fromXml.tree.encoding, "xml")
+    t:ok(#fromDtn.flows[1].events > 100, "a score with events in it")
+    t:eq(difference(fromDtn, fromXml, "score", {}), nil)
+    local e = fromXml.flows[1].events[1]
+    e.position = values.add(e.position, values.position("1"))
+    t:ok(difference(fromDtn, fromXml, "score", {}), "a moved event shows")
   end,
   a_reference_with_no_hash = function(t) fails(t, "<a>&x41;</a>", "&x41;") end,
   an_ampersand_that_starts_no_reference = function(t)
