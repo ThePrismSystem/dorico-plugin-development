@@ -40,10 +40,14 @@ def run_dir_for(env):
 RUN_DIR = run_dir_for(os.environ)
 REPO = Path(__file__).resolve().parents[1]
 PRESS = Path(__file__).resolve().parent / "press.ps1"
+CLICK = Path(__file__).resolve().parent / "click.ps1"
 TITLES = Path(__file__).resolve().parent / "titles.ps1"
 # Prompts Dorico raises when opening a scratch copy, and the key that answers each safely.
 # Matched by exact window title only; anything else is left alone and the run times out.
 KNOWN_PROMPTS = {"Activate Project for Playback": "{ESC}"}  # Esc = "Do Not Activate"
+# Prompts answered by clicking a named button. A project an older Dorico saved opens with a notice titled "Dorico"
+# whose only button is OK; other "Dorico" prompts, such as one asking to save, have no OK button and are left alone.
+KNOWN_BUTTONS = [("Dorico", "OK")]
 
 
 LUAC_CANDIDATES = ["luac52", "luac5.2", "C:/ProgramData/chocolatey/lib/lua52/tools/luac52.exe", "luac"]
@@ -111,6 +115,12 @@ def answer_known_prompts():
     for title, keys in KNOWN_PROMPTS.items():
         subprocess.run(
             ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(PRESS), "-Title", title, "-Keys", keys],
+            capture_output=True,
+        )
+    for title, button in KNOWN_BUTTONS:
+        subprocess.run(
+            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(CLICK), "-Window", title,
+             "-Button", button],
             capture_output=True,
         )
 
