@@ -3,13 +3,22 @@ local checks = {}
 
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
 
+local function readJson(name)
+  local json = require("json")
+  local f = assert(io.open(here .. "../../../fixtures/" .. name, "rb"))
+  local value = json.decode(f:read("*a"))
+  f:close()
+  return value
+end
+
 -- fixtures/expected.json: what the sample holds.
 function checks.expected()
-  local json = require("json")
-  local f = assert(io.open(here .. "../../../fixtures/expected.json", "rb"))
-  local expected = json.decode(f:read("*a"))
-  f:close()
-  return expected
+  return readJson("expected.json")
+end
+
+-- fixtures/reading.expected.json: what the reading fixture holds.
+function checks.reading()
+  return readJson("reading.expected.json")
 end
 
 -- Loads helper blocks out of an example together (a later block may use an earlier one) and returns the value of

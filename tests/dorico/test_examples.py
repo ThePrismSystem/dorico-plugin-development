@@ -25,11 +25,12 @@ READ_COLOURS = FUNDAMENTALS + "04-noteheads-and-colours.lua"
 EXAMPLES = []
 
 
-def row(name, example, twice=False, args=None, check=None, before=None, after=(), dialog=None):
+def row(name, example, twice=False, args=None, check=None, before=None, after=(), dialog=None, project=None):
     """dialog: {"window", "button", "text"?} for an example that waits on a box; the example then runs in the
-    background while the test answers the box."""
+    background while the test answers the box. project: None for the sample, "reading" for the reading fixture."""
     EXAMPLES.append({"name": name, "example": example, "check": check or CHECKS + Path(example).name,
-                     "twice": twice, "args": args or {}, "before": before, "after": list(after), "dialog": dialog})
+                     "twice": twice, "args": args or {}, "before": before, "after": list(after), "dialog": dialog,
+                     "project": harness.PROJECTS[project]})
 
 
 def then_check(check, example=None):
@@ -146,7 +147,7 @@ def make_test(spec):
         before = spec["before"]
         first, first_args = (before["case"], before.get("args")) if before else \
             ("case_example.lua", harness.example_args(spec))
-        with harness.scratch(self, first, args=first_args) as (client, result):
+        with harness.scratch(self, first, args=first_args, open_file=spec["project"]) as (client, result):
             if spec["dialog"]:
                 box = spec["dialog"]
                 run = harness.Background(lambda: harness.run_more(self, client, "case_example.lua",
