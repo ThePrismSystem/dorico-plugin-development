@@ -1,0 +1,91 @@
+-- The examples that read a saved copy, run in stock Lua on the fixtures, then checked by the check files the in-Dorico
+-- suite uses. A stand-in app's save copies the fixture to the path the reader asks for, and its doCommand records each
+-- command. 06 is left out: it reads Dorico's own dumps.
+local ROOT = (arg and arg[0] or ""):match("^(.*[/\\])tests[/\\]") or "./"
+local FIXTURES = ROOT .. "fixtures/6.2.30/"
+local SAMPLE, READING = FIXTURES .. "sample.dorico", FIXTURES .. "reading.dorico"
+local CHECKS = ROOT .. "tests/dorico/lib/?.lua;"
+
+local function copy(src, dst)
+  local f = assert(io.open(src, "rb"))
+  local bytes = f:read("*a")
+  f:close()
+  local g = assert(io.open(dst, "wb"))
+  g:write(bytes)
+  g:close()
+  return true
+end
+
+-- Runs an example with DoApp standing in for Dorico, and puts back what it changed. What it printed, and the commands
+-- it sent.
+local function run(example, fixture)
+  local printed, sent = {}, {}
+  local app = { currentScore = { flows = {} }, save = function(_, _, path) return copy(fixture, path) end,
+    doCommand = function(_, command) sent[#sent + 1] = command end }
+  local path, realPrint = package.path, print
+  DoApp = { DoApp = function() return app end }
+  print = function(...) printed[#printed + 1] = table.concat({ ... }, "\t") end
+  local ok, err = pcall(dofile, ROOT .. example)
+  print, DoApp, package.path = realPrint, nil, path
+  if not ok then error(err, 0) end
+  return printed, sent
+end
+
+-- Runs a check file on what an example printed; how many checks it made, and the failures.
+local function check(name, printed, args)
+  local path = package.path
+  package.path = CHECKS .. path
+  local made, failed = 0, {}
+  local p = { check = function(_, label, ok, detail)
+    made = made + 1
+    if not ok then failed[#failed + 1] = label .. ": " .. tostring(detail) end
+    return ok
+  end }
+  local ok, err = pcall(function()
+    assert(loadfile(ROOT .. "tests/dorico/checks/" .. name))()(p, { printed = printed, ok = true }, args)
+  end)
+  package.path = path
+  if not ok then error(err, 0) end
+  return made, failed
+end
+
+local function passes(t, example, fixture, checkName)
+  local made, failed = check(checkName, (run("examples/fundamentals/" .. example, fixture)))
+  t:ok(made > 0, checkName .. " made no checks")
+  t:eq(#failed, 0, table.concat(failed, " / "))
+end
+
+return {
+  read_the_saved_copy = function(t)
+    passes(t, "04-read-the-saved-copy.lua", SAMPLE, "04-read-the-saved-copy.lua")
+  end,
+
+  names_and_titles = function(t)
+    passes(t, "05-names-and-titles.lua", SAMPLE, "05-names-and-titles.lua")
+  end,
+
+  values_per_layout = function(t)
+    passes(t, "07-values-per-layout.lua", READING, "07-values-per-layout.lua")
+  end,
+
+  text_lyrics_chords_dynamics = function(t)
+    passes(t, "08-text-lyrics-chords-dynamics.lua", READING, "08-text-lyrics-chords-dynamics.lua")
+  end,
+
+  bars_keys_and_times = function(t)
+    passes(t, "09-bars-keys-and-times.lua", READING, "09-bars-keys-and-times.lua")
+  end,
+
+  set_a_property_by_id_sends_a_command_per_note = function(t)
+    local printed, sent = run("examples/fundamentals/13-set-a-property-by-id.lua", SAMPLE)
+    t:eq(#sent, 5)
+    for _, command in ipairs(sent) do
+      t:ok(command:match("^EventEdit%.ChangeProperty%?FlowID=%d+&EventID=%d+&EventBlockID=%d+&Type=kEventColour"
+        .. "&Value=#ff1f78b4$"), command)
+    end
+    -- The stand-in's second copy is the fixture again, so no colour took.
+    t:eq(printed[1], "1\tFlute\t4\tG5\tnot coloured")
+    t:eq(#printed, 6)
+    t:eq(printed[6], "total\t0\t5")
+  end,
+}
