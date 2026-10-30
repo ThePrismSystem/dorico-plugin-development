@@ -7,7 +7,7 @@ works, so "verified" means the project was read afterwards and showed the change
 
 Dorico has hundreds more. Its own `keycommands_en.json` (in its program folder) lists the ones with default keys,
 `application.log` in `%APPDATA%\Steinberg\Dorico 6` records the command behind each menu item you use, and the
-Remote Control API's `getcommands` lists them all.
+Remote Control API's `getcommands` lists them all (the handbells plug-in).
 
 ## Selecting
 
@@ -15,22 +15,23 @@ Remote Control API's `getcommands` lists them all.
 | ------- | ---------- | ------ | ----- |
 | `EventEdit.Select` | `FlowID`, `EventID`, `EventBlockID` | verified | Selects one event, replacing the selection. The block id comes from `stream.blockInstances` ([12](../../examples/fundamentals/12-select-by-id.lua)). |
 | `EventEdit.NavigateRightExtend` | | verified | Adds the next item to the right to the selection. |
-| `EventEdit.NavigateDownExtend` | | verified | Extends the selection one staff down (the old fundamental 04, in [S8](../spikes.md#s8-reading-and-setting-note-properties)). |
+| `EventEdit.NavigateDownExtend` | | verified | Extends the selection one staff down ([S8](../spikes.md#s8-reading-and-setting-note-properties)). |
 | `Edit.SelectNone` | | verified | Clears the selection. |
 | `Edit.SelectAll` | | verified | Selects everything in the flow (`spikes/pitch_up_down.lua`). |
-| `Edit.SelectToStartOfFlow`, `Edit.SelectAtEndOfFlow` | | verified | Extend the selection to the flow's ends (the old fundamental 04, in [S8](../spikes.md#s8-reading-and-setting-note-properties)). |
+| `Edit.SelectToStartOfFlow`, `Edit.SelectAtEndOfFlow` | | verified | Extend the selection to the flow's ends ([S8](../spikes.md#s8-reading-and-setting-note-properties)). |
 | `Filter.NotesAndChords` | | verified | Keeps only notes and chords in the selection, and the lines attached to them. |
 
 ## Editing
 
 | Command | Parameters | Status | Notes |
 | ------- | ---------- | ------ | ----- |
-| `Edit.Copy`, `Edit.Paste`, `Edit.Delete` | | verified | On the selection (the old fundamental 04, in [S8](../spikes.md#s8-reading-and-setting-note-properties); `Edit.Delete` in W1 to W3). |
+| `Edit.Copy`, `Edit.Paste`, `Edit.Delete` | | verified | On the selection ([S8](../spikes.md#s8-reading-and-setting-note-properties); `Edit.Delete` in W1 to W3). |
 | `Edit.Undo` | | verified | Inside a script, takes back everything the run has done so far. Only the first in a run is safe ([18](../../examples/fundamentals/18-undo.lua)). |
 | `Edit.RemoveRests` | | verified | On the selection. Leaves no trace in the dump. |
 | `Edit.HideAccidental` | | verified | On the selected note (the handbells plug-in). |
 | `EventEdit.ChangeProperty` | `FlowID`, `EventID`, `EventBlockID`, `Type`, `Value` | verified | Sets a property on one event by its ids, with nothing selected, stored for every layout; it joins the run's one undo step. With no `Value` it takes the property off. It stores any name and value without checking: an unknown accidental visibility becomes `kHide` (W5, `spikes/w5_accidentals.lua`). |
-| `Edit.ShowAccidentalInParentheses`, `Edit.ShowAccidentalInBrackets` | | verified | On the selected notes; stored only for the layout on screen, layout 0 when the full score is showing (W5). |
+| `Edit.ShowAccidentalInBrackets` | | verified | On the selected notes; stored only for the layout on screen, layout 0 when the full score is showing (W5). |
+| `Edit.ShowAccidentalInParentheses` | | not tried | The same menu's parentheses. |
 | `Edit.SetNoteheadSetOverride` | `NoteheadSetEntityID` | verified | On the selected notes; stored for every layout and the note's block instance (F3). |
 | `Edit.FlipItem` | | verified | Flips the selected text above or below, stored as `kTextEventAboveOrBelow` for the layout on screen (W1). |
 | `Edit.ChangeStaffTextToSystemText` | | verified | Makes the selected staff text a system text: a new event in the timebase stream (W1). |
@@ -47,7 +48,7 @@ Remote Control API's `getcommands` lists them all.
 | ------- | ---------- | ------ | ----- |
 | `NoteInput.Exit` | | verified | Leaves note input; do it before selecting. |
 | `NoteInput.StartChordSymbolInput` | | verified | Opens chord symbol input at the selection. |
-| `NoteInput.AcceptCurrentChordSymbolTextInput` | `Definition`, `ChordSymbolEntryAdvanceType` | verified | After the command above, `Definition=G7&ChordSymbolEntryAdvanceType=kEndInput` makes the chord symbol. Alone it makes nothing. Each chord symbol takes three undo steps ([chord-symbols](../../examples/recipes/chord-symbols.lua)). |
+| `NoteInput.AcceptCurrentChordSymbolTextInput` | `Definition`, `ChordSymbolEntryAdvanceType` | verified | After the command above, `Definition=G7&ChordSymbolEntryAdvanceType=kEndInput` makes the chord symbol. Alone it makes nothing. Each chord symbol makes about three undo steps of its own: the recipe's four took eleven presses of Edit > Undo ([chord-symbols](../../examples/recipes/chord-symbols.lua)). |
 | `NoteInput.StartLyricInput` | | verified | Opens lyric input at the selected note (W2). |
 | `NoteInput.AcceptCurrentLyricInput` | `LyricText`, `LyricsEntryAdvanceType` | verified | After the start command, `LyricText=glad&LyricsEntryAdvanceType=kEndInput` puts a whole-word lyric on line 1. A trailing hyphen stays in the word (W2). |
 | `NoteInput.CreateDynamic` | `Definition` | verified | `Definition=mf` makes a dynamic at the selection; `Dynamic=ff` makes nothing (S4). |
@@ -63,7 +64,7 @@ Remote Control API's `getcommands` lists them all.
 | `Project.Flow.Rename` | `FlowID`, `Name` | verified | ([10](../../examples/fundamentals/10-commands.lua)) |
 | `Project.Flows.MoveToStart` | `FlowIDArray` | verified | A single id is the whole array (the handbells plug-in). |
 | `Project.Flows.Delete` | | verified | Needs Setup mode, and asks the user to confirm (the handbells plug-in). |
-| `Project.Player.Rename` | `PlayerID`, `Name`, `ShortName` | verified | Both names optional. Takes a player id, not an instrument id ([16](../../examples/fundamentals/16-flows-and-players.lua)). |
+| `Project.Player.Rename` | `PlayerID`, `Name` | verified | Takes a player id, not an instrument id ([16](../../examples/fundamentals/16-flows-and-players.lua)). |
 | `Project.Players.DeleteEmpty` | | verified | Opens Dorico's "Delete Empty Players" dialog (the handbells plug-in). |
 | `Project.Layouts.Delete` | `LayoutIDArray` | verified | Deletes a layout silently (the handbells plug-in). |
 | `Project.Layout.SetOptions` | `Dictionary`, `OpenScoreID`, `LayoutIDArray` | verified | Sets layout options ([15](../../examples/fundamentals/15-layout-and-notation-options.lua)). |
@@ -82,4 +83,3 @@ Remote Control API's `getcommands` lists them all.
 | `Script.RunLastScript` | | verified | Runs the last script again; Ctrl+Shift+Alt+R by default (S2). |
 | `Script.ShowConsole` | | verified | Toggles the Script Console (S6). |
 | `Window.SwitchMode` | `WindowMode` | verified | `kWriteMode` before selecting; `kSetupMode` before deleting a flow. |
-| `View.ZoomIn` | | verified | Zoomed the view in when a screenshot of a test copy was taken. Nothing in this repository runs it. |

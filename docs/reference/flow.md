@@ -2,11 +2,8 @@
 
 A flow, and the element tables it reaches.
 
-Members come from `spikes/class_members.lua`'s scan of Lua's registry, sorted by `tools/members.py` into
-[members.json](members.json). "Member" in the Kind column means the scan can't tell a property from a method, since
-luabind stores both as functions, and nobody has tried it. Status says whether an example or probe has used a member
-(verified), found it broken (fails), or left it alone (not tried). Don't try a member on a project you care about:
-a bad call can crash Dorico.
+[The reference's index](README.md#reading-the-tables) explains the Kind and Status columns. Don't try a member
+marked "not tried" on a project you care about: a bad call can crash Dorico.
 
 ## `DoCore.Flow`
 
@@ -16,7 +13,7 @@ a bad call can crash Dorico.
 | `__len` | operator | not tried |  |
 | `__tostring` | operator | not tried |  |
 | `addPlayer` | method | verified | Adds a player to the flow (the handbells plug-in uses it). |
-| `allStreams` | property | verified | Every stream of the flow, of every type (the chord-symbols recipe's check). |
+| `allStreams` | property | verified | Every stream of the flow, of every type ([06](../../examples/fundamentals/06-match-by-event-id.lua)). |
 | `elementTables` | property | verified | The flow's bar divisions, dynamics and key signatures (S3). |
 | `id` | property | verified | What commands take as `FlowID`; the Remote API's ids too. |
 | `instruments` | property | verified | One per voice stream, in the same order: `instruments[i]` owns `voiceStreams[i]` ([02-walk-the-score](../../examples/fundamentals/02-walk-the-score.lua)). |

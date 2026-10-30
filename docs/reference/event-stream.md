@@ -2,11 +2,8 @@
 
 A stream of events: a voice, a staff, a player's, or the timebase.
 
-Members come from `spikes/class_members.lua`'s scan of Lua's registry, sorted by `tools/members.py` into
-[members.json](members.json). "Member" in the Kind column means the scan can't tell a property from a method, since
-luabind stores both as functions, and nobody has tried it. Status says whether an example or probe has used a member
-(verified), found it broken (fails), or left it alone (not tried). Don't try a member on a project you care about:
-a bad call can crash Dorico.
+[The reference's index](README.md#reading-the-tables) explains the Kind and Status columns. Don't try a member
+marked "not tried" on a project you care about: a bad call can crash Dorico.
 
 ## `DoCore.EventStream`
 
@@ -33,7 +30,7 @@ a bad call can crash Dorico.
 | `createTonalityDivision` | member | not tried |  |
 | `createTransposingClef` | member | not tried |  |
 | `createTuplet` | member | not tried |  |
-| `delete` | method | verified | `delete(event)` removes an event ([proofread](../../examples/recipes/proofread.lua)). |
+| `delete` | method | verified | `delete(event)` removes an event (`spikes/undo_object_edits.lua`, in [Undo](../spikes.md#undo)). |
 | `deleteEventsInRange` | method | verified | `deleteEventsInRange(from, to)` clears a range (the handbells plug-in). |
 | `dump` | method | verified | Text, one line per event, on any stream ([03-read-notes](../../examples/fundamentals/03-read-notes.lua)). |
 | `events` | property | verified | Event objects. A stream holding lyrics or another kind with no Lua class raises an error; on a voice holding a slur, the list stopped just before the slur with no error ([S8](../spikes.md#s8-reading-and-setting-note-properties), [text_event.lua](../spikes.md#texteventtext)). |
