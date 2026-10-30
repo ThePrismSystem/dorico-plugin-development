@@ -1,9 +1,9 @@
--- chord-symbols.lua named the piano's four chords, C, Am, F and G7 at the starts of bars 1 to 4, and put a chord
--- symbol at each, in the first flow's timebase stream.
+-- chord-symbols.lua named the piano's four chords, C, Am, F and G7 in bars 1 to 4, and put a chord symbol at the
+-- start of each bar, in the first flow's timebase stream.
 local checks = require("checks")
 
 return function(p, run)
-  local want = { "flow 1 at 0: C", "flow 1 at 4: Am", "flow 1 at 8: F", "flow 1 at 12: G7" }
+  local want = { "flow 1, bar 1: C", "flow 1, bar 2: Am", "flow 1, bar 3: F", "flow 1, bar 4: G7" }
   p:check("named the four chords", table.concat(run.printed, " / ") == table.concat(want, " / "),
     table.concat(run.printed, " / "))
   local symbols = checks.chordSymbols(1)

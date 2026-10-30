@@ -1,20 +1,20 @@
--- Recipe: name the chords one player plays, and write them in as chord symbols.
--- What it does: finds the first player whose name starts with PLAYER and, at every point where one of its notes
--- starts, names the chord all its sounding notes make (both hands of a piano, any voice). Where the chord changes,
--- it adds a chord symbol there, through the chord symbol popover's own commands, and prints "flow <n> at <position>:
--- <chord>". Positions are quarter notes from the start of the flow.
+-- Recipe: name the chords one player plays, bar by bar, and write them in as chord symbols.
+-- What it does: reads a saved copy, finds the first player whose name starts with PLAYER and, for each bar, names the
+-- chord its notes make (both hands of a piano, any voice). Where the chord changes from the bar before, it adds a
+-- chord symbol at the first note that starts in the bar, through the chord symbol popover's own commands, and prints
+-- "flow <n>, bar <b>: <chord>".
 -- Changes: adds chord symbols where the flow has none, and changes the selection. A chord symbol already in place is
 -- left as it is, since entering another there would replace it.
 -- Undo: Edit > Undo takes the chord symbols back one at a time, three presses each: the chord symbol popover's
 -- commands make undo steps of their own, unlike the rest of a run (the sample's four took eleven presses). To
 -- remove them all at once, select the passage, filter the selection to chord symbols, and press Delete.
--- Builds on: 03-read-notes.lua, 10-commands.lua and 12-select-by-id.lua. Open Script > Show Script Console to read
--- what it prints.
+-- Builds on: 04-read-the-saved-copy.lua, 09-bars-keys-and-times.lua, 10-commands.lua and 12-select-by-id.lua. Open
+-- Script > Show Script Console to read what it prints.
 --
--- It names a chord wherever three or more pitch classes sound, from a short list of types (major, minor, diminished,
--- augmented, sus4, and the common sevenths). Inversions are named by their root. Passing notes count too, so a busy
--- texture can give odd names; a real chord-finder would weigh beats and durations, which this doesn't. Lua can't read
--- time signatures, so it can't work bar by bar.
+-- It names a chord where three or more pitch classes sound, from a short list of types (major, minor, diminished,
+-- augmented, sus4, and the common sevenths). Inversions are named by their root. A bar's chord is the one all the
+-- notes sounding in it make; when a passing note spoils that, the notes sounding on its first beat decide. A real
+-- chord-finder would weigh beats and durations more than this does.
 --
 -- A chord symbol goes in as the popover would put it: select a note at the right place, then
 --   NoteInput.StartChordSymbolInput
@@ -35,127 +35,80 @@ local function guard()
 end
 -- end helper: guard
 
--- helper: dump
--- stream:dump() as tables. Each event line reads "<pos> (<pos>)[ dur: <d>]: <event>", where <event> is what
--- tostring(event) gives, such as "kNoteEvent (id:7932) at 0, duration 1  E5 (ends 1)". A "Start block id:" line
--- starts each block instance; the events after it belong to that instance (EventEdit.Select needs it).
---   dump.parse(text) -> {events = {{kind, id, pos, duration, spelling, grace, instance, raw}}}
---   dump.event(text, instance) -> one event from tostring(event), or nil
---   dump.notes(parsed) -> the notes and grace notes, {{id, spelling, pos, duration, grace, instance}}
---   dump.owners(score, flow) -> {[voice stream id] = player name}
--- Kinds are "note", "grace", "rest", "text" and "other". Positions and durations are quarter notes.
-local dump = {}
+-- helper: reader
+-- Puts the reader library on the module path: lib/ two folders up in this repository, or a lib folder beside the
+-- script once both are copied into Script Plug-ins. Dorico keeps one Lua state, so the library's modules from an
+-- earlier run are cleared first.
+local function reader()
+  local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])") or ""
+  local paths = here .. "../../lib/?.lua;" .. here .. "lib/?.lua"
+  for name in pairs(package.loaded) do
+    if name:match("^scorereader") then package.loaded[name] = nil end
+  end
+  if not package.path:find(paths, 1, true) then package.path = paths .. ";" .. package.path end
+end
+-- end helper: reader
+
+-- helper: bars
+-- Where bars start, from a flow's bar divisions, and the bar and beat of a position. Positions are quarter notes from
+-- the start of the flow. A bar is numerator * 4 / denominator quarter notes long ("3+2" counts as 5). A time
+-- signature partway through a bar starts a new bar there, and so does a barline-only division, keeping the time
+-- signature. Where there is no length to go by (before the first time signature, or an open meter with no beats), a
+-- bar runs to the next division. A flow with no time signature is one bar. A time signature's pickup makes its first
+-- bar that long; that bar's beats count back from its end, so a one-beat pickup in 4/4 is on beat 4, and a pickup at
+-- the start of the flow is bar 0.
+--   bars.starts(divisions, endPos) -> {{bar, pos, length, offset}}; divisions: {{pos, numerator, denominator,
+--     pickup}} in order, with no numerator for a barline-only division and pickup in quarter notes or nil
+--   bars.at(starts, pos) -> bar, beat (from 1)
+local bars = {}
 do
-  local KINDS = {
-    kNoteEvent = "note", kGraceNoteEvent = "grace", kRestEvent = "rest", kBarRestEvent = "rest", kTextEvent = "text",
-  }
-  local SPELLING = "[A-G][#bx]*%-?%d+"
-
-  -- "13/2 (6.5)" gives 6.5 and "4" gives 4: the exact fraction, where there is one, beats the rounded decimal.
-  local function number(s)
-    local raw = s and s:match("^([%-%d%./]+)")
-    if not raw then return nil end
-    local a, b = raw:match("^(%-?%d+)/(%d+)$")
-    if a then return tonumber(a) / tonumber(b) end
-    return tonumber(raw)
+  local function beats(numerator)
+    if type(numerator) == "number" then return numerator end
+    local sum = 0
+    for part in tostring(numerator):gmatch("%d+") do sum = sum + tonumber(part) end
+    return sum
   end
 
-  function dump.event(text, instance)
-    local s = text and text:match("^(k%a+ %(id:%d+%).*)$")
-    if not s then return nil end
-    local ev = { kind = KINDS[s:match("^(k%a+)")] or "other", raw = s, instance = instance }
-    ev.id = tonumber(s:match("%(id:(%d+)%)"))
-    ev.pos = number(s:match(" at (%S+)"))
-    ev.duration = number(s:match(", duration (%S+)"))
-    ev.grace = ev.kind == "grace"
-    if ev.kind == "note" then
-      ev.spelling = s:match("%s(" .. SPELLING .. ") %(ends")
-    elseif ev.kind == "grace" then
-      ev.spelling = s:match(",%s*(" .. SPELLING .. ")%s*$")
-      ev.duration = nil
-    elseif ev.kind == "text" then
-      ev.text = s:match(" : (.*)$")
+  function bars.starts(divisions, endPos)
+    local out, length = {}, nil
+    local d1 = divisions[1]
+    local base = (d1 and d1.pos == 0 and d1.numerator and d1.pickup) and -1 or 0
+    local function add(pos, len, offset)
+      out[#out + 1] = { bar = #out + 1 + base, pos = pos, length = len, offset = offset or 0 }
     end
-    return ev
-  end
-
-  function dump.parse(text)
-    local out, instance = { events = {} }, nil
-    for line in (text or ""):gmatch("[^\r\n]+") do
-      local start = line:match("^Start block id: (%d+)")
-      if start then
-        instance = tonumber(start)
-      else
-        local ev = dump.event(line:match(": (k%a+ %(id:%d+%).*)$"), instance)
-        if ev then out.events[#out.events + 1] = ev end
+    local first = d1 and d1.pos or endPos
+    if first > 0 then add(0, first) end
+    for i, d in ipairs(divisions) do
+      if d.numerator then
+        local n = beats(d.numerator) * 4 / d.denominator
+        length = n > 0 and n or nil
+      end
+      local stop = divisions[i + 1] and divisions[i + 1].pos or endPos
+      local pos = d.pos
+      if not length and pos < stop then add(pos, stop - pos) end
+      if length and d.numerator and d.pickup and d.pickup > 0 and pos < stop then
+        add(pos, math.min(d.pickup, stop - pos), length - d.pickup)
+        pos = pos + d.pickup
+      end
+      while length and pos < stop do
+        add(pos, math.min(length, stop - pos))
+        pos = pos + length
       end
     end
+    if #out == 0 then add(0, endPos) end
     return out
   end
 
-  function dump.notes(parsed)
-    local notes = {}
-    for _, ev in ipairs(parsed.events) do
-      if (ev.kind == "note" or ev.kind == "grace") and ev.spelling then
-        notes[#notes + 1] = { id = ev.id, spelling = ev.spelling, pos = ev.pos, duration = ev.duration,
-          grace = ev.grace, instance = ev.instance }
-      end
+  function bars.at(starts, pos)
+    local found = starts[1]
+    for _, b in ipairs(starts) do
+      if b.pos <= pos then found = b else break end
     end
-    return notes
-  end
-
-  -- flow.instruments[i] owns flow.voiceStreams[i], and tostring(player) is the player's name.
-  function dump.owners(score, flow)
-    local nameOf = {}
-    for _, player in ipairs(score.players) do
-      for _, instrument in ipairs(player.instruments) do nameOf[instrument.id] = tostring(player) end
-    end
-    local owners = {}
-    for i, stream in ipairs(flow.voiceStreams) do owners[stream.id] = nameOf[flow.instruments[i].id] end
-    return owners
+    if not found then return 1, pos + 1 end
+    return found.bar, pos - found.pos + 1 + found.offset
   end
 end
--- end helper: dump
-
--- helper: commands
--- Builds a command string, "Name?key=value&key=value", for app:doCommand. Dorico reads a backslash in a value as an
--- escape, and a bare "&" or "," ends the value, so a value's own backslashes, ampersands and commas each get a
--- backslash in front; "=" and any other character pass as they are. A nil value is refused, since tostring would
--- send Dorico the word "nil". Only single ids have been tried in list parameters such as FlowIDArray; given several,
--- as "1,2", this would escape the commas between them.
---   commands.value(v) -> v escaped
---   commands.build(name, params) -> the command, params a list of {key, value} pairs
-local commands = {}
-do
-  function commands.value(v)
-    if v == nil then error("a command parameter has no value", 2) end
-    return (tostring(v):gsub("\\", "\\\\"):gsub("&", "\\&"):gsub(",", "\\,"))
-  end
-
-  function commands.build(name, params)
-    local parts = {}
-    for i, kv in ipairs(params or {}) do parts[i] = kv[1] .. "=" .. commands.value(kv[2]) end
-    if #parts == 0 then return name end
-    return name .. "?" .. table.concat(parts, "&")
-  end
-end
--- end helper: commands
-
--- helper: blockIdOf
--- The block id EventEdit.Select needs for an event. The dump's "Start block id" names a block instance, despite
--- its name, and the instance's block carries the id to select by. A select with any other number selects nothing
--- and raises no error. parsed is dump.parse(stream:dump()).
-local function blockIdOf(stream, eventId, parsed)
-  local instance
-  for _, ev in ipairs(parsed.events) do
-    if ev.id == eventId then instance = ev.instance end
-  end
-  for _, bi in ipairs(stream.blockInstances) do
-    if bi.id == instance then return bi.block.id end
-  end
-  error("no block holds event " .. tostring(eventId))
-end
--- end helper: blockIdOf
+-- end helper: bars
 
 -- helper: chords
 -- Names the chord a set of notes makes, as the chord symbol popover takes it ("C", "Am", "G7", "Bbmaj7"), or nil when
@@ -213,16 +166,75 @@ do
 end
 -- end helper: chords
 
-local app, score = guard()
-if not score then return end
-
-local key
-for _, player in ipairs(score.players) do
-  if not key and tostring(player):sub(1, #PLAYER) == PLAYER then key = player.instruments[1].id end
+-- helper: barchords
+-- One chord a bar for a player's notes: the chord all the notes sounding in the bar make or, when they make none, the
+-- chord of the notes sounding on its first beat. A chord is kept only where it changes from the bar before, and only
+-- in a bar where a note starts, since a chord symbol goes in at a selected note.
+--   barchords.of(notes, starts, name) -> {{bar, pos, name, note}}; notes: {{pos, duration, spelling}} in quarter
+--     notes, starts as the bars helper gives them, name as chords.name; note is the first note to start in the bar
+local barchords = {}
+do
+  function barchords.of(notes, starts, name)
+    local out, last = {}, nil
+    for _, b in ipairs(starts) do
+      local from, to = b.pos, b.pos + b.length
+      local all, first, starter = {}, {}, nil
+      for _, n in ipairs(notes) do
+        if n.pos < to and n.pos + n.duration > from then
+          all[#all + 1] = n.spelling
+          if n.pos <= from then first[#first + 1] = n.spelling end
+        end
+        if n.pos >= from and n.pos < to and (not starter or n.pos < starter.pos) then starter = n end
+      end
+      local chord = name(all) or name(first)
+      if chord then
+        if chord ~= last and starter then
+          out[#out + 1] = { bar = b.bar, pos = starter.pos, name = chord, note = starter }
+        end
+        last = chord
+      end
+    end
+    return out
+  end
 end
-if not key then
+-- end helper: barchords
+
+local app, project = guard()
+if not project then return end
+reader()
+local savedcopy = require("scorereader.dorico.savedcopy")
+local commands = require("scorereader.dorico.commands")
+local edit = require("scorereader.dorico.edit")
+local score = require("scorereader.score")
+local values = require("scorereader.values")
+
+local ok, s = pcall(savedcopy.read, app)
+if not ok then
+  print("The reader couldn't read this project: " .. tostring(s))
+  return
+end
+
+local player
+for _, p in ipairs(s.players) do
+  if not player and p.name:sub(1, #PLAYER) == PLAYER then player = p end
+end
+if not player then
   print(string.format("No player's name starts with %q. Change PLAYER at the top of the script.", PLAYER))
   return
+end
+
+-- Where each flow's bars start, from its time signatures, as 09 does.
+local function barsOf(flow)
+  local divisions, endPos = {}, 0
+  for _, e in ipairs(flow.events) do
+    endPos = math.max(endPos, values.toNumber(e.position) + values.toNumber(e.duration))
+    if e.kind == "timeSignature" then
+      divisions[#divisions + 1] = { pos = values.toNumber(e.position), numerator = e.numerator,
+        denominator = e.denominator, pickup = e.pickup and values.toNumber(e.pickup) }
+    end
+  end
+  table.sort(divisions, function(a, b) return a.pos < b.pos end)
+  return bars.starts(divisions, endPos)
 end
 
 -- Selecting only works outside note input, in Write mode.
@@ -230,61 +242,29 @@ app:doCommand("NoteInput.Exit")
 app:doCommand(commands.build("Window.SwitchMode", { { "WindowMode", "kWriteMode" } }))
 
 local count = 0
-for n, flow in ipairs(score.flows) do
-  -- Every note the player has in this flow, from all its voices, with what selecting it needs.
-  local notes, onsets, seen = {}, {}, {}
-  for i, stream in ipairs(flow.voiceStreams) do
-    if flow.instruments[i].id == key then
-      local parsed = dump.parse(stream:dump())
-      for _, note in ipairs(dump.notes(parsed)) do
-        if not note.grace then
-          note.stream, note.parsed = stream, parsed
-          notes[#notes + 1] = note
-          if not seen[note.pos] then
-            seen[note.pos] = true
-            onsets[#onsets + 1] = note.pos
-          end
-        end
-      end
+for n, flow in ipairs(s.flows) do
+  local notes, existing = {}, {}
+  for _, e in ipairs(score.eventsOf(s, flow, player)) do
+    if e.kind == "note" then
+      notes[#notes + 1] = { pos = values.toNumber(e.position), duration = values.toNumber(e.duration),
+        spelling = e.spelling, event = e }
     end
   end
-  table.sort(onsets)
-
-  -- Chord symbols the flow already has, by position, from its timebase stream (type 0). Entering one where one
-  -- exists replaces it, so those places are left as they are.
-  local existing = {}
-  for _, stream in ipairs(flow.allStreams) do
-    if stream.type == 0 then
-      for _, ev in ipairs(dump.parse(stream:dump()).events) do
-        if ev.raw:match("^kChordSymbolEvent") then existing[ev.pos] = true end
-      end
-    end
+  -- Entering a chord symbol where one exists replaces it, so those places are left as they are.
+  for _, e in ipairs(flow.events) do
+    if e.kind == "chordSymbol" then existing[values.toNumber(e.position)] = true end
   end
-
-  local last
-  for _, at in ipairs(onsets) do
-    local sounding, starter = {}, nil
-    for _, note in ipairs(notes) do
-      if note.pos <= at and at < note.pos + note.duration then sounding[#sounding + 1] = note.spelling end
-      if note.pos == at then starter = starter or note end
+  for _, c in ipairs(barchords.of(notes, barsOf(flow), chords.name)) do
+    if existing[c.pos] then
+      print(string.format("flow %d, bar %d: %s (a chord symbol is already there, left as it is)", n, c.bar, c.name))
+    else
+      edit.select(app, c.note.event)
+      app:doCommand("NoteInput.StartChordSymbolInput")
+      app:doCommand(commands.build("NoteInput.AcceptCurrentChordSymbolTextInput", { { "Definition", c.name },
+        { "ChordSymbolEntryAdvanceType", "kEndInput" } }))
+      print(string.format("flow %d, bar %d: %s", n, c.bar, c.name))
     end
-    local name = chords.name(sounding)
-    if name and name ~= last then
-      if existing[at] then
-        print(string.format("flow %d at %s: %s (a chord symbol is already there, left as it is)", n, tostring(at),
-          name))
-      else
-        app:doCommand("Edit.SelectNone")
-        app:doCommand(commands.build("EventEdit.Select", { { "FlowID", flow.id }, { "EventID", starter.id },
-          { "EventBlockID", blockIdOf(starter.stream, starter.id, starter.parsed) } }))
-        app:doCommand("NoteInput.StartChordSymbolInput")
-        app:doCommand(commands.build("NoteInput.AcceptCurrentChordSymbolTextInput", { { "Definition", name },
-          { "ChordSymbolEntryAdvanceType", "kEndInput" } }))
-        print(string.format("flow %d at %s: %s", n, tostring(at), name))
-      end
-      count = count + 1
-    end
-    last = name or last
+    count = count + 1
   end
 end
 app:doCommand("Edit.SelectNone")

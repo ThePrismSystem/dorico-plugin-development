@@ -99,7 +99,7 @@ load the reader from `lib/`, so copy the `lib` folder into Script Plug-ins besid
 | [colour-by-pitch](examples/recipes/colour-by-pitch.lua) | Colours every note by pitch class, C red through B magenta. | Yes; one Edit > Undo |
 | [label-notes](examples/recipes/label-notes.lua) | Writes trumpet valve numbers (or note names) above one player's notes. | Yes; one Edit > Undo |
 | [proofread](examples/recipes/proofread.lua) | Reports notes out of range and parallel fifths and octaves, by bar and beat. | No |
-| [chord-symbols](examples/recipes/chord-symbols.lua) | Names the piano's chords and writes them in as chord symbols. | Yes; three Edit > Undo presses per chord symbol |
+| [chord-symbols](examples/recipes/chord-symbols.lua) | Names the piano's chords bar by bar and writes them in as chord symbols. | Yes; three Edit > Undo presses per chord symbol |
 | [instrument-report](examples/recipes/instrument-report.lua) | Lists each flow's players, instruments, note counts and the most playing at once. | No |
 | [hotkey-colour-cycle](examples/recipes/hotkey-colour-cycle.lua) | Colours the selection, moving to the next colour on each quick rerun. | Yes; one Edit > Undo per run |
 

@@ -217,6 +217,28 @@ return {
     t:eq(chords.name({ "F#3", "A3", "C#4" }), "F#m")
   end,
 
+  names_one_chord_a_bar_where_it_changes = function(t)
+    local bars, barchords = helpers.load(CHORDS, "bars"), helpers.load(CHORDS, "barchords")
+    local chords = helpers.load(CHORDS, "chords")
+    local starts = bars.starts({ { pos = 0, numerator = 4, denominator = 4 } }, 16)
+    local function n(pos, duration, spelling) return { pos = pos, duration = duration, spelling = spelling } end
+    local function brief(list)
+      local out = {}
+      for i, c in ipairs(list) do out[i] = c.bar .. ":" .. c.name .. "@" .. c.pos end
+      return table.concat(out, " ")
+    end
+    -- C broken over bar 1; A minor with a passing B in bar 2, so only its first beat names it; A minor again in bar 3;
+    -- G7 from beat 2 of bar 4
+    local notes = { n(0, 1, "C4"), n(1, 1, "E4"), n(2, 2, "G4"),
+      n(4, 4, "A3"), n(4, 2, "C4"), n(4, 2, "E4"), n(6, 1, "B4"),
+      n(8, 4, "A3"), n(8, 4, "C4"), n(8, 4, "E4"),
+      n(13, 3, "G3"), n(13, 3, "B3"), n(13, 3, "D4"), n(13, 3, "F4") }
+    t:eq(brief(barchords.of(notes, starts, chords.name)), "1:C@0 2:Am@4 4:G7@13")
+    local tied = { n(0, 8, "C4"), n(0, 8, "E4"), n(0, 8, "G4"), n(8, 4, "F4"), n(8, 4, "A4"), n(8, 4, "C5") }
+    t:eq(brief(barchords.of(tied, starts, chords.name)), "1:C@0 3:F@8", "a chord tied into bar 2 isn't new there")
+    t:eq(brief(barchords.of({ n(0, 4, "C4"), n(0, 4, "G4") }, starts, chords.name)), "", "two pitch classes")
+  end,
+
   names_inversions_by_their_root = function(t)
     local chords = helpers.load(CHORDS, "chords")
     t:eq(chords.name({ "E3", "G3", "C4" }), "C")
