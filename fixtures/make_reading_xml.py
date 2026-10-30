@@ -9,8 +9,9 @@ durations in reading.expected.json are exact fractions of a quarter note from th
 ("13/3"), and spellings are sounding pitch. "props" lists the note properties finish_reading.lua sets after the
 import, since MusicXML can't carry them.
 
-Dorico's MusicXML import puts every text above the staff, whatever its placement says, and keeps only the last
-<words> of a direction, so the texts here are single words above.
+Dorico's MusicXML import puts every text above the staff, whatever its placement says, keeps only the last <words>
+of a direction, and turns words it knows into tempos or playing techniques ("con fuoco" became a tempo), so the
+texts here are plain words above.
 """
 import json
 import os
@@ -68,7 +69,7 @@ FLUTE = {
         4: {1: [D("wedge", type="crescendo"), N("C5", 2, tie="stop"), D("wedge", type="stop"),
                 N("D5", 2, dynamic="f")]},
         5: {1: [D("rehearsal", text="A"), N("G5", 4)]},
-        6: {1: [D("words", text="con fuoco", placement="above"), N("F#5", 2), N("E5", 2)]},
+        6: {1: [D("words", text="Sing out", placement="above"), N("F#5", 2), N("E5", 2)]},
         7: {1: [N("D5", 3)]},
         8: {1: [N("G5", 3)]},
     },
