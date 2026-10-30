@@ -100,10 +100,18 @@ kScore
   playModeData         mixer, playback template and instrument playback data
 ```
 
-### Players
+### Players and instruments
 
-A `scorePlayer` has a `playerID`, `displayName` and `displayShortName` (the names Dorico shows), `baseName`,
-`soloPlayer`, and `instruments`, a list of `instrument` nodes.
+A `scorePlayer` has a `playerID`, `displayName` and `displayShortName` (the names Dorico shows; `displayName` is what
+`tostring(player)` gives, `{@flat@}` tokens included), `baseName`, `soloPlayer`, and `instruments`, a list of
+`instrument` nodes. Lua gives players no ids, so the `playerID` is the file's own.
+
+An `instrument` has an `instrumentID` (the id Lua gives the same instrument), an `entityID` naming its definition
+(`instrument.wind.clarinet.bflat`), `numStaves`, the playing ranges `standardRange` and `advancedRange` (`D3-F6`),
+its names, and for fretted instruments a `frettedInstrumentDataEntityID` and the tuning. The transposition is in the
+definition: `library/instruments` holds one definition per instrument the project uses, and its
+`pitchedInstrumentData` has `transposedDiatonicTransposition` and `transposedChromaticTransposition` (1 and 2 for a
+B-flat clarinet: written a major second above sounding) and `concertOctaveTransposition`.
 
 ### Flows
 
@@ -123,7 +131,28 @@ A `flow` has:
 - `notationOptions`: the flow's notation options, the same set as Notation Options in Dorico. For example,
   `accidentalStateCalcOptions` holds the accidental duration rule (`durationBehaviour`, such as `kCommonPractice`)
   and every cautionary-accidental setting (`showCautionariesForNotesInNextBarAtSameOctave = kParenthesise` and so
-  on).
+  on). Every flow carries a full set; `scoreOptions/defaultNotationOptionsForFlow` holds the defaults new flows take.
+  Layout options are in each layout's `layoutOptions`, with defaults in `scoreOptions/defaultLayoutOptionsMap`.
+
+### Streams and what they hold
+
+A stream's `streamID` is the id Lua gives the same stream (`flow.allStreams`, `voiceStreams`, `staveStreams` and
+the rest), and its `eventStreamType` matches what `tostring(stream)` says. To find a stream's events, follow its
+block instances to their blocks. In the reading fixture and in a 6.2.20 project with 8,794 notes, every event
+`stream:dump()` listed was in those blocks with the same id and position, and none was missing.
+
+| Stream | `eventStreamType` | Holds |
+| ------ | ----------------- | ----- |
+| one per flow | `kGlobalTimebaseStream` | time signatures, key signatures, tempos, chord symbols, rehearsal marks |
+| one per staff | `kInstrumentStaveStream` | clefs, dynamics, and text imported from MusicXML |
+| one per voice | `kVoiceStream` | notes, grace notes, rests, tuplets, slurs, lyrics, playing techniques, and text made with `createText` |
+| one per player | `kPlayerStream` | events that belong to the whole player |
+
+A flow's `flowPlayers` says who owns what. Each `flowPlayer` names its `playerID` and its player stream
+(`eventStreamID`), and each of its `flowPlayerInstruments` names the `instrumentID` with its stave streams
+(`staveStreamInfos`: `staveStreamID`, `staveID`, `nthStaveInInstrument`) and voice streams (`voiceStreamInfos`:
+`voiceStreamID`, `instrumentID`). That's the same ownership Lua gives through `flow.instruments[i]`, which owns
+`flow.voiceStreams[i]`.
 
 ### Events
 
@@ -143,6 +172,7 @@ The probes found 46 kinds. These are the ones a plug-in is most likely to read, 
 | `LyricEventDefinition` | `lyricElementID` |
 | `DynamicGroupEventDefinition` | `dynamicGroupID` |
 | `TextEventDefinition` | `aboveOrBelow`, `isSystemText`, `alignWithSystemStart`, `content` |
+| `ChordSymbolEventDefinition` | `rowIndex`, `chordSymbolData`, `chordDiagramData` |
 | `BarDivisionEventDefinition` | `barDivisionElementID` (a time signature, or a barline or bar number change) |
 | `TonalityDivisionEventDefinition` | `tonalityDivisionElementID` (a key signature) |
 | `ClefEventDefinition` | `entityIDs`, `forceAfterGraceNotes` |
@@ -162,10 +192,64 @@ The rest are `AutomationEventDefinition`, `FiguredBassEventDefinition`, `TrillEv
 `GlissandoLineEventDefinition`, `StaveCountChangeEventDefinition`, `RepeatEndingLineEventDefinition`,
 `PercussionLegendEventDefinition`, `MIDITriggerEventDefinition`, `InstrumentChangeEventDefinition`,
 `VerticalLineEventDefinition`, `GenerativeSlashEventDefinition`, `CutawayEventDefinition` and
-`MultiRestEventDefinition`. None of the 52 projects has a chord symbol or a tab staff.
+`MultiRestEventDefinition`. None of the 52 projects has a chord symbol; the reading fixture has five.
 
-A text event's words are in `content/paragraphs/paragraph`, which has a `paragraphStyleID` and `fragments`. Each
-`fragment` has its words in `content` and its formatting in `textFragmentStyle`.
+### Reading common items
+
+These come from the reading fixture (`fixtures/6.2.30/reading.dorico`), whose source says what each item is.
+
+#### Text
+
+A text event's words are in `content/paragraphs/paragraph`, which has a `paragraphStyleID`
+(`paragraph.defaulttext`) and `fragments`. Each `fragment` has its words in `content` and its formatting in
+`textFragmentStyle`. `aboveOrBelow` is `kAbove` or `kBelow`, and `isSystemText` says whether it's system text.
+
+#### Chord symbols
+
+`chordSymbolData/primaryChord` has a `root` (`noteName` `G`, `accidentalType` `kNatural`) and a
+`definition` with a `quality` (`kMajor`, `kMinor`), an `interval` (`kNone`, `k7`) and `alterations`. The dump names
+the same chords `C`, `G7`, `Am`, `F` and `G`.
+
+#### Dynamics
+
+A `DynamicGroupEventDefinition` points by `dynamicGroupID` to a `DynamicGroupElementDefinition`, whose
+`subElements` are the dynamics in the group, each with a `position` from the group's start:
+
+| Dynamic | Stored as |
+| ------- | --------- |
+| pp | `ImmediateChangeDynamicDefinition`, `intensity = steamVariantList:list: {int: 1}, {}, {bool: false}, {int: 2}` |
+| p | `intensity = ... {int: 1}, {}, {bool: false}, {int: 1}` |
+| mp | `intensity = ... {int: 1}, {}, {bool: true}, {}` |
+| mf | `intensity = ... {int: 0}, {}, {bool: true}, {}` |
+| f | `intensity = ... {int: 0}, {}, {bool: false}, {int: 1}` |
+| ff | `intensity = ... {int: 0}, {}, {bool: false}, {int: 2}` |
+| fp | `CombinedDynamicDefinition`, `direction = kDown`, `startIntensity = 1`, `endIntensity = 1` |
+| sfz | `ForceDynamicDefinition`, `type = kForceDynamicSfz`, `intensityLevel = 1` |
+| crescendo hairpin | `GradualChangeDynamicDefinition`, `direction = kGradualDynamicUp`, `duration = 2` |
+
+So an immediate dynamic's intensity is: the family (0 forte, 1 piano), an empty item, whether it is mezzo, and how
+many letters. The `intensityModifier` beside it was empty for all of these.
+
+#### Lyrics
+
+A `LyricEventDefinition` in a voice stream points by `lyricElementID` to a `LyricElementDefinition` with
+the `text`, a `syllableType` (`kStart`, `kMiddle`, `kEnd`, `kWholeWord`), a `lineNumber` counted from 0, and
+`lineType` (`kVerse`). A melisma is the lyric event's `duration`: a word held over two half notes lasts 4.
+
+#### Time and key signatures
+
+A `BarDivisionEventDefinition` in the timebase stream points by `barDivisionElementID`
+to `barDivisionData/timeSignature/timeSignaturesAndDivisions/timeSignatureAndDivision/timeSignature`, with
+`numerator`, `denominator` and the beat grouping. A `TonalityDivisionEventDefinition` points to
+`tonalityDivisionData/keySignature`, whose `root` has a `tonalityType` (`kKeySigMajor`) and a `root` note
+(`noteName` `G`, `accidentalID` `accidental.12et.western.natural`).
+
+#### Tuplets, tempos and techniques
+
+A tuplet's `tupletDefinition` is `steamVariantList:list: {int: 3}, {int: 2},
+{list: {int: 7}, {int: 0}}, {bool: true}` for a triplet of eighths, and its `duration` is the span. A tempo's `data`
+has the `text` (`Allegro`), `presetID` and `absoluteTempo/tempoValue` in microseconds per beat (500000 for 120 beats a
+minute). A playing technique's `appearanceEntityID` (`pta.pizzText`) names its definition in the library.
 
 ### Element tables
 
@@ -211,8 +295,40 @@ applies only somewhere, a `context`. A context names the layout in `layoutIDWith
 `blockInstanceID`, and sometimes a `propertyOffset` and `assignedStaveType`. A layout of -1 means every layout and a
 block instance of -1 means any.
 
+How a value was set decides its context. The reading fixture's notes were set each way, then saved and decoded:
+
+| Set by | Context stored |
+| ------ | -------------- |
+| `propertyTable:set` from Lua | none: every layout, any block instance |
+| `EventEdit.ChangeProperty` with the event's ids | none |
+| `Edit.SetNoteheadSetOverride` on a selection | layout -1 and the note's own block instance |
+| `UI.InvokePropertyChangeValue` with a part on screen | that part's layout |
+| `Edit.ShowAccidentalInBrackets` on a selection | layout 0, the full score |
+
+Other note properties the fixture holds: `kArticulationDuration` (`kStaccato`, `kTenuto`) and `kArticulationForce`
+(`kAccent`) for articulations, `kNoteStringIndex` (`int: 4` for a guitar's fifth string; the fret follows from the
+pitch and the tuning), `kNoteAccidentalVisibility_v3` (`kRoundBrackets`, `kSquareBrackets`) with the older
+`kNoteAccidentalVisibility` written beside it, and `kBeamNone` on notes whose beams were broken.
+
+## The library
+
+`library` holds the definitions the project uses, each under an `entities` list. Every definition has an `entityID`,
+which is what events and properties name, and a `name` to show a person:
+
+| Collection | Example |
+| ---------- | ------- |
+| `paragraphStyles` | `paragraph.barnumbers.part` is "Bar numbers (parts)" |
+| `playingTechniqueAppearanceCollectionDefinition` | `pta.pizzText` is "Pizzicato", shown as `pizz`, for the technique `pt.pizzicato` |
+| `noteheadSetDefinitions` | `noteheadset.diamondNoteheads` is "Diamond Noteheads" |
+| `instruments` | `instrument.wind.clarinet.bflat`, with its staves, clefs, ranges and transposition |
+
 ## Matching the file to Lua
 
 A decoded `eventID` is the id Lua gives the same event, and a context's `blockInstanceID` is the "Start block id"
-in `stream:dump()`. The handbells plug-in found this on two real projects, where all 1,079 and all 2,365 dumped notes
-matched a decoded note with the same position and pitch.
+in `stream:dump()`. Stream ids and instrument ids are Lua's too.
+
+`spikes/f2_compare.lua` checks this for every event, not only notes: it matched every event in every stream's dump to
+the file, by id and position, in the reading fixture and in Fauré's *Dolly* (8,794 notes, 933 slurs, 288 dynamics and
+the rest). *Dolly* was saved by 6.2.20 and opened in 6.2.30, so the ids survived the update Dorico makes when it opens
+an older project, at least for that step. The handbells plug-in found the same for notes in two other projects
+(1,079 and 2,365 of them).

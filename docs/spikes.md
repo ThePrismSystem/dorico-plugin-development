@@ -267,3 +267,36 @@ including the 8 guided-tutorial projects in Dorico's program folder. Neither Dor
 commands has anything that saves XML. Dorico 6.2.30 opens the XML projects, and the reader reads them into the same
 tree: for one installed example, `scorereader.xml` gave 238,312 nodes and Python's XML parser counted 238,312
 elements.
+
+## F2 to F6: what the events hold, and how they match Lua
+
+Probes: `tree_dump.lua` (stock Lua: writes any project's tree as text), `f2_events.lua` (in Dorico: every stream's
+dump with its owners, the players and the layouts) and `f2_compare.lua` (stock Lua: sets `f2_events.lua`'s result
+beside the decoded file). Run on `fixtures/6.2.30/reading.dorico`, whose source says what each item is, and on Fauré's
+*Dolly* from `fixtures/6.2.20`.
+
+- Stream ids, event ids and instrument ids in the file are the ones Lua gives. For both projects, every event in every
+  stream's dump matched a decoded event by id and position, and every decoded event was in a dump: 0 mismatches over
+  22 streams in the fixture and over 8,794 notes, 933 slurs, 288 dynamics, 200 breaks and the rest in *Dolly*.
+- *Dolly* was saved by 6.2.20. Opening it in 6.2.30 kept every id, so a reader can match Lua's view of an upgraded
+  project to the file the user opened. Dorico shows a notice ("This project was created in version 6.2.20 of Dorico.
+  It will be automatically updated to the current version.") with only an OK button; `tools/run_lua.py` now clicks it.
+- Where events live: the timebase stream holds time and key signatures, tempos, chord symbols and rehearsal marks; a
+  staff's stream holds its clefs, dynamics and any text imported from MusicXML; a voice stream holds notes, tuplets,
+  lyrics, slurs, playing techniques and the text `createText` makes.
+- What the file adds to the dump: lyric text and syllable types, dynamic names, time and key signatures, chord symbol
+  roots and qualities (the dump names chords too), text styles and fragments, articulations, string numbers, and
+  every property with its context. [file-format.md](file-format.md) has the details.
+- Contexts (F3): a value set through Lua's property table or by `EventEdit.ChangeProperty` has no context;
+  `Edit.SetNoteheadSetOverride` stores layout -1 with the note's block instance; the Properties panel with a part on
+  screen stores that part's layout; `Edit.ShowAccidentalInBrackets` stores layout 0.
+- Ownership (F4): each flow's `flowPlayers` lists every player's instruments and their stave and voice streams, the same
+  ownership as `flow.instruments`. Instruments' transpositions and ranges are in their library definitions.
+- Options (F5): every flow carries a full set of notation options, including the accidental duration rule and every
+  cautionary-accidental setting; layouts carry their layout options.
+- Definitions (F6): every library definition has an `entityID` and a `name`, so one pass over the library turns the ids
+  events use into names.
+
+The reading fixture also showed what Dorico 6.2.30's MusicXML import does with text: every `<words>` direction lands
+above the staff whatever its `placement`, a direction with two `<words>` keeps only the last, and `font-weight` is
+dropped. `pizz.` and `arco` arrive as playing techniques, not text.
