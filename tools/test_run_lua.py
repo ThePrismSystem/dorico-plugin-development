@@ -247,10 +247,6 @@ class RunTests(unittest.TestCase):
         self.assertFalse(any(c.startswith("Script.RunScript") for c in client.commands))
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class PromptTests(unittest.TestCase):
     def test_answers_the_update_notice_by_its_ok_button(self):
         # Opening a project an older Dorico saved shows "Dorico" with only an OK button. It is clicked by name, so a
@@ -268,3 +264,7 @@ class PromptTests(unittest.TestCase):
             run_lua.answer_known_prompts()
         presses = [c.args[0] for c in ran.call_args_list if str(run_lua.PRESS) in c.args[0]]
         self.assertEqual(presses[0][presses[0].index("-Title") + 1], "Activate Project for Playback")
+
+
+if __name__ == "__main__":
+    unittest.main()
