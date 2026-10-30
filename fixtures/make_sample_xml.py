@@ -144,7 +144,7 @@ def _notes(part):
     """Every note of a part, sounding, with ties joined."""
     notes = []
     for n, bar in enumerate(part["bars"]):
-        for voice, items in bar.items():
+        for items in bar.values():
             pos = n * sample_data.BEATS
             for item in items:
                 if item["kind"] == "rest":
