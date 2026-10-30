@@ -68,4 +68,27 @@ return {
     local n = names()
     t:eq(n.chord({ "C4", "E4", "G4" }, "english"), "G\nE\nC")
   end,
+  the_written_key_for_written_names = function(t)
+    local n = names()
+    local clarinet = { diatonic = 1, chromatic = 2 }
+    local g = n.writtenKey({ fifths = 1, mode = "major" }, clarinet)
+    t:eq(g.fifths, 3, "concert G major is written in A major")
+    t:eq(n.of(n.written("G4", clarinet), "movable", { key = g }), "do", "the tonic stays do")
+    t:eq(n.of(n.written("G4", clarinet), "degrees", { key = g }), "1")
+    t:eq(n.writtenKey({ fifths = 0, mode = "minor" }, { diatonic = 2, chromatic = 3 }).fifths, -3, "A clarinet")
+    t:eq(n.writtenKey({ fifths = 0, mode = "major" }, { diatonic = 7, chromatic = 12 }).fifths, 0, "guitar")
+    t:eq(n.writtenKey({ fifths = 1, mode = "major" }, nil).fifths, 1, "no transposition")
+    local fSharp = n.writtenKey({ fifths = 6, mode = "major" }, clarinet)
+    t:eq(n.of(n.written("F#4", clarinet), "movable", { key = fSharp }), "do", "G# major, past seven sharps")
+  end,
+  knows_every_name_it_could_write = function(t)
+    local n = names()
+    for _, words in ipairs({ "C", "F" .. SHARP .. "5", "Heses", "R\195\169", "Sol4", "ti", "fi", FLAT .. "7", "1",
+      "G\nE\nC", "do\nmi", "C-1" }) do
+      t:ok(n.isName(words), words)
+    end
+    for _, words in ipairs({ "", "dolce", "C major", "8", "do re", "G\nhello" }) do
+      t:ok(not n.isName(words), words)
+    end
+  end,
 }

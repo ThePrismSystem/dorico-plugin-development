@@ -155,7 +155,8 @@ do
     local script, answer = folder .. "/dorico-form.ps1", folder .. "/dorico-form.txt"
     local f = io.open(script, "wb")
     if not f then return nil end
-    f:write(form.script(title, fields))
+    -- Windows PowerShell 5.1 reads a script with no byte order mark in the ANSI code page, which garbles accents.
+    f:write("\239\187\191" .. form.script(title, fields))
     f:close()
     os.remove(answer)
     os.execute('powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "' .. script .. '" -Out "'
@@ -278,7 +279,8 @@ end
 -- motion. Intervals are compared without their octaves, so a twelfth is a fifth, and a pair stays the same pair when
 -- the parts cross. A rest in either part breaks the chain unless restBreaks is false. Grace notes are left out. Three
 -- or more consecutive octaves or unisons in a row, four notes in each part moving together, are a doubling and are
--- left out unless doublings is set. Hidden fifths and octaves (similar motion into one, with a leap in the upper
+-- left out unless doublings is set. A repeated or held note that keeps the parts in octaves doesn't end that run, so a
+-- doubling in another rhythm counts too. Hidden fifths and octaves (similar motion into one, with a leap in the upper
 -- part) count only between the outer parts sounding at both moments. outerOnly keeps only findings between those.
 local parallels = {}
 do
@@ -355,9 +357,11 @@ do
           local kind, octaveLike = compare(prev, v, outer, opts)
           local f = kind and (outer or not opts.outerOnly)
             and { kind = kind, a = A.name, b = B.name, pos = t, notes = { prev.a, prev.b, a, b } }
+          -- A repeated or held note that keeps the two parts in octaves carries a doubling on.
+          local stillDoubled = not kind and (prev.a.pitch - prev.b.pitch) % 12 == 0 and (a.pitch - b.pitch) % 12 == 0
           if f and octaveLike then
             run[#run + 1] = f
-          else
+          elseif not stillDoubled then
             flush()
             if f then keep(f) end
           end

@@ -70,6 +70,25 @@ return {
     t:eq(brief(find({ part("cello", { { 0, E3 + 12 }, { 1, F3 + 12 } }), part("bassoon", { { 0, E3 }, { 1, F3 } }) })),
       "octaves cello/bassoon @1", "two notes are a consecutive")
   end,
+  a_doubling_with_a_repeated_note_or_another_rhythm = function(t)
+    local scale = { 60, 62, 64, 64, 65, 67 }
+    local upper, lower = {}, {}
+    for i, p in ipairs(scale) do
+      upper[i] = { i - 1, p + 12 }
+      lower[i] = { i - 1, p }
+    end
+    t:eq(brief(find({ part("flute", upper), part("violin", lower) })), "", "a repeated note in both parts")
+    local halves, quarters = {}, {}
+    for i, p in ipairs({ 60, 62, 64, 65, 67 }) do
+      halves[i] = { 2 * (i - 1), p + 12, 2 }
+      quarters[#quarters + 1] = { 2 * (i - 1), p }
+      quarters[#quarters + 1] = { 2 * (i - 1) + 1, p }
+    end
+    t:eq(brief(find({ part("flute", halves), part("violin", quarters) })), "", "half notes over repeated quarters")
+    local leaves = { part("flute", { { 0, 72 }, { 1, 74 }, { 2, 74 }, { 3, 76 } }),
+      part("violin", { { 0, 60 }, { 1, 62 }, { 2, 65 }, { 3, 64 } }) }
+    t:eq(brief(find(leaves)), "octaves flute/violin @1", "a part leaving the octave ends the doubling")
+  end,
   hidden_fifths_between_the_outer_parts = function(t)
     local parts = { part("top", { { 0, D5 }, { 1, G5 } }), part("bottom", { { 0, 45 }, { 1, C3 } }) }
     t:eq(brief(find(parts)), "", "off by default")

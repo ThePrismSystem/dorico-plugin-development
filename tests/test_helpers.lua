@@ -452,9 +452,12 @@ return {
   form_on_windows_runs_the_box_and_reads_its_answer = function(t)
     local form = helpers.load(ASK, "form")
     local fields = { { key = "words", label = "Words", kind = "text", default = "" } }
-    local realExecute, ran = os.execute, nil
+    local realExecute, ran, head = os.execute, nil, nil
     os.execute = function(command)
       ran = command
+      local script = assert(io.open(command:match('%-File "([^"]+)"'), "rb"))
+      head = script:read(3)
+      script:close()
       local f = assert(io.open(command:match('%-Out "([^"]+)"'), "wb"))
       f:write("words=hello\n")
       f:close()
@@ -467,6 +470,7 @@ return {
     t:ok(ok, tostring(answers))
     t:ok(ran and ran:find("^powershell %-NoProfile"), tostring(ran))
     t:eq(answers and answers.words, "hello")
+    t:eq(head, "\239\187\191", "the script starts with a UTF-8 byte order mark, so PowerShell 5.1 reads it as UTF-8")
     t:ok(ok2, tostring(cancelled))
     t:eq(cancelled, nil, "Cancel writes no answer")
   end,

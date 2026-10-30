@@ -2,17 +2,18 @@
 -- What it does: reads a saved copy, asks for the naming system and where the names go, then writes one staff text per
 -- note, or per chord with its names stacked top first, in the players and flows chosen. Transposing instruments get
 -- their written notes' names unless you untick that. Tick "Only remove names" to take the names off and add none.
--- Changes: adds a staff text at each note, and deletes the names an earlier run wrote.
+-- Changes: adds a staff text at each note, and deletes the names an earlier run wrote in those players and flows.
 -- Undo: Edit > Undo takes the whole run back in one step.
 -- Builds on: 04-read-the-saved-copy.lua, 09-bars-keys-and-times.lua (key signatures), 13-set-a-property-by-id.lua,
 -- 14-add-notes-rests-text.lua and 17-ask-and-report.lua (the form helper). Open Script > Show Script Console to read
 -- what it prints.
 --
 -- A tied note is one note, so it gets one name. Grace notes get none. Accidentals come from each note's own spelling,
--- and movable do and scale degrees follow the key signature in force at the note (movable do keeps the major key's do
--- in a minor key). A name is an ordinary staff text, so a run first deletes every text in a voice whose words are
--- exactly a name this script could have written for the notes at that place, in any system; a text you typed with
--- those same words there would go too. Writing a text takes about 60 ms, so a long score takes a while.
+-- and movable do and scale degrees follow the key signature in force at the note, in the written key when the names
+-- are for written pitch (movable do keeps the major key's do in a minor key). A name is an ordinary staff text, so a
+-- run first deletes, in the players and flows chosen, every text in a voice whose every line is a name this script
+-- could write for some note: a letter name, a solfa syllable or a scale degree, with or without an octave. A text you
+-- typed that is only one of those goes too. Writing a text takes about 60 ms, so a long score takes a while.
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. The read of app.currentScore goes
@@ -154,7 +155,8 @@ do
     local script, answer = folder .. "/dorico-form.ps1", folder .. "/dorico-form.txt"
     local f = io.open(script, "wb")
     if not f then return nil end
-    f:write(form.script(title, fields))
+    -- Windows PowerShell 5.1 reads a script with no byte order mark in the ANSI code page, which garbles accents.
+    f:write("\239\187\191" .. form.script(title, fields))
     f:close()
     os.remove(answer)
     os.execute('powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "' .. script .. '" -Out "'
@@ -213,6 +215,9 @@ end
 --   names.chord(spellings, system, opts) -> the names of a chord's notes, one per line, highest first
 --   names.written(spelling, transposition) -> the written spelling, transposition = {diatonic, chromatic} as the
 --     reader gives an instrument's (nil for none)
+--   names.writtenKey(key, transposition) -> the key the instrument's part is written in, for written names
+--   names.isName(words) -> whether every line of words is a name this helper could give one note, in any system and
+--     key, with or without its octave
 local names = {}
 do
   local LETTERS = "CDEFGAB"
@@ -226,13 +231,12 @@ do
   local MOVABLE = { "do", "re", "mi", "fa", "sol", "la", "ti" }
   local RAISED = { "di", "ri", nil, "fi", "si", "li", nil }
   local LOWERED = { "de", "ra", "me", "fe", "se", "le", "te" }
-  -- The tonics of the keys with -7 (seven flats) to 7 sharps.
-  local MAJOR_TONICS, MINOR_TONICS = {}, {}
-  for k, tonic in ipairs({ "Cb", "Gb", "Db", "Ab", "Eb", "Bb", "F", "C", "G", "D", "A", "E", "B", "F#", "C#" }) do
-    MAJOR_TONICS[k - 8] = tonic
-  end
-  for k, tonic in ipairs({ "Ab", "Eb", "Bb", "F", "C", "G", "D", "A", "E", "B", "F#", "C#", "G#", "D#", "A#" }) do
-    MINOR_TONICS[k - 8] = tonic
+  -- The tonic of the key with this many fifths (sharps above 0, flats below), spelled without an octave: 0 is C major
+  -- or A minor, and a written key can go past seven, as 8 for G# major.
+  local function tonicOf(fifths, minor)
+    local f = fifths + (minor and 3 or 0) + 1
+    local alter = math.floor(f / 7)
+    return ("FCGDAEB"):sub(f % 7 + 1, f % 7 + 1) .. (alter > 0 and string.rep("#", alter) or string.rep("b", -alter))
   end
   local SCALES = { major = { 0, 2, 4, 5, 7, 9, 11 }, minor = { 0, 2, 3, 5, 7, 8, 10 } }
 
@@ -277,12 +281,11 @@ do
     elseif FIXED[system] then
       name = FIXED[system][i] .. symbols(alter)
     elseif system == "movable" then
-      local step, off = degree(i, alter, MAJOR_TONICS[key.fifths], SCALES.major)
+      local step, off = degree(i, alter, tonicOf(key.fifths), SCALES.major)
       name = (off == 1 and RAISED[step]) or (off == -1 and LOWERED[step]) or (MOVABLE[step] .. symbols(off))
     elseif system == "degrees" then
       local minor = key.mode == "minor"
-      local step, off = degree(i, alter, (minor and MINOR_TONICS or MAJOR_TONICS)[key.fifths],
-        minor and SCALES.minor or SCALES.major)
+      local step, off = degree(i, alter, tonicOf(key.fifths, minor), minor and SCALES.minor or SCALES.major)
       name = symbols(off) .. step
     else
       name = LETTERS:sub(i, i) .. symbols(alter)
@@ -312,6 +315,41 @@ do
     local wa = pitch - (12 * (wo + 1) + NATURAL[wi])
     local accidentals = wa > 0 and (wa == 2 and "x" or string.rep("#", wa)) or string.rep("b", -wa)
     return LETTERS:sub(wi, wi) .. accidentals .. wo
+  end
+
+  -- A transposition moves the key by 7 fifths for each semitone and back 12 for each letter step: a major second up
+  -- (1 step, 2 semitones) is 2 fifths, so concert C is written in D.
+  function names.writtenKey(key, transposition)
+    if not key or not transposition then return key end
+    return { fifths = key.fifths + 7 * transposition.chromatic - 12 * transposition.diatonic, mode = key.mode }
+  end
+
+  local known
+  function names.isName(words)
+    if not known then
+      known = {}
+      for i = 1, 7 do
+        for alter = -2, 2 do
+          local spelling = LETTERS:sub(i, i) .. (alter > 0 and string.rep("#", alter) or string.rep("b", -alter)) .. "4"
+          for _, system in ipairs({ "english", "german", "fixed-it", "fixed-fr", "fixed-es", "movable", "degrees" }) do
+            for fifths = -7, 7 do
+              for _, mode in ipairs({ "major", "minor" }) do
+                known[names.of(spelling, system, { key = { fifths = fifths, mode = mode } })] = true
+              end
+            end
+          end
+        end
+      end
+    end
+    if words == "" then return false end
+    for line in (words .. "\n"):gmatch("([^\n]*)\n") do
+      local ok = known[line] == true
+      for k = 1, #line - 1 do
+        ok = ok or (known[line:sub(1, k)] == true and line:sub(k + 1):match("^%-?%d+$") ~= nil)
+      end
+      if not ok then return false end
+    end
+    return true
   end
 end
 -- end helper: names
@@ -400,41 +438,31 @@ local function instrumentOf(stream)
   return s.instruments[stream.instrumentId]
 end
 
--- Every name a run could have written for a chord, in any system and with any setting.
-local function anyName(chord, key)
-  local all, sounding, written = {}, {}, {}
-  local t = (instrumentOf(chord.stream) or {}).transposition
-  for k, e in ipairs(chord.notes) do
-    sounding[k] = e.spelling
-    written[k] = names.written(e.spelling, t)
-  end
-  for _, sys in ipairs(SYSTEMS) do
-    for _, octave in ipairs({ false, true }) do
-      for _, spellings in ipairs({ sounding, written }) do
-        all[names.chord(spellings, sys[2], { octave = octave, key = key })] = true
-      end
-    end
-  end
-  return all
-end
+-- Deleting goes through a selection, which needs Write mode outside note input.
+app:doCommand("NoteInput.Exit")
+app:doCommand("Window.SwitchMode?WindowMode=kWriteMode")
 
+-- In the flows and players asked for: take off every name an earlier run could have written, wherever it is, and
+-- gather the chords to name.
 local removed, chords = 0, {}
 for n, flow in ipairs(s.flows) do
-  for _, player in ipairs(s.players) do
-    for _, chord in ipairs(chordsOf(flow, player)) do
-      local key = keyAt(flow, values.toNumber(chord.position))
-      local ours = anyName(chord, key)
-      for _, e in ipairs(chord.stream.events) do
-        if e.kind == "text" and values.positionText(e.position) == values.positionText(chord.position)
-          and ours[e.words] then
-          edit.delete(app, e)
-          removed = removed + 1
+  if answers.flow == ALL_FLOWS or answers.flow == n .. ": " .. flow.title then
+    for _, player in ipairs(s.players) do
+      if answers.player == ALL_PLAYERS or answers.player == player.name then
+        for _, stream in ipairs(flow.streams) do
+          if stream.type == "voice" and stream.playerId == player.id then
+            for _, e in ipairs(stream.events) do
+              if e.kind == "text" and names.isName(e.words) then
+                edit.delete(app, e)
+                removed = removed + 1
+              end
+            end
+          end
         end
-      end
-      local inFlow = answers.flow == ALL_FLOWS or answers.flow == n .. ": " .. flow.title
-      if inFlow and (answers.player == ALL_PLAYERS or answers.player == player.name) then
-        chord.key = key
-        chords[#chords + 1] = chord
+        for _, chord in ipairs(chordsOf(flow, player)) do
+          chord.key = keyAt(flow, values.toNumber(chord.position))
+          chords[#chords + 1] = chord
+        end
       end
     end
   end
@@ -455,7 +483,7 @@ for _, chord in ipairs(chords) do
   local t = answers.written and (instrumentOf(chord.stream) or {}).transposition or nil
   local spellings = {}
   for k, e in ipairs(chord.notes) do spellings[k] = names.written(e.spelling, t) end
-  local words = names.chord(spellings, system, { octave = answers.octave, key = chord.key })
+  local words = names.chord(spellings, system, { octave = answers.octave, key = names.writtenKey(chord.key, t) })
   local voice = streams[chord.stream.id]
   local p = chord.position
   local text = voice:createText(DoCore.RhythmicLength(p.num, p.den), DoCore.RhythmicLength(1), words)

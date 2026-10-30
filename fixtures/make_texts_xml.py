@@ -3,11 +3,12 @@
     python fixtures/make_texts_xml.py   ->  fixtures/build/texts.musicxml, fixtures/texts.expected.json
 
 One flow of 4/4 bars for flute and soprano. The flute has a staff text at the start of bars 1 to 4 and 6: "dolce",
-"dolce e cantabile" (which finish_texts.lua flips below the staff), "Dolce", "dolcemente" and "dolce assai" (which it
-colours, a setting of its own). finish_texts.lua also adds "dolce sempre" in bar 5 and makes it a system text. The
-soprano sings "sweet", "dol-ce" and "dolce" on line 1, with "dolce" under the first note on line 2, and there are
-chord symbols C, Am and G7 at the start of bars 1 to 3. "texts", "lyrics" and "chords" are what the fixture holds
-afterwards; "rows" are the searches the tests run and what each should list and leave, worked out by hand.
+"dolce e cantabile" (which finish_texts.lua puts below the staff by event id, for every layout), "Dolce",
+"dolcemente" and "dolce assai" (which it colours, a setting of its own). finish_texts.lua also adds "dolce sempre" in
+bar 5 and makes it a system text, and "dolce cantando" in bar 7, flipped below with Edit.FlipItem for the full score
+only. The soprano sings "sweet", "dol-ce" and "dolce" on line 1, with "dolce" under the first note on line 2, and
+there are chord symbols C, Am and G7 at the start of bars 1 to 3. "texts", "lyrics" and "chords" are what the fixture
+holds afterwards; "rows" are the searches the tests run and what each should list and leave, worked out by hand.
 """
 import json
 import sys
@@ -19,9 +20,11 @@ from make_sample_xml import parse_spelling  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 BUILD = HERE / "build"
-BARS = 6
+BARS = 7
 TEXTS = {1: "dolce", 2: "dolce e cantabile", 3: "Dolce", 4: "dolcemente", 6: "dolce assai"}
+# Made with createText in finish_texts.lua: the import turned "dolce cantando" (and "poco dolce") into "dolce".
 SYSTEM_TEXT = {"bar": 5, "words": "dolce sempre"}
+FLIPPED_TEXT = {"bar": 7, "words": "dolce cantando"}
 BELOW_BAR, COLOURED_BAR, COLOUR = 2, 6, "#ff0000c0"
 CHORDS = {1: ("C", "major"), 2: ("A", "minor"), 3: ("G", "dominant")}
 # soprano: {bar: [(spelling, [(line, text, syllabic)])]}, one quarter note each; other bars are whole-bar rests
@@ -91,6 +94,8 @@ def build_xml():
 def texts():
     out = [{"player": "Flute", "bar": bar, "words": words, "above": bar != BELOW_BAR, "system": False}
            for bar, words in TEXTS.items()]
+    out.append({"player": "Flute", "bar": FLIPPED_TEXT["bar"], "words": FLIPPED_TEXT["words"], "above": False,
+                "system": False})
     out.append({"player": "-", "bar": SYSTEM_TEXT["bar"], "words": SYSTEM_TEXT["words"], "above": True,
                 "system": True})
     return sorted(out, key=lambda t: t["bar"])
@@ -123,8 +128,9 @@ ROWS = {
             _line("staff text", 1, "Flute", "dolce"), _line("lyric", 1, "Soprano", "dolce"),
             _line("staff text", 2, "Flute", "dolce e cantabile"), _line("lyric", 2, "Soprano", "dolce"),
             _line("staff text", 3, "Flute", "Dolce"), _line("staff text", 4, "Flute", "dolcemente"),
-            _line("system text", 5, "-", "dolce sempre"), _line("staff text", 6, "Flute", "dolce assai")],
-        "summary": "Found 8; the first is selected.",
+            _line("system text", 5, "-", "dolce sempre"), _line("staff text", 6, "Flute", "dolce assai"),
+            _line("staff text", 7, "Flute", "dolce cantando")],
+        "summary": "Found 9; the first is selected.",
     },
     "findSopranoFromBar2": {
         "lines": [_line("lyric", 2, "Soprano", "dolce")],
@@ -139,27 +145,35 @@ ROWS = {
             _line("staff text", 3, "Flute", "Dolce -> sweet"),
             _line("system text", 5, "-", "dolce sempre -> sweet sempre"),
             _line("staff text", 6, "Flute",
-                  "dolce assai: left as it is, it has settings of its own (kEventColour)")],
-        "summary": "Replaced 5; left 2 as they were.",
+                  "dolce assai: left as it is, it has settings of its own (kEventColour)"),
+            _line("staff text", 7, "Flute",
+                  "dolce cantando: left as it is, it is above or below the staff in one layout only")],
+        "summary": "Replaced 5; left 3 as they were.",
         "texts": {1: "sweet", 2: "sweet e cantabile", 3: "sweet", 5: "sweet sempre"},
         "lyrics": {2: "sweet"},
     },
     "pattern": {
-        "lines": [_line("staff text", 2, "Flute", "dolce e cantabile -> cantabile e dolce")],
+        "lines": [_line("system text", 5, "-", "dolce sempre -> sempre dolce")],
         "summary": "Replaced 1; left 0 as they were.",
-        "texts": {2: "cantabile e dolce"},
+        "texts": {5: "sempre dolce"},
     },
     "chord": {
         "lines": [_line("chord symbol", 2, "-", "Am -> Dm")],
         "summary": "Replaced 1; left 0 as they were.",
         "chords": {2: "Dm"},
     },
+    "chordUnreadable": {
+        "lines": [_line("chord symbol", 3, "-",
+                        "G7: left as it is, Dorico couldn't read the new one, so the old one is still there")],
+        "summary": "Replaced 0; left 1 as they were.",
+    },
 }
 
 
 def expected():
     return {"texts": texts(), "lyrics": lyrics(), "chords": chords(), "belowBar": BELOW_BAR,
-            "colouredBar": COLOURED_BAR, "colour": COLOUR, "systemText": SYSTEM_TEXT, "rows": ROWS}
+            "colouredBar": COLOURED_BAR, "colour": COLOUR, "flippedText": FLIPPED_TEXT, "systemText": SYSTEM_TEXT,
+            "rows": ROWS}
 
 
 def main():

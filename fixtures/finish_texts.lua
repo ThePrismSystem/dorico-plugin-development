@@ -1,5 +1,6 @@
--- Finishes the imported texts fixture on its scratch copy, as a user might: flips one text below the staff with
--- Edit.FlipItem, colours another by event id, and adds a staff text with createText and makes it a system text. It
+-- Finishes the imported texts fixture on its scratch copy, as a user or a script might: puts one text below the staff
+-- by event id, for every layout, flips another with Edit.FlipItem, which stores it for the full score only, colours a
+-- third by event id, and adds a staff text with createText and makes it a system text. It
 -- then checks the fixture holds what texts.expected.json says, and that createText makes a text in the default
 -- paragraph style, which the find and replace recipe relies on. fixtures/build_texts.py runs it.
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
@@ -31,17 +32,21 @@ probe.run("finish_texts", function(p)
   end
   local s = savedcopy.read(app, opts)
   local below, coloured = textAt(s, expected.belowBar), textAt(s, expected.colouredBar)
-  if not p:check("the texts to flip and colour came in", below ~= nil and coloured ~= nil) then return end
-  app:doCommand("Edit.SelectNone")
-  edit.select(app, below)
-  app:doCommand("Edit.FlipItem")
-  app:doCommand("Edit.SelectNone")
+  if not p:check("the texts to place and colour came in", below ~= nil and coloured ~= nil) then return end
+  edit.setProperty(app, below, "kTextEventAboveOrBelow", "kBelow")
   edit.setProperty(app, coloured, "kEventColour", expected.colour)
 
   local flute = app.currentScore.flows[1].voiceStreams[1]
-  local pos = 4 * (expected.systemText.bar - 1)
-  local made = flute:createText(DoCore.RhythmicLength(pos), DoCore.RhythmicLength(0), expected.systemText.words)
+  local function make(t)
+    local pos = 4 * (t.bar - 1)
+    return flute:createText(DoCore.RhythmicLength(pos), DoCore.RhythmicLength(0), t.words)
+  end
+  local made, flipped = make(expected.systemText), make(expected.flippedText)
   local mid = savedcopy.read(app, opts)
+  app:doCommand("Edit.SelectNone")
+  edit.select(app, mid.events[flipped.id])
+  app:doCommand("Edit.FlipItem")
+  app:doCommand("Edit.SelectNone")
   local new = mid.events[made.id]
   p:check("createText makes a text in the default paragraph style",
     new and new.paragraphs[1].style == "paragraph.defaulttext", new and new.paragraphs[1].style)

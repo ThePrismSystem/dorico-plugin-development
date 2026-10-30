@@ -316,7 +316,8 @@ beside the decoded file). Run on `fixtures/6.2.30/reading.dorico`, whose source 
 
 The reading fixture also showed what Dorico 6.2.30's MusicXML import does with text: every `<words>` direction lands
 above the staff whatever its `placement`, a direction with two `<words>` keeps only the last, and `font-weight` is
-dropped. `pizz.` and `arco` arrive as playing techniques, not text. The texts fixture's "poco dolce" came in as "dolce".
+dropped. `pizz.` and `arco` arrive as playing techniques, not text. The texts fixture's "poco dolce" and
+"dolce cantando" came in as "dolce".
 
 ## W1 to W7: changing what the reader found
 
@@ -373,3 +374,7 @@ Probes: `multiline_text.lua` on a scratch copy of `fixtures/6.2.30/reading.doric
 - A tick box that Windows Forms draws itself, the default `FlatStyle`, ignores a check message from another program,
   so `tools/setfield.ps1` couldn't untick one. With `FlatStyle = 'System'` Windows draws it and the message works. A
   list's `CB_SETCURSEL` sets the item the form reads back.
+- `chord_replace.lua`, on a scratch copy of the texts fixture: entering a chord symbol with the chord-symbol commands
+  over an existing one replaces it, giving it a new event id. A definition Dorico can't read, such as "Xyzzy", leaves
+  the old chord symbol as it was, with its old id. One chord symbol replaced this way took two Edit > Undo presses to
+  take back.

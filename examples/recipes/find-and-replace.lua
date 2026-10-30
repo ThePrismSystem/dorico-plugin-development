@@ -3,22 +3,23 @@
 -- a range of bars). Find lists every match (what it is, flow, bar and beat, player, the words) and selects the first.
 -- Replace rebuilds each match with the new words and lists those it can't rebuild exactly, which it leaves as they
 -- are.
--- Changes: in Replace, deletes each text, lyric or chord symbol it replaces and enters the new one in its place.
--- Find changes nothing.
--- Undo: Edit > Undo takes the whole run back in one step.
+-- Changes: in Replace, deletes each text or lyric it replaces and enters the new one in its place, and enters each new
+-- chord symbol over the old one. Find changes nothing.
+-- Undo: Edit > Undo takes the whole run back in one step, except chord symbols: the chord-symbol commands make undo
+-- steps of their own, so each one replaced adds presses (a run that replaced one chord symbol took two).
 -- Builds on: 04-read-the-saved-copy.lua, 08-text-lyrics-chords-dynamics.lua, 09-bars-keys-and-times.lua,
 -- 12-select-by-id.lua, 13-set-a-property-by-id.lua, 14-add-notes-rests-text.lua and 17-ask-and-report.lua (the form
 -- helper). Open Script > Show Script Console to read what it prints.
 --
 -- Lua can't change a text's words, so a text is deleted and created again with createText in the same stream at the
 -- same position, put below the staff again by id if it was there, and made a system text again through
--- Edit.ChangeStaffTextToSystemText if it was one. createText makes a plain text in the default paragraph style, so a
--- text with formatting inside it, in another paragraph style, with more than one paragraph or with settings of its own
--- (a colour or a nudge, say) is listed and left. A lyric is replaced only when it is a whole word on line 1 and the new
--- one is a single word, through the lyric commands on the note under it; a chord symbol through the chord-symbol
--- commands on a note at its position. Lyrics and chord symbols are entered in Write mode, so the script switches to it
--- when it has one to enter. Chord symbols are matched by the names the reader gives (plain major, minor and seventh
--- chords). The options are in the findtext helper below.
+-- Edit.ChangeStaffTextToSystemText if it was one. A lyric is deleted and entered again with the lyric commands on the
+-- note under it. A chord symbol is replaced by entering the new one over it with the chord-symbol commands, on a note
+-- at its position; when Dorico can't read the new one, the old one stays and the script lists it. Deleting and
+-- entering go through a selection, so the script leaves note input and switches to Write mode before it changes
+-- anything. What can be rebuilt exactly is in the rebuild helper below; the rest is listed and left. Chord symbols are
+-- matched by the names the reader gives (plain major, minor and seventh chords). The options for matching are in the
+-- findtext helper.
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. The read of app.currentScore goes
@@ -160,7 +161,8 @@ do
     local script, answer = folder .. "/dorico-form.ps1", folder .. "/dorico-form.txt"
     local f = io.open(script, "wb")
     if not f then return nil end
-    f:write(form.script(title, fields))
+    -- Windows PowerShell 5.1 reads a script with no byte order mark in the ANSI code page, which garbles accents.
+    f:write("\239\187\191" .. form.script(title, fields))
     f:close()
     os.remove(answer)
     os.execute('powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "' .. script .. '" -Out "'
@@ -340,9 +342,51 @@ do
 end
 -- end helper: findtext
 
+-- helper: rebuild
+-- Whether a text, lyric or chord symbol the reader found can be rebuilt with new words exactly, or why not. A text has
+-- to be what createText makes, one plain paragraph in the default paragraph style, with no property but a placement
+-- above or below the staff for every layout, which goes back on by id. A lyric has to be a whole word on line 1, below
+-- the staff, with no melisma line and no property, and the new one a single word. A chord symbol has to have no
+-- property, and the new one has to be one word.
+--   rebuild.why(e, entries, new, typed) -> nil or the reason; for a text that can be rebuilt, then "kBelow" when it
+--     goes below the staff; entries are score.entries(s, e) and typed is values.typed
+local rebuild = {}
+do
+  local function ownSettings(entries)
+    if entries[1] then return "it has settings of its own (" .. entries[1].property .. ")" end
+  end
+
+  function rebuild.why(e, entries, new, typed)
+    if e.kind == "text" then
+      if e.formatted then return "it has formatting inside it" end
+      if #e.paragraphs ~= 1 then return "it has more than one paragraph" end
+      if e.paragraphs[1].style ~= "paragraph.defaulttext" then return "it is in another paragraph style" end
+      local below = not e.above
+      for _, x in ipairs(entries) do
+        if x.property ~= "kTextEventAboveOrBelow" then return "it has settings of its own (" .. x.property .. ")" end
+        if x.layout ~= -1 or x.instance ~= -1 then return "it is above or below the staff in one layout only" end
+        below = typed(x.value).value == "kBelow"
+      end
+      if new == "" then return "the new words are empty" end
+      return nil, below and "kBelow" or nil
+    elseif e.kind == "lyric" then
+      if e.line ~= 1 or e.syllable ~= "single" or e.lineType ~= "verse" then
+        return "only a whole-word lyric on line 1 can be replaced"
+      end
+      if e.duration.num > 0 then return "it has a melisma line" end
+      if e.above then return "it is above the staff" end
+      if ownSettings(entries) then return ownSettings(entries) end
+      if not new:match("^[^%s%-]+$") then return "the new lyric isn't a single word" end
+      return nil
+    end
+    if ownSettings(entries) then return ownSettings(entries) end
+    if not new:match("^%S+$") then return "the new chord symbol isn't one word" end
+  end
+end
+-- end helper: rebuild
+
 local TITLE = "Find and replace"
 local ALL_FLOWS, ALL_PLAYERS = "All flows", "All players"
-local DEFAULT_STYLE = "paragraph.defaulttext"
 local PLACEMENT = "kTextEventAboveOrBelow"
 
 local app, project = guard()
@@ -474,32 +518,17 @@ local function noteIn(flow, streamId, pos)
   end
 end
 
--- Why an item can't be rebuilt with its new words exactly, or nil when it can. For a text, also the placement to
--- restore: the value of every kTextEventAboveOrBelow it has, when they agree.
+-- Why an item can't be replaced, or nil when it can, with the note to enter a lyric or chord symbol on and the
+-- placement to put a text back in.
 local function check(f, new)
-  local e = f.e
-  if e.kind == "text" then
-    if e.formatted then return "it has formatting inside it" end
-    if #e.paragraphs ~= 1 then return "it has more than one paragraph" end
-    if e.paragraphs[1].style ~= DEFAULT_STYLE then return "it is in another paragraph style" end
-    for _, x in ipairs(score.entries(s, e)) do
-      if x.property ~= PLACEMENT or (f.placement and f.placement ~= x.value) then
-        return "it has settings of its own (" .. x.property .. ")"
-      end
-      f.placement = x.value
-    end
-    f.placement = f.placement and values.typed(f.placement).value or (not e.above and "kBelow" or nil)
-    if new == "" then return "the new words are empty" end
-  elseif e.kind == "lyric" then
-    if e.line ~= 1 or e.syllable ~= "single" or e.lineType ~= "verse" then
-      return "only a whole-word lyric on line 1 can be replaced"
-    end
-    if not new:match("^[^%s%-]+$") then return "the new lyric isn't a single word" end
-    f.note = noteIn(f.flow, e.streamId, e.position)
+  local why, placement = rebuild.why(f.e, score.entries(s, f.e), new, values.typed)
+  if why then return why end
+  f.placement = placement
+  if f.e.kind == "lyric" then
+    f.note = noteIn(f.flow, f.e.streamId, f.e.position)
     if not f.note then return "there is no note under it" end
-  else
-    if not new:match("^%S+$") then return "the new chord symbol isn't one word" end
-    f.note = noteIn(f.flow, nil, e.position)
+  elseif f.e.kind == "chordSymbol" then
+    f.note = noteIn(f.flow, nil, f.e.position)
     if not f.note then return "there is no note at its position to enter it on" end
   end
 end
@@ -523,44 +552,43 @@ for _, flow in ipairs(app.currentScore.flows) do
   firstVoice[flow.id] = flow.voiceStreams[1]
 end
 
-local made, replaced, left, entering = {}, 0, 0, false
+local todo = 0
 for _, f in ipairs(found) do
-  if f.why then
-    print(where(f) .. "\t" .. shown(f.words) .. ": left as it is, " .. f.why)
-    left = left + 1
-  else
-    print(where(f) .. "\t" .. shown(f.words) .. " -> " .. shown(f.new))
-    replaced = replaced + 1
-    local e = f.e
-    if e.kind == "text" then
-      local stream = e.system and firstVoice[e.flowId] or streams[e.streamId]
-      edit.delete(app, e)
-      local t = stream:createText(DoCore.RhythmicLength(e.position.num, e.position.den), DoCore.RhythmicLength(0),
-        f.new)
-      made[#made + 1] = { id = t.id, placement = not e.system and f.placement or nil, system = e.system }
+  if not f.why then todo = todo + 1 end
+end
+if todo > 0 then
+  app:doCommand("NoteInput.Exit")
+  app:doCommand("Window.SwitchMode?WindowMode=kWriteMode")
+end
+
+local made, chords = {}, {}
+for _, f in ipairs(found) do
+  local e = f.e
+  if not f.why and e.kind == "text" then
+    local stream = e.system and firstVoice[e.flowId] or streams[e.streamId]
+    edit.delete(app, e)
+    local t = stream:createText(DoCore.RhythmicLength(e.position.num, e.position.den), DoCore.RhythmicLength(0), f.new)
+    made[#made + 1] = { id = t.id, placement = not e.system and f.placement or nil, system = e.system }
+  elseif not f.why then
+    -- A lyric goes in on its own line, so the old one comes off first; a new chord symbol replaces the old one.
+    if e.kind == "lyric" then edit.delete(app, e) end
+    edit.select(app, f.note)
+    if e.kind == "lyric" then
+      app:doCommand("NoteInput.StartLyricInput")
+      app:doCommand(commands.build("NoteInput.AcceptCurrentLyricInput",
+        { { "LyricsEntryAdvanceType", "kEndInput" }, { "LyricText", f.new } }))
     else
-      if not entering then
-        app:doCommand("NoteInput.Exit")
-        app:doCommand("Window.SwitchMode?WindowMode=kWriteMode")
-        entering = true
-      end
-      edit.delete(app, e)
-      edit.select(app, f.note)
-      if e.kind == "lyric" then
-        app:doCommand("NoteInput.StartLyricInput")
-        app:doCommand(commands.build("NoteInput.AcceptCurrentLyricInput",
-          { { "LyricsEntryAdvanceType", "kEndInput" }, { "LyricText", f.new } }))
-      else
-        app:doCommand("NoteInput.StartChordSymbolInput")
-        app:doCommand(commands.build("NoteInput.AcceptCurrentChordSymbolTextInput",
-          { { "Definition", f.new }, { "ChordSymbolEntryAdvanceType", "kEndInput" } }))
-      end
+      app:doCommand("NoteInput.StartChordSymbolInput")
+      app:doCommand(commands.build("NoteInput.AcceptCurrentChordSymbolTextInput",
+        { { "Definition", f.new }, { "ChordSymbolEntryAdvanceType", "kEndInput" } }))
+      chords[#chords + 1] = f
     end
   end
 end
 
 -- A new text has the ids the file gives only once it is saved, so placements and system texts go on after a read.
-local after = #made > 0 and savedcopy.read(app)
+-- The same read shows which chord symbols Dorico took: one it couldn't read leaves the old one, with its old id.
+local after = (#made > 0 or #chords > 0) and savedcopy.read(app)
 for _, m in ipairs(made) do
   local e = after.events[m.id]
   if e and m.placement then edit.setProperty(app, e, PLACEMENT, m.placement) end
@@ -569,5 +597,19 @@ for _, m in ipairs(made) do
     app:doCommand("Edit.ChangeStaffTextToSystemText")
   end
 end
+for _, f in ipairs(chords) do
+  if after.events[f.e.id] then f.why = "Dorico couldn't read the new one, so the old one is still there" end
+end
 app:doCommand("Edit.SelectNone")
+
+local replaced, left = 0, 0
+for _, f in ipairs(found) do
+  if f.why then
+    print(where(f) .. "\t" .. shown(f.words) .. ": left as it is, " .. f.why)
+    left = left + 1
+  else
+    print(where(f) .. "\t" .. shown(f.words) .. " -> " .. shown(f.new))
+    replaced = replaced + 1
+  end
+end
 print(string.format("Replaced %d; left %d as they were.", replaced, left))

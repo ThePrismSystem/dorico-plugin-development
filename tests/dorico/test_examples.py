@@ -175,6 +175,13 @@ row("note_names_undone", NAMES, project="reading", before=OPEN_FIRST, dialog=NAM
     after=[then_command("Edit.Undo"), then_check("note-names.none.lua")])
 row("note_names_cancelled", NAMES, project="reading", before=OPEN_FIRST, check=CHECKS + "note-names.none.lua",
     args={"cancelled": True}, dialog={"window": "Note names", "button": "Cancel"})
+# The Players list is the third list: 1 is the flute, 2 the clarinet.
+row("note_names_one_player_then_another", NAMES, project="reading", before=OPEN_FIRST,
+    check=CHECKS + "note-names.two-players.lua", args={"players": ["Flute"]},
+    dialog={"window": "Note names", "button": "OK", "fields": [("choice", 2, 1)]},
+    after=[then_dialog("note-names.two-players.lua", NAMES,
+                       {"window": "Note names", "button": "OK", "fields": [("choice", 2, 2)]},
+                       args={"players": ["Flute", "Clarinet (B{@flat@})"]})])
 CAUTIONARY = RECIPES + "cautionary-accidentals.lua"
 CAUTIONARY_OK = {"window": "Cautionary accidentals", "button": "OK", "fields": []}
 row("cautionary_accidentals", CAUTIONARY, project="cautionary", before=OPEN_FIRST, dialog=CAUTIONARY_OK,
@@ -215,10 +222,15 @@ row("find_and_replace_replace", FIND, project="texts", before=OPEN_FIRST, args={
     dialog=find_box(REPLACE, ("text", 0, "dolce"), ("text", 1, "sweet"), ("check", 1, True)),
     after=[then_command("Edit.Undo"), then_check("find-and-replace.none.lua")])
 row("find_and_replace_pattern", FIND, project="texts", before=OPEN_FIRST, args={"row": "pattern"},
-    dialog=find_box(REPLACE, ("text", 0, "(%a+) e (%a+)"), ("text", 1, "%2 e %1"), ("check", 0, True),
+    dialog=find_box(REPLACE, ("text", 0, "^(%a+) (sempre)$"), ("text", 1, "%2 %1"), ("check", 0, True),
                     ("check", 2, True)))
+CHORD_UNDO_PRESSES = 2  # one press takes back too little (tried)
 row("find_and_replace_chord_symbol", FIND, project="texts", before=OPEN_FIRST, args={"row": "chord"},
-    dialog=find_box(REPLACE, ("text", 0, "Am"), ("text", 1, "Dm"), ("check", 0, True), ("check", 1, True)))
+    dialog=find_box(REPLACE, ("text", 0, "Am"), ("text", 1, "Dm"), ("check", 0, True), ("check", 1, True)),
+    after=[then_command("Edit.Undo")] * CHORD_UNDO_PRESSES + [then_check("find-and-replace.none.lua")])
+row("find_and_replace_chord_symbol_dorico_cant_read", FIND, project="texts", before=OPEN_FIRST,
+    args={"row": "chordUnreadable"},
+    dialog=find_box(REPLACE, ("text", 0, "G7"), ("text", 1, "Xyzzy"), ("check", 0, True), ("check", 1, True)))
 row("find_and_replace_cancelled", FIND, project="texts", before=OPEN_FIRST,
     check=CHECKS + "find-and-replace.none.lua", args={"cancelled": True},
     dialog={"window": "Find and replace", "button": "Cancel"})

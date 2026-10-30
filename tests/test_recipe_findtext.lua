@@ -1,9 +1,28 @@
--- The findtext helper from the find and replace recipe: matching and replacing words, one option per test.
+-- The find and replace recipe's helpers: findtext matching and replacing words, one option per test, and rebuild
+-- saying which matches can be replaced exactly.
 local helpers = require("helpers")
 
 local RECIPE = "examples/recipes/find-and-replace.lua"
 
 local function findtext() return helpers.load(RECIPE, "findtext") end
+
+-- rebuild.why for a text, lyric or chord symbol built from defaults and changes, with property entries as
+-- {property, value, layout} (layout -1 for none).
+local function why(kind, changes, entries, new)
+  local e = ({
+    text = { kind = "text", formatted = false, paragraphs = { { style = "paragraph.defaulttext" } }, above = true },
+    lyric = { kind = "lyric", line = 1, syllable = "single", lineType = "verse", above = false,
+      duration = { num = 0, den = 1 } },
+    chordSymbol = { kind = "chordSymbol" },
+  })[kind]
+  for k, v in pairs(changes or {}) do e[k] = v end
+  local list = {}
+  for i, x in ipairs(entries or {}) do
+    list[i] = { property = x[1], value = 'string: "' .. x[2] .. '"', layout = x[3] or -1, instance = -1 }
+  end
+  local reason, placement = helpers.load(RECIPE, "rebuild").why(e, list, new or "new", require("scorereader.values").typed)
+  return tostring(reason) .. (placement and (" / " .. placement) or "")
+end
 
 -- "from-to" for each match, in order.
 local function spans(words, query, opts)
@@ -53,5 +72,36 @@ return {
   end,
   a_broken_pattern_stops_with_an_error = function(t)
     t:ok(not pcall(findtext().matches, "dolce", "[d", { pattern = true }))
+  end,
+  texts_that_can_be_rebuilt = function(t)
+    t:eq(why("text"), "nil", "a plain text above the staff")
+    t:eq(why("text", nil, { { "kTextEventAboveOrBelow", "kBelow" } }), "nil / kBelow", "below for every layout")
+    t:eq(why("text", { above = false }), "nil / kBelow", "below as written")
+  end,
+  texts_that_cant = function(t)
+    t:eq(why("text", nil, { { "kTextEventAboveOrBelow", "kBelow", 0 } }),
+      "it is above or below the staff in one layout only", "flipped with a layout on screen")
+    t:eq(why("text", nil, { { "kEventColour", "#ff0000c0" } }), "it has settings of its own (kEventColour)")
+    t:eq(why("text", { formatted = true }), "it has formatting inside it")
+    t:eq(why("text", { paragraphs = { { style = "paragraph.user.default_text_2" } } }),
+      "it is in another paragraph style")
+    t:eq(why("text", { paragraphs = { { style = "paragraph.defaulttext" }, { style = "paragraph.defaulttext" } } }),
+      "it has more than one paragraph")
+    t:eq(why("text", nil, nil, ""), "the new words are empty")
+  end,
+  lyrics = function(t)
+    t:eq(why("lyric"), "nil", "a whole word on line 1")
+    t:eq(why("lyric", { line = 2 }), "only a whole-word lyric on line 1 can be replaced")
+    t:eq(why("lyric", { syllable = "begin" }), "only a whole-word lyric on line 1 can be replaced")
+    t:eq(why("lyric", { duration = { num = 1, den = 1 } }), "it has a melisma line")
+    t:eq(why("lyric", { above = true }), "it is above the staff")
+    t:eq(why("lyric", nil, { { "kEventColour", "#ff0000c0" } }), "it has settings of its own (kEventColour)")
+    t:eq(why("lyric", nil, nil, "two words"), "the new lyric isn't a single word")
+    t:eq(why("lyric", nil, nil, "hap-"), "the new lyric isn't a single word")
+  end,
+  chord_symbols = function(t)
+    t:eq(why("chordSymbol", nil, nil, "Dm7"), "nil")
+    t:eq(why("chordSymbol", nil, { { "kEventColour", "#ff0000c0" } }), "it has settings of its own (kEventColour)")
+    t:eq(why("chordSymbol", nil, nil, "D m"), "the new chord symbol isn't one word")
   end,
 }

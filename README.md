@@ -105,7 +105,7 @@ load the reader from `lib/`, so copy the `lib` folder into Script Plug-ins besid
 | [parallel-fifths](examples/recipes/parallel-fifths.lua) | Flags consecutive fifths and octaves between every pair of parts, colouring the notes and listing them. | Yes, unless cancelled; one Edit > Undo |
 | [note-names](examples/recipes/note-names.lua) | Writes each note's name under it: letters, German names, fixed or movable do, or scale degrees. | Yes, unless cancelled; one Edit > Undo |
 | [cautionary-accidentals](examples/recipes/cautionary-accidentals.lua) | Adds cautionary accidentals by your own rules (bars back, rests, ties, other staves), and can take them back. | Yes, unless cancelled; one Edit > Undo |
-| [find-and-replace](examples/recipes/find-and-replace.lua) | Finds words in texts, lyrics and chord symbols, and replaces them where a script can. | Replace only; one Edit > Undo. Find changes nothing |
+| [find-and-replace](examples/recipes/find-and-replace.lua) | Finds words in texts, lyrics and chord symbols, and replaces them where a script can. | Replace only; one Edit > Undo, and more for each chord symbol. Find changes nothing |
 
 ## What the probes changed
 

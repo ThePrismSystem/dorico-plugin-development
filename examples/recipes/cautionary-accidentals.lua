@@ -159,7 +159,8 @@ do
     local script, answer = folder .. "/dorico-form.ps1", folder .. "/dorico-form.txt"
     local f = io.open(script, "wb")
     if not f then return nil end
-    f:write(form.script(title, fields))
+    -- Windows PowerShell 5.1 reads a script with no byte order mark in the ANSI code page, which garbles accents.
+    f:write("\239\187\191" .. form.script(title, fields))
     f:close()
     os.remove(answer)
     os.execute('powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "' .. script .. '" -Out "'
