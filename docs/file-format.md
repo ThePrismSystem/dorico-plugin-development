@@ -202,7 +202,8 @@ These come from the reading fixture (`fixtures/6.2.30/reading.dorico`), whose so
 
 A text event's words are in `content/paragraphs/paragraph`, which has a `paragraphStyleID`
 (`paragraph.defaulttext`) and `fragments`. Each `fragment` has its words in `content` and its formatting in
-`textFragmentStyle`. `aboveOrBelow` is `kAbove` or `kBelow`, and `isSystemText` says whether it's system text.
+`textFragmentStyle`. `aboveOrBelow` is `kAbove` or `kBelow`, and `isSystemText` says whether it's system text. A text flipped in
+Dorico keeps its `aboveOrBelow` and gains a `kTextEventAboveOrBelow` property for the layout it was flipped in.
 
 #### Chord symbols
 

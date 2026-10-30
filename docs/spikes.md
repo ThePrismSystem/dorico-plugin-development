@@ -300,3 +300,41 @@ beside the decoded file). Run on `fixtures/6.2.30/reading.dorico`, whose source 
 The reading fixture also showed what Dorico 6.2.30's MusicXML import does with text: every `<words>` direction lands
 above the staff whatever its `placement`, a direction with two `<words>` keeps only the last, and `font-weight` is
 dropped. `pizz.` and `arco` arrive as playing techniques, not text.
+
+## W1 to W7: changing what the reader found
+
+Probes: `w1_text_rebuild.lua`, `w2_lyrics.lua`, `w3_chord_replace.lua`, `w4_bulk_text.lua`, `w5_accidentals.lua` with
+`w5_undo.py`, and `w7_selected_text.lua`, each on a scratch copy of `fixtures/6.2.30/reading.dorico`. Each one finds
+its events with the reader, acts on them by the ids the file gives, and reads the result back from a saved copy.
+
+- W1, text. Deleting a text by its ids and creating one with new words in the same stream at the same position
+  works; `createText` works on a stave stream too. `Edit.FlipItem` stores `kTextEventAboveOrBelow = kBelow` for the
+  layout on screen, and the same property set by `EventEdit.ChangeProperty` holds in every layout.
+  `Edit.ChangeStaffTextToSystemText` turns the selected text into a system text, which is a new event in the timebase
+  stream. No route set a paragraph style: three guessed property names through the Properties panel did nothing, and
+  `ChangeProperty` stored two invented names as properties without complaint, changing nothing. A text in another
+  style, or with formatting inside it, can't be rebuilt as it was.
+- W2, lyrics. Deleting a lyric by its ids and entering `NoteInput.StartLyricInput` then
+  `NoteInput.AcceptCurrentLyricInput?LyricsEntryAdvanceType=kEndInput&LyricText=glad` on the selected note puts the
+  whole word on line 1. Sent the same way, "hap-" became a whole word with the hyphen in it, so syllables need
+  another route.
+- W3, chord symbols. Deleting the Am by its ids, selecting a note at the same position and entering `Dm7` with the
+  chord-symbol commands gave a Dm7 there (`kMinor`, `k7`).
+- W4, many texts. 300 `createText` calls took 18.7 s, about 62 ms each, and all 300 read back. Reading the copy took
+  1.3 s.
+- W5, accidentals. `EventEdit.ChangeProperty` with `kNoteAccidentalVisibility_v3` takes `kRoundBrackets`,
+  `kSquareBrackets`, `kShow` and `kHide`, writing the older `kNoteAccidentalVisibility` beside each (`kParenthesise`
+  for both bracket kinds); it stores `kDefault`, or any other value, as `kHide`. The command with no `Value`, and the
+  Properties panel's enable switch on a selection, both take the property off. The panel's route on a selection with
+  the full score on screen stores layout 0, as the menu commands do, so a value set by id (no context) is told apart
+  from one set by hand. One `Edit.Undo` from outside took back a run's `ChangeProperty` and its `createText`
+  together: the property joins the run's one undo step.
+- W6, showing a problem. A colour set by `ChangeProperty` holds in every layout and reads back
+  (`tests/dorico/case_reader.lua`). The only command found that creates a comment, `NoteInput.ShowCommentDialog`, opens
+  a dialog.
+- W7, the selection. Marking the selection with `UI.InvokePropertyChangeValue?Type=kEventColour` and reading a saved
+  copy finds every selected event, texts included: their colour is stored for layout 0. The enable switch takes the
+  marks off again, leaving nothing behind. It would also take off a colour a selected item already had, so a plug-in
+  notes those from a saved copy first and puts them back by the same route. The panel ignores a property Dorico
+  doesn't know, so a private marker isn't possible. `EventEdit.Select` replaces the selection; the probe's attempt to
+  add to it with an `Add` parameter did nothing.
