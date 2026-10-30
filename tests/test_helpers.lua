@@ -688,4 +688,15 @@ return {
     t:eq(silent, nil)
     t:eq(silentWhy, "osascript gave no answer")
   end,
+
+  form_on_a_mac_says_why_when_osascript_wont_start = function(t)
+    local form = helpers.load(ASK, "form")
+    local realPopen = io.popen
+    io.popen = function() return nil, "no such program" end
+    local ok, answers, why = pcall(form.mac, "Box", { { key = "words", label = "Words", kind = "text" } })
+    io.popen = realPopen
+    t:ok(ok, tostring(answers))
+    t:eq(answers, nil)
+    t:eq(why, "couldn't start osascript: no such program")
+  end,
 }
