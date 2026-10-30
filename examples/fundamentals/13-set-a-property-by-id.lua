@@ -2,7 +2,7 @@
 -- What it does: reads a saved copy, finds every note and grace note higher than F5 (sounding pitch) and sets its
 -- colour by event id. Then it reads a second copy to see that each took, and prints one line per note (flow number,
 -- player, position, spelling, and "coloured" or "not coloured", with tabs between) and a "total" line: how many
--- took, of how many it set.
+-- took, of how many it set. When it can't read the second copy, it says how many it set instead.
 -- Change COLOUR below to use another colour.
 -- Changes: the colour of those notes, in every layout.
 -- Undo: Edit > Undo takes all the colours back in one step.
@@ -84,7 +84,10 @@ end
 -- A command reports nothing, so read a second copy and look on each note for the colour stored for every layout and
 -- block instance, as EventEdit.ChangeProperty stores it.
 local after = readCopy(app)
-if not after then return end
+if not after then
+  print("Set the colour of " .. #set .. " notes, but couldn't read the project back to check that it took.")
+  return
+end
 local coloured = 0
 for _, x in ipairs(set) do
   local stored, e = false, after.events[x.e.id]

@@ -157,6 +157,18 @@ local function changedCopy(fixture, change)
   return function() return { read = function() return s end } end
 end
 
+-- Stands in for the saved copy: the fixture as the reader reads it the first time, and an error after that.
+local function readOnce(fixture)
+  local reads = 0
+  return function()
+    return { read = function()
+      reads = reads + 1
+      if reads > 1 then error("no copy", 0) end
+      return require("scorereader.score").readFile(fixture)
+    end }
+  end
+end
+
 -- Stands in for the score module, with a script's mark, value stored with no layout, added to each note that has the
 -- property stored for a layout, as a setting made in the Properties panel is.
 local function markedWithTheirOwn(property, value)
@@ -237,6 +249,26 @@ return {
     t:eq(printed[1], "1\tFlute\t4\tG5\tnot coloured")
     t:eq(#printed, 6)
     t:eq(printed[6], "total\t0\t5")
+  end,
+
+  set_a_property_by_id_says_what_it_set_when_it_cant_read_the_project_back = function(t)
+    package.preload["scorereader.dorico.savedcopy"] = readOnce(SAMPLE)
+    local ok, printed, sent = pcall(run, "examples/fundamentals/13-set-a-property-by-id.lua", SAMPLE)
+    package.preload["scorereader.dorico.savedcopy"] = nil
+    t:ok(ok, tostring(printed))
+    t:eq(#sent, 5)
+    t:eq(table.concat(printed, " / "), "The reader couldn't read this project: no copy / Set the colour of 5 notes, "
+      .. "but couldn't read the project back to check that it took.")
+  end,
+
+  chord_symbols_say_what_they_entered_when_they_cant_read_the_project_back = function(t)
+    package.preload["scorereader.dorico.savedcopy"] = readOnce(SAMPLE)
+    local ok, printed = pcall(run, "examples/recipes/chord-symbols.lua", SAMPLE)
+    package.preload["scorereader.dorico.savedcopy"] = nil
+    t:ok(ok, tostring(printed))
+    t:eq(table.concat(printed, " / "), "flow 1, bar 1: C / flow 1, bar 2: Am / flow 1, bar 3: F / flow 1, bar 4: G7"
+      .. " / The reader couldn't read this project: no copy / Entered 4 chord symbols, listed above, but couldn't read"
+      .. " the project back to check them.")
   end,
 
   chord_symbols_say_which_chords_dorico_didnt_put_in = function(t)

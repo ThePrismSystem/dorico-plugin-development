@@ -3,7 +3,7 @@
 -- chord its notes make (both hands of a piano, any voice). Where the chord changes from the last one it put in, it
 -- adds a chord symbol at the first note that starts in the bar, through the chord symbol popover's own commands, and
 -- prints "flow <n>, bar <b>: <chord>". Then it reads a second copy and prints any chord Dorico didn't put in as
--- written.
+-- written, or, if it can't read one, how many it entered.
 -- Changes: adds a chord symbol at each chord change with no chord symbol there yet, and changes the selection. A chord
 -- symbol already in place is left as it is, since entering another there would replace it.
 -- Undo: Edit > Undo takes the chord symbols back one at a time, three presses each: the chord symbol popover's
@@ -288,7 +288,10 @@ if count == 0 then print("No chords found.") end
 -- only major and minor chords and dominant sevenths, so another chord counts as put in when one is there at all.
 if #entered == 0 then return end
 local after = readCopy(app)
-if not after then return end
+if not after then
+  print("Entered " .. #entered .. " chord symbols, listed above, but couldn't read the project back to check them.")
+  return
+end
 for _, c in ipairs(entered) do
   local found
   for _, e in ipairs(after.flows[c.flow].events) do
