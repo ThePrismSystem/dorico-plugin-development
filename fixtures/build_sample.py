@@ -44,6 +44,27 @@ def wait_saved(path: Path, timeout=60):
     return False
 
 
+def save_and_verify(client, scratch, built: Path, verify: Path):
+    """Save the open copy as built, close it, move the file into the folder for the Dorico version that saved it, and
+    check a copy of it with verify. Returns verify's exit code and result."""
+    if built.exists():
+        built.unlink()  # SaveAs over an existing file would ask to replace it
+    client.command(f"File.SaveAs?File={run_lua.fwd(built)}")
+    saved = wait_saved(built)
+    run_lua.close_scratch(client, scratch)
+    if not saved:
+        print(f"{built} was not written: Dorico may be showing a dialog")
+        return 2, None
+    target = HERE / fixture_versions.saved_by(built) / built.name
+    target.parent.mkdir(exist_ok=True)
+    built.replace(target)
+    print(f"saved {target} ({target.stat().st_size} bytes); list it in fixtures/versions.json if it is new")
+    time.sleep(2)
+    code, result, _ = run_lua.run(verify, open_file=target, client=client, timeout=300)
+    report(verify.stem, code, result)
+    return code, result
+
+
 def main():
     make_sample_xml.main()
     client = dws.DoricoClient()
@@ -57,22 +78,7 @@ def main():
             if scratch is not None and verified:
                 run_lua.close_scratch(client, scratch)
             return code or 2
-        if BUILT.exists():
-            BUILT.unlink()  # SaveAs over an existing file would ask to replace it
-        client.command(f"File.SaveAs?File={run_lua.fwd(BUILT)}")
-        saved = wait_saved(BUILT)
-        run_lua.close_scratch(client, scratch)
-        if not saved:
-            print(f"{BUILT} was not written: Dorico may be showing a dialog")
-            return 2
-        target = HERE / fixture_versions.saved_by(BUILT) / "sample.dorico"
-        target.parent.mkdir(exist_ok=True)
-        BUILT.replace(target)
-        print(f"saved {target} ({target.stat().st_size} bytes); list it in fixtures/versions.json if it is new")
-        time.sleep(2)
-        code, result, _ = run_lua.run(HERE / "verify_sample.lua", open_file=target, client=client, timeout=300)
-        report("verify_sample", code, result)
-        return code
+        return save_and_verify(client, scratch, BUILT, HERE / "verify_sample.lua")[0]
     finally:
         client.close()
 

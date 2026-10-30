@@ -3,7 +3,7 @@
 -- before and after (to <run folder>/s3-gap.txt). Scratch copy only.
 --   args.attempt: "right" (EventEdit.NavigateRight) or "extend" (EventEdit.NavigateRightExtend)
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
-local mine = here .. "?.lua;" .. here .. "lib/?.lua;" .. here .. "../fixtures/?.lua"
+local mine = here .. "?.lua;" .. here .. "lib/?.lua;" .. here .. "../fixtures/?.lua;" .. here .. "../lib/?.lua"
 for name in pairs(package.loaded) do
   if package.searchpath(name, mine) then package.loaded[name] = nil end
 end
@@ -11,6 +11,8 @@ if not package.path:find(mine, 1, true) then package.path = mine .. ";" .. packa
 local probe = require("probe")
 
 probe.run("s3_gap", function(p)
+  local dump = require("scorereader.dorico.dump")
+  local edit = require("scorereader.dorico.edit")
   local dumpparse = require("dumpparse")
   local app = DoApp.DoApp()
   local score = app.currentScore
@@ -29,7 +31,7 @@ probe.run("s3_gap", function(p)
     end
   end
   record("before")
-  local parsed = dumpparse.parse(trumpet:dump())
+  local parsed = dump.parse(trumpet:dump())
   local note
   for _, ev in ipairs(parsed.events) do
     if ev.kind == "note" and ev.pos == 16 then note = ev end
@@ -39,13 +41,13 @@ probe.run("s3_gap", function(p)
   app:doCommand("Window.SwitchMode?WindowMode=kWriteMode")
   app:doCommand("Edit.SelectNone")
   app:doCommand(string.format("EventEdit.Select?FlowID=%d&EventID=%d&EventBlockID=%d", flow.id, note.id,
-    dumpparse.blockIdOf(trumpet, note.id, parsed)))
+    edit.blockIdOf(trumpet, note.id, parsed)))
   app:doCommand(p.args.attempt == "extend" and "EventEdit.NavigateRightExtend" or "EventEdit.NavigateRight")
   app:doCommand("Edit.RemoveRests")
   app:doCommand("Edit.SelectNone")
   record("after " .. tostring(p.args.attempt))
   out:close()
   local kinds = {}
-  for _, ev in ipairs(dumpparse.parse(trumpet:dump()).events) do kinds[#kinds + 1] = ev.raw:sub(1, 90) end
+  for _, ev in ipairs(dump.parse(trumpet:dump()).events) do kinds[#kinds + 1] = ev.raw:sub(1, 90) end
   p:fact("trumpetAfter", kinds)
 end)

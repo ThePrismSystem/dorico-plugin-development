@@ -37,6 +37,15 @@ return {
     t:eq(tree.isArray(t2, tree.child(t2, 0, "entries")), true, "a tag with the 1 bit")
     t:eq(tree.isArray(t2, tree.child(t2, 0, "plain")), false, "a tag without it")
   end,
+  the_tags_other_bits_are_ignored = function(t)
+    -- saved files use every tag byte from 0x00 to 0xFF
+    local t2 = dtn.decode(encode({ "a", "b", "c" }, { "" },
+      { { 0xFE, 0, 0, { 1, 2 } }, { 0xFD, 1, 0 }, { 0xFC, 2, 0 } }))
+    t:eq(#tree.children(t2, 0), 2, "0xFE has children")
+    t:eq(tree.isArray(t2, 1), true, "0xFD is a list")
+    t:eq(#tree.children(t2, 2), 0, "0xFC is a leaf")
+    t:eq(tree.isArray(t2, 2), false)
+  end,
   trailing_bytes = function(t) fails(t, TINY .. "\0", "trailing") end,
   truncated = function(t) fails(t, TINY:sub(1, -2), "truncated") end,
   bad_header = function(t) fails(t, "\5" .. TINY:sub(2), "header") end,

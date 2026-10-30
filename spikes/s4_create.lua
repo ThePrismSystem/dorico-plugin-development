@@ -2,7 +2,7 @@
 -- one piano note by id, sends its commands, and reports which event kinds appeared anywhere in the flow. Never calls
 -- a constructor with guessed arguments. Scratch copy only.
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
-local mine = here .. "?.lua;" .. here .. "lib/?.lua;" .. here .. "../fixtures/?.lua"
+local mine = here .. "?.lua;" .. here .. "lib/?.lua;" .. here .. "../fixtures/?.lua;" .. here .. "../lib/?.lua"
 for name in pairs(package.loaded) do
   if package.searchpath(name, mine) then package.loaded[name] = nil end
 end
@@ -22,6 +22,8 @@ local TRIES = {
 }
 
 probe.run("s4_create", function(p)
+  local dump = require("scorereader.dorico.dump")
+  local edit = require("scorereader.dorico.edit")
   local dumpparse = require("dumpparse")
   local app = DoApp.DoApp()
   local score = app.currentScore
@@ -44,14 +46,14 @@ probe.run("s4_create", function(p)
   local results = {}
   for _, try in ipairs(TRIES) do
     local before = census()
-    local parsed = dumpparse.parse(piano:dump())
+    local parsed = dump.parse(piano:dump())
     local note
     for _, ev in ipairs(parsed.events) do
       if not note and ev.kind == "note" and ev.pos == try.pos then note = ev end
     end
     app:doCommand("Edit.SelectNone")
     app:doCommand(string.format("EventEdit.Select?FlowID=%d&EventID=%d&EventBlockID=%d", flow.id, note.id,
-      dumpparse.blockIdOf(piano, note.id, parsed)))
+      edit.blockIdOf(piano, note.id, parsed)))
     for _, c in ipairs(try.commands) do app:doCommand(c) end
     app:doCommand("NoteInput.Exit")
     app:doCommand("Edit.SelectNone")

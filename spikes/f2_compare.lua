@@ -6,12 +6,12 @@
 -- position. It prints each stream's counts, the kinds that matched (dump kind = file definition), and anything that
 -- didn't match.
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])") or "./"
-local mine = here .. "../lib/?.lua;" .. here .. "lib/?.lua;" .. here .. "../fixtures/?.lua"
+local mine = here .. "../lib/?.lua;" .. here .. "lib/?.lua;" .. here .. "../fixtures/?.lua;" .. here .. "../lib/?.lua"
 if not package.path:find(mine, 1, true) then package.path = mine .. ";" .. package.path end
 local project = require("scorereader.project")
 local tree = require("scorereader.tree")
 local json = require("json")
-local dumpparse = require("dumpparse")
+local dump = require("scorereader.dorico.dump")
 
 local f = assert(io.open(arg[1], "rb"))
 local lua = json.decode(f:read("*a")).facts
@@ -60,7 +60,7 @@ for fi, flow in ipairs(lua.flows) do
         fileCount = fileCount + 1
       end
     end
-    local parsed = dumpparse.parse(s.dump)
+    local parsed = dump.parse(s.dump)
     local unmatched = {}
     for _, ev in ipairs(parsed.events) do
       local fe = fileEvents[ev.id]

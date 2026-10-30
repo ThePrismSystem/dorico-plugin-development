@@ -23,12 +23,12 @@ local NAMED = { quot = '"', amp = "&", lt = "<", gt = ">", apos = "'" }
 
 local function unescape(text)
   if not find(text, "&", 1, true) then return text end
-  return (text:gsub("&(#?x?)(%w+);", function(kind, body)
-    if kind == "" then
-      return NAMED[body] or fail("unknown entity &" .. body .. ";")
-    end
-    local code = tonumber(body, kind == "#x" and 16 or 10)
-    if kind == "#" and not body:match("^%d+$") or not code then fail("bad character reference &" .. kind .. body .. ";") end
+  return (text:gsub("&([^&;]*)(;?)", function(body, semicolon)
+    if semicolon == "" then fail("an & that starts no reference: &" .. body) end
+    if NAMED[body] then return NAMED[body] end
+    local code = body:match("^#%d+$") and tonumber(body:sub(2), 10)
+      or body:match("^#x%x+$") and tonumber(body:sub(3), 16)
+    if not code then fail("unknown reference &" .. body .. ";") end
     return utf8(code)
   end))
 end
@@ -53,10 +53,12 @@ function xml.decode(text)
     local id = count
     count = count + 1
     nameOf[id], valueOf[id] = intern(names, nameIndex, name), 0
-    for attr, v in attrs:gmatch('([%w_:]+)%s*=%s*"([^"]*)"') do
+    local rest = attrs:gsub('([%w_:]+)%s*=%s*"([^"]*)"', function(attr, v)
       if attr ~= "array" or v ~= "true" then fail("unknown attribute " .. attr .. '="' .. v .. '" on <' .. name .. ">") end
       arrayOf[id] = true
-    end
+      return ""
+    end)
+    if rest:find("%S") then fail("attributes the reader can't read on <" .. name .. ">:" .. attrs) end
     local parent = stack[#stack]
     if parent then
       local kids = kidsOf[parent]
@@ -104,7 +106,10 @@ function xml.decode(text)
       if not name or not id or names[nameOf[id] + 1] ~= name then
         fail("</" .. tostring(name) .. "> doesn't close " .. (id and "<" .. names[nameOf[id] + 1] .. ">" or "anything"))
       end
-      if pending[#stack] then valueOf[id] = intern(values, valueIndex, unescape(pending[#stack])) end
+      local text = pending[#stack]
+      -- An empty list written across lines holds its indentation, which isn't a value: score.dtn gives it none.
+      if text and arrayOf[id] and not text:find("%S") then text = "" end
+      if text then valueOf[id] = intern(values, valueIndex, unescape(text)) end
       pending[#stack] = nil
       stack[#stack] = nil
       if #stack == 0 then rootClosed = true end

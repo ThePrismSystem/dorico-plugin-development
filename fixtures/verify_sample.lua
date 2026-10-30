@@ -1,7 +1,7 @@
 -- Checks a scratch copy of fixtures/<version>/sample.dorico against fixtures/expected.json: every player's notes in every
 -- flow, by sounding spelling, position and duration. Read-only.
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
-local mine = here .. "?.lua;" .. here .. "../spikes/lib/?.lua"
+local mine = here .. "?.lua;" .. here .. "../spikes/lib/?.lua;" .. here .. "../lib/?.lua"
 for name in pairs(package.loaded) do
   if package.searchpath(name, mine) then package.loaded[name] = nil end
 end
@@ -14,6 +14,7 @@ local function key(n)
 end
 
 probe.run("verify_sample", function(p)
+  local dump = require("scorereader.dorico.dump")
   local dumpparse = require("dumpparse")
   local json = require("json")
   local f = assert(io.open(here .. "expected.json", "rb"))
@@ -31,7 +32,7 @@ probe.run("verify_sample", function(p)
       for _, s in ipairs(flow.voiceStreams) do
         local name = owners[s.id] or "?"
         got[name] = got[name] or {}
-        for _, ev in ipairs(dumpparse.parse(s:dump()).events) do
+        for _, ev in ipairs(dump.parse(s:dump()).events) do
           if ev.kind == "note" or ev.kind == "grace" then
             got[name][#got[name] + 1] = key({ spelling = ev.spelling, pos = ev.pos, duration = ev.duration,
               grace = ev.kind == "grace" })

@@ -1,4 +1,4 @@
--- Opening a .dorico: unzip it and decode its score, from score.dtn when it has one (what Dorico 6.2 saves) or
+-- Opening a .dorico: unzip it and decode its score, from score.dtn when it has one (what Dorico 6 saves) or
 -- score.xml (what Steinberg's shipped examples hold).
 local zip = require("scorereader.zip")
 local dtn = require("scorereader.dtn")

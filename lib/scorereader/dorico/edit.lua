@@ -2,6 +2,7 @@
 -- flowId, id and blockId, which is everything EventEdit.Select and EventEdit.ChangeProperty need.
 local commands = require("scorereader.dorico.commands")
 
+---@class scorereader.dorico.edit
 local edit = {}
 
 -- Selects the event alone.

@@ -1,6 +1,7 @@
 -- Command strings for app:doCommand, "Name?key=value&key=value". Dorico reads a backslash in a value as an escape, and
 -- a bare "&" or "," ends the value, so a value's own backslashes, ampersands and commas each get a backslash in front;
 -- "=" and any other character pass as they are. A nil value is refused, since tostring would send the word "nil".
+---@class scorereader.dorico.commands
 local commands = {}
 
 function commands.value(v)

@@ -1,4 +1,5 @@
 """tools/run_tests.py's own helpers."""
+import io
 import os
 import shutil
 import sys
@@ -50,6 +51,21 @@ class SyntaxStepTests(unittest.TestCase):
         (self.folder / "elsewhere" / "e.lua").write_text("return 1\n")
         names = sorted(Path(p).name for p in run_tests.lua_files(self.folder))
         self.assertEqual(names, ["r.lua", "s.lua"])
+
+
+class InputStepTests(unittest.TestCase):
+    def test_without_lua_the_inputs_are_skipped(self):
+        # the missing Lua has already failed its own step
+        folder = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, folder, True)
+        (folder / "inputs" / "shipped").mkdir(parents=True)
+        (folder / "inputs" / "shipped" / "Bach.dorico").write_bytes(b"PK")
+        with mock.patch.object(run_tests.run_lua, "RUN_DIR", folder), \
+                mock.patch.object(run_tests.subprocess, "run", wraps=run_tests.subprocess.run) as ran, \
+                mock.patch.object(sys, "stdout", io.StringIO()) as out:
+            self.assertTrue(run_tests.input_checks(None))
+        ran.assert_not_called()
+        self.assertIn("inputs: skipped", out.getvalue())
 
 
 if __name__ == "__main__":

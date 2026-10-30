@@ -103,6 +103,8 @@ def dorico_checks():
 def input_checks(lua):
     """The reader on every project in the run folder's inputs/ subfolders: Steinberg's examples, as shipped and as
     re-saved, which can't be committed."""
+    if not lua:
+        return step("inputs: skipped, no stock Lua 5.2 to read them", True)  # its own step has failed already
     projects = sorted(str(p) for p in (run_lua.RUN_DIR / "inputs").glob("*/*.dorico"))
     if not projects:
         return step("inputs: none in " + str(run_lua.RUN_DIR / "inputs"), True)

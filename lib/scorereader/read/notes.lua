@@ -23,22 +23,15 @@ function notes.spelling(letter, pitch)
   return letter .. ACCIDENTALS[best.alter] .. best.octave
 end
 
--- kNoteSpelling can have an entry for each tied part of a note that was respelled, with a propertyOffset of
--- "0:<num>:<den>:0": where that part starts, in quarter notes from the note's start. The note's own spelling, the one
--- stream:dump() shows, is the entry at 0.
-local function atStart(offset)
-  return offset == nil or offset == "" or offset:match("^0:0:%d+:") ~= nil
-end
-
 -- A note or grace note: pitch (sounding MIDI), spelling ("F#5"), and for a grace note its notated duration and
 -- whether it is slashed.
 function notes.note(ctx, e, node)
   e.pitch = ctx.int(node, "pitch")
-  local entries = ctx.read(function(n) return props.entries(ctx.t, n) end, node, "note " .. e.id)
-  ctx.score.cache[e] = entries
+  -- A respelled tied note has a kNoteSpelling for each tied part; the note's own, the one stream:dump() shows, is the
+  -- one at its start.
   local letter
-  for _, x in ipairs(entries) do
-    if x.property == "kNoteSpelling" and x.layout == -1 and atStart(x.offset) then
+  for _, x in ipairs(ctx.entries(e)) do
+    if x.property == "kNoteSpelling" and x.layout == -1 and props.atStart(x.offset) then
       letter = ctx.read(values.string, x.value, "a spelling")
     end
   end
@@ -46,7 +39,7 @@ function notes.note(ctx, e, node)
   e.spelling = notes.spelling(letter, e.pitch) or ctx.fail("note " .. e.id .. " is spelled " .. letter
     .. " but sounds MIDI " .. e.pitch)
   if e.kind == "grace" then
-    e.notatedDuration = ctx.read(values.position, ctx.text(node, "notatedDuration"), "a notated duration")
+    e.notatedDuration = ctx.position(node, "notatedDuration", "a notated duration")
     e.slashed = ctx.opt(node, "slashed") == "true"
   end
 end

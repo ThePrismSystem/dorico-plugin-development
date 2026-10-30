@@ -22,6 +22,14 @@ return {
     t:eq(values.positionText(values.position("13/3")), "13/3")
     t:eq(values.positionText(values.position("16")), "16")
   end,
+  positions_in_lowest_terms = function(t)
+    local p = values.position("4/8")
+    t:eq(p.num, 1)
+    t:eq(p.den, 2)
+    t:eq(values.positionText(values.position("-6/4")), "-3/2")
+    t:eq(values.positionText(values.position("8/4")), "2")
+    t:eq(values.positionText(values.position("0/5")), "0")
+  end,
   adding_positions_stays_exact = function(t)
     t:eq(values.positionText(values.add(values.position("13/3"), values.position("1/3"))), "14/3")
     t:eq(values.positionText(values.add(values.position("2/3"), values.position("1/3"))), "1")

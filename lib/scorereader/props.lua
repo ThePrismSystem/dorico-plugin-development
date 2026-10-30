@@ -61,14 +61,20 @@ function props.entries(t, node)
   return out
 end
 
+-- Whether an entry's propertyOffset is the event's start. An offset of "0:<num>:<den>:0" says the value holds from
+-- that many quarter notes into the event: the tied part of a respelled note, a notch partway along a pedal line.
+function props.atStart(offset)
+  return offset == nil or offset == "" or offset:match("^0:0:%d+:") ~= nil
+end
+
 -- The raw value of property that applies in layoutId and block instance, or nil; then whether nothing applied but a
 -- value exists for that layout and another instance. Only entries for that layout or every layout, and that instance
--- or any, count; the more specific wins, the layout first. Values for one frame chain or for condensed staves are
--- left out.
+-- or any, count; the more specific wins, the layout first. Values for one frame chain, for condensed staves or from
+-- partway through the event are left out.
 function props.pick(entries, property, layoutId, instance)
   local best, bestRank, elsewhere
   for _, x in ipairs(entries) do
-    if x.property == property and x.frameChain == -1 and x.staveType ~= "kCondensed"
+    if x.property == property and x.frameChain == -1 and x.staveType ~= "kCondensed" and props.atStart(x.offset)
       and (x.layout == layoutId or x.layout == -1) then
       if x.instance == instance or x.instance == -1 then
         local rank = (x.layout == layoutId and 2 or 0) + (x.instance == instance and 1 or 0)
