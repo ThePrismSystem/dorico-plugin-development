@@ -117,6 +117,15 @@ return {
     m = match.stream(s, s.flows[1].id, stream.id, parsed)
     t:eq(#m.unmatched, 3, "an extra event, a moved one, a missing one: " .. table.concat(m.unmatched, "; "))
   end,
+  matching_a_stream_the_file_lacks = function(t)
+    local s = score.readFile(SAMPLE)
+    local flowId, streamId = s.flows[1].id, s.flows[1].streams[1].id
+    local m = match.stream(s, flowId, 99999, { events = {} })
+    t:eq(m.unmatched[1], "the file has no stream 99999 in flow " .. flowId)
+    m = match.stream(s, 99999, streamId, { events = {} })
+    t:eq(m.unmatched[1], "the file has no stream " .. streamId .. " in flow 99999")
+    t:eq(m.count, 0)
+  end,
   matching_compares_spellings_and_words = function(t)
     local s = score.readFile(READING)
     local flow = s.flows[1]

@@ -26,7 +26,8 @@ local function unescape(text)
   return (text:gsub("&([^&;]*)(;?)", function(body, semicolon)
     if semicolon == "" then fail("an & that starts no reference: &" .. body) end
     if NAMED[body] then return NAMED[body] end
-    local code = body:match("^#%d+$") and tonumber(body:sub(2), 10) or body:match("^#x%x+$") and tonumber(body:sub(3), 16)
+    local code = body:match("^#%d+$") and tonumber(body:sub(2), 10)
+      or body:match("^#x%x+$") and tonumber(body:sub(3), 16)
     if not code then fail("unknown reference &" .. body .. ";") end
     return utf8(code)
   end))

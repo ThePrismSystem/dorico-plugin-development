@@ -5,9 +5,7 @@ local signatures = {}
 -- signatures is empty, as when it changes only a barline or a bar number; barline is the barline change's type when
 -- there is one.
 function signatures.time(ctx, e, node)
-  local id = ctx.int(node, "barDivisionElementID")
-  local el = (ctx.flow.elements.BarDivisionElementTableDefinition or {})[id]
-    or ctx.fail("bar division " .. e.id .. " points to no element " .. id)
+  local el = ctx.element(e, node, "barDivisionElementID", "BarDivisionElementTableDefinition", "bar division")
   local first = ctx.list(el, "barDivisionData/timeSignature/timeSignaturesAndDivisions")[1]
   if first then
     local numerator = ctx.text(first, "timeSignature/numerator")
@@ -28,16 +26,17 @@ local MODES = { kKeySigMajor = "major", kKeySigMinor = "minor", kKeySigAtonal = 
 -- neither do keys in another tonality system: Steinberg's Smith example spells its flats
 -- accidental.24et.western.flat.gould, which the reader hasn't matched to a 12-note accidental.
 function signatures.key(ctx, e, node)
-  local id = ctx.int(node, "tonalityDivisionElementID")
-  local el = (ctx.flow.elements.TonalityDivisionElementTableDefinition or {})[id]
-    or ctx.fail("tonality division " .. e.id .. " points to no element " .. id)
+  local el = ctx.element(e, node, "tonalityDivisionElementID", "TonalityDivisionElementTableDefinition",
+    "tonality division")
   local key = ctx.node(el, "tonalityDivisionData/keySignature")
   local rawMode = ctx.text(key, "root/tonalityType")
   e.mode = MODES[rawMode] or ctx.fail("key " .. e.id .. " has a type the reader doesn't know: " .. rawMode)
   e.atonal = e.mode == "atonal"
   local letter = ctx.opt(key, "root/root/noteName")
   if not letter then
-    if e.mode == "major" or e.mode == "minor" then ctx.fail("key " .. e.id .. " is " .. e.mode .. " but has no root") end
+    if e.mode == "major" or e.mode == "minor" then
+      ctx.fail("key " .. e.id .. " is " .. e.mode .. " but has no root")
+    end
     return
   end
   local accidentalId = ctx.text(key, "root/root/accidentalID")

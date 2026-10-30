@@ -48,9 +48,7 @@ local LINE_TYPES = { kVerse = "verse", kChorus = "chorus" }
 -- text, syllable (begin, middle, end, single, as MusicXML names them), line (from 1), lineType (verse or chorus),
 -- above. A melisma is the event's duration.
 function text.lyric(ctx, e, node)
-  local id = ctx.int(node, "lyricElementID")
-  local el = (ctx.flow.elements.LyricElementTableDefinition or {})[id]
-    or ctx.fail("lyric " .. e.id .. " points to no element " .. id)
+  local el = ctx.element(e, node, "lyricElementID", "LyricElementTableDefinition", "lyric")
   e.text = ctx.text(el, "text")
   local raw = ctx.text(el, "syllableType")
   e.syllable = SYLLABLES[raw] or ctx.fail("lyric " .. e.id .. " has a syllable type the reader doesn't know: " .. raw)

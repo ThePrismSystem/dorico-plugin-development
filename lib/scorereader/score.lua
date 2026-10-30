@@ -77,6 +77,18 @@ local function newContext(s)
     if not ok then ctx.fail(what .. ": " .. tostring(v)) end
     return v
   end
+  function ctx.position(id, path, what)
+    return ctx.read(values.position, ctx.text(id, path), what)
+  end
+  -- An event's property entries (scorereader.props), read once and kept in s.cache.
+  function ctx.entries(e)
+    local cached = s.cache[e]
+    if not cached then
+      cached = ctx.read(function(node) return props.entries(t, node) end, e.node, "event " .. e.id)
+      s.cache[e] = cached
+    end
+    return cached
+  end
   return ctx
 end
 
@@ -130,12 +142,17 @@ local function readFlow(ctx, flowNode)
   for _, bi in ipairs(ctx.list(flowNode, "blockInstances/array")) do
     local stream = flow.streamById[ctx.int(bi, "streamID")]
     local inst = { id = ctx.int(bi, "blockInstanceID"), blockId = ctx.int(bi, "blockID"),
-      position = ctx.read(values.position, ctx.text(bi, "position"), "a block instance's position") }
+      position = ctx.position(bi, "position", "a block instance's position") }
     if not stream then ctx.fail("block instance " .. inst.id .. " is in no stream the flow lists") end
     stream.instances[#stream.instances + 1] = inst
   end
 
   local fctx = setmetatable({ flow = flow }, { __index = ctx })
+  -- The element of the flow's table tableName that an event's idField names; what names the event in the error.
+  function fctx.element(e, node, idField, tableName, what)
+    local id = ctx.int(node, idField)
+    return (flow.elements[tableName] or {})[id] or ctx.fail(what .. " " .. e.id .. " points to no element " .. id)
+  end
   for _, stream in ipairs(flow.streams) do
     table.sort(stream.instances, function(a, b) return values.toNumber(a.position) < values.toNumber(b.position) end)
     for _, inst in ipairs(stream.instances) do
@@ -145,8 +162,8 @@ local function readFlow(ctx, flowNode)
         local kind = KINDS[definition] or { "other" }
         local e = { id = ctx.int(node, "eventID"), definition = definition, kind = kind[1], flowId = flow.id,
           streamId = stream.id, blockId = inst.blockId, instanceId = inst.id, node = node,
-          position = values.add(inst.position, ctx.read(values.position, ctx.text(node, "position"), "a position")),
-          duration = ctx.read(values.position, ctx.text(node, "duration"), "a duration") }
+          position = values.add(inst.position, ctx.position(node, "position", "a position")),
+          duration = ctx.position(node, "duration", "a duration") }
         if kind[2] then kind[2](fctx, e, node) end
         stream.events[#stream.events + 1] = e
         flow.events[#flow.events + 1] = e
@@ -160,13 +177,17 @@ end
 -- A decoded tree, the table project.read returns, or the bytes of a .dorico.
 function score.read(input)
   local t = type(input) == "string" and project.read(input).tree or input.tree or input
-  local s = { tree = t, format = format.detect(t), events = {}, flows = {}, cache = {} }
+  local s = { tree = t, format = format.detect(t), events = {}, flows = {}, flowById = {}, cache = {} }
   local ctx = newContext(s)
   s.library = players.library(ctx)
   s.info = players.info(ctx)
   s.players, s.instruments = players.players(ctx)
   s.layouts = players.layouts(ctx)
-  for _, f in ipairs(ctx.list(0, "flows/array")) do s.flows[#s.flows + 1] = readFlow(ctx, f) end
+  for _, f in ipairs(ctx.list(0, "flows/array")) do
+    local flow = readFlow(ctx, f)
+    s.flows[#s.flows + 1] = flow
+    s.flowById[flow.id] = flow
+  end
   return s
 end
 
@@ -176,13 +197,9 @@ end
 
 -- The player that owns an event's stream, or nil for the timebase stream.
 function score.ownerOf(s, e)
-  for _, flow in ipairs(s.flows) do
-    if flow.id == e.flowId then
-      local stream = flow.streamById[e.streamId]
-      for _, p in ipairs(s.players) do
-        if p.id == stream.playerId then return p end
-      end
-    end
+  local stream = s.flowById[e.flowId].streamById[e.streamId]
+  for _, p in ipairs(s.players) do
+    if p.id == stream.playerId then return p end
   end
 end
 
@@ -211,13 +228,7 @@ end
 
 -- An event's property entries (scorereader.props), read once.
 function score.entries(s, e)
-  local cached = s.cache[e]
-  if not cached then
-    local ctx = newContext(s)
-    cached = ctx.read(function(node) return props.entries(s.tree, node) end, e.node, "event " .. e.id)
-    s.cache[e] = cached
-  end
-  return cached
+  return s.cache[e] or newContext(s).entries(e)
 end
 
 -- The decoded value of a property that applies to an event in a layout (the event's own block instance), or nil.

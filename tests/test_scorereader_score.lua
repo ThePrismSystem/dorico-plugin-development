@@ -355,11 +355,21 @@ return {
     t:eq(#s.players, 0)
     t:eq(#s.layouts, 0)
   end,
-  events_by_id = function(t)
+  events_and_flows_by_id = function(t)
     local s = load("6.2.30/reading.dorico")
     local e = s.flows[1].events[1]
     t:eq(s.events[e.id], e)
     t:ok(e.streamId and e.instanceId and e.blockId, "where it lives")
+    for _, f in ipairs(s.flows) do t:eq(s.flowById[f.id], f, "flow " .. f.id) end
+  end,
+  a_timebase_event_has_no_owner = function(t)
+    local s = load("6.2.30/reading.dorico")
+    local flow, timebase = s.flows[1], nil
+    for _, e in ipairs(flow.events) do
+      if not timebase and flow.streamById[e.streamId].type == "timebase" then timebase = e end
+    end
+    t:ok(timebase, "the flow has a timebase event")
+    t:eq(score.ownerOf(s, timebase), nil)
   end,
   older_projects_read_consistently = function(t)
     for _, entry in ipairs(readJson(fixtures .. "versions.json")) do

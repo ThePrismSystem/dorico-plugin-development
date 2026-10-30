@@ -27,12 +27,10 @@ end
 -- whether it is slashed.
 function notes.note(ctx, e, node)
   e.pitch = ctx.int(node, "pitch")
-  local entries = ctx.read(function(n) return props.entries(ctx.t, n) end, node, "note " .. e.id)
-  ctx.score.cache[e] = entries
   -- A respelled tied note has a kNoteSpelling for each tied part; the note's own, the one stream:dump() shows, is the
   -- one at its start.
   local letter
-  for _, x in ipairs(entries) do
+  for _, x in ipairs(ctx.entries(e)) do
     if x.property == "kNoteSpelling" and x.layout == -1 and props.atStart(x.offset) then
       letter = ctx.read(values.string, x.value, "a spelling")
     end
@@ -41,7 +39,7 @@ function notes.note(ctx, e, node)
   e.spelling = notes.spelling(letter, e.pitch) or ctx.fail("note " .. e.id .. " is spelled " .. letter
     .. " but sounds MIDI " .. e.pitch)
   if e.kind == "grace" then
-    e.notatedDuration = ctx.read(values.position, ctx.text(node, "notatedDuration"), "a notated duration")
+    e.notatedDuration = ctx.position(node, "notatedDuration", "a notated duration")
     e.slashed = ctx.opt(node, "slashed") == "true"
   end
 end
