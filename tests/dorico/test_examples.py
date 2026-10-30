@@ -102,6 +102,8 @@ row("act_on_nothing_selected", FUNDAMENTALS + "11-act-on-the-selection.lua",
 row("select_by_id", FUNDAMENTALS + "12-select-by-id.lua",
     after=[then_check("12-select-by-id.coloured.lua", READ_COLOURS), then_command("Edit.Undo"),
            then_check("12-select-by-id.undone.lua", READ_COLOURS)])
+row("set_a_property_by_id", FUNDAMENTALS + "13-set-a-property-by-id.lua",
+    after=[then_command("Edit.Undo"), then_check("13-set-a-property-by-id.undone.lua")])
 row("add_notes_rests_text", FUNDAMENTALS + "14-add-notes-rests-text.lua",
     after=[then_command("Edit.Undo"), then_check("14-add-notes-rests-text.undone.lua")])
 row("layout_and_notation_options", FUNDAMENTALS + "15-layout-and-notation-options.lua",

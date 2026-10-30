@@ -21,6 +21,33 @@ function checks.reading()
   return readJson("reading.expected.json")
 end
 
+-- The open project as the reader sees it, from a saved copy: the score, and the score and values modules.
+function checks.savedCopy()
+  local lib = here .. "../../../lib/?.lua"
+  for name in pairs(package.loaded) do
+    if name:match("^scorereader") then package.loaded[name] = nil end
+  end
+  if not package.path:find(lib, 1, true) then package.path = lib .. ";" .. package.path end
+  local s = require("scorereader.dorico.savedcopy").read(DoApp.DoApp())
+  return s, require("scorereader.score"), require("scorereader.values")
+end
+
+-- {"<flow n>|<player>|<pos>|<spelling>" = event} for every note and grace note of a score the reader read, keyed as
+-- checks.notesAbove keys them.
+function checks.notesOf(s, score, values)
+  local out = {}
+  for n, flow in ipairs(s.flows) do
+    for _, player in ipairs(s.players) do
+      for _, e in ipairs(score.eventsOf(s, flow, player)) do
+        if e.kind == "note" or e.kind == "grace" then
+          out[table.concat({ n, player.name, tostring(values.toNumber(e.position)), e.spelling }, "|")] = e
+        end
+      end
+    end
+  end
+  return out
+end
+
 -- Loads helper blocks out of an example together (a later block may use an earlier one) and returns the value of
 -- the one named want. They are the blocks the examples run, so the checks read the project the way the examples do.
 function checks.helper(example, names, want)

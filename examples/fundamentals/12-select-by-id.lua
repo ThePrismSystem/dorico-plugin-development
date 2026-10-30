@@ -11,7 +11,8 @@
 -- script colours one note at a time.
 --
 -- The colour goes on through UI.InvokePropertyChangeValue, the command the Properties panel uses. Dorico stores it
--- for the layout on screen, so propertyTable:get can't read it back; 04-read-the-saved-copy.lua can.
+-- for the layout on screen, so propertyTable:get can't read it back; 04-read-the-saved-copy.lua can. To set a value
+-- for every layout without selecting anything, see 13-set-a-property-by-id.lua.
 
 local ABOVE = "F5"
 local COLOUR = "#ffff0000" -- alpha, red, green, blue
