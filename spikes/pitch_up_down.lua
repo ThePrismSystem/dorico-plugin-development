@@ -5,7 +5,7 @@
 -- puts the music back with the run's one Edit.Undo. The sample's notes are all naturals, so args.spellings can name
 -- extra notes to write first, in a new flow (each an exact spelling such as "Fb4").
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
-local mine = here .. "?.lua;" .. here .. "lib/?.lua;" .. here .. "../fixtures/?.lua"
+local mine = here .. "?.lua;" .. here .. "lib/?.lua;" .. here .. "../fixtures/?.lua;" .. here .. "../lib/?.lua"
 for name in pairs(package.loaded) do
   if package.searchpath(name, mine) then package.loaded[name] = nil end
 end
@@ -13,7 +13,8 @@ if not package.path:find(mine, 1, true) then package.path = mine .. ";" .. packa
 local probe = require("probe")
 
 probe.run("pitch_up_down", function(p)
-  local dumpparse = require("dumpparse")
+  local dump = require("scorereader.dorico.dump")
+  local edit = require("scorereader.dorico.edit")
   local app = DoApp.DoApp()
   app:doCommand("NoteInput.Exit")
   app:doCommand("Window.SwitchMode?WindowMode=kWriteMode")
@@ -29,7 +30,7 @@ probe.run("pitch_up_down", function(p)
     local out = {}
     for fi, f in ipairs(app.currentScore.flows) do
       for _, s in ipairs(f.voiceStreams) do
-        for _, ev in ipairs(dumpparse.parse(s:dump()).events) do
+        for _, ev in ipairs(dump.parse(s:dump()).events) do
           if ev.spelling then out[#out + 1] = fi .. ":" .. ev.id .. "=" .. ev.spelling end
         end
       end
@@ -41,7 +42,7 @@ probe.run("pitch_up_down", function(p)
   for _, f in ipairs(app.currentScore.flows) do
     -- select the flow's first note, then everything in the flow
     for _, s in ipairs(f.voiceStreams) do
-      local parsed = dumpparse.parse(s:dump())
+      local parsed = dump.parse(s:dump())
       local first
       for _, ev in ipairs(parsed.events) do
         if not first and ev.kind == "note" then first = ev.id end
@@ -49,7 +50,7 @@ probe.run("pitch_up_down", function(p)
       if first then
         app:doCommand("Edit.SelectNone")
         app:doCommand(string.format("EventEdit.Select?FlowID=%d&EventID=%d&EventBlockID=%d", f.id, first,
-          dumpparse.blockIdOf(s, first, parsed)))
+          edit.blockIdOf(s, first, parsed)))
         app:doCommand("Edit.SelectAll")
         break
       end

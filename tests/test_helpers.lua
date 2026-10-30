@@ -12,6 +12,7 @@ local BY_ID = "examples/fundamentals/12-select-by-id.lua"
 local BARS = "examples/fundamentals/09-bars-keys-and-times.lua"
 local ASK = "examples/fundamentals/17-ask-and-report.lua"
 local TMP = (os.getenv("TEMP") or os.getenv("TMPDIR") or "/tmp"):gsub("\\", "/")
+local LAYOUTS = "examples/fundamentals/07-values-per-layout.lua"
 local CHORDS = "examples/recipes/chord-symbols.lua"
 local PROOFREAD = "examples/recipes/proofread.lua"
 local EXPORT = "examples/fundamentals/15-layout-and-notation-options.lua"
@@ -25,6 +26,13 @@ local PATH = '"C:/Users/calli/AppData/Local/Temp/dorico-examples-run/scratch.dor
 
 local function records(rows)
   return helpers.load(EXPORT, "export").parse(table.concat(rows, "\r\n") .. "\r\n")
+end
+
+-- Where each bar from the bars helper starts and how long it is, as "<pos>+<length>".
+local function spans(starts)
+  local out = {}
+  for _, b in ipairs(starts) do out[#out + 1] = b.pos .. "+" .. b.length end
+  return table.concat(out, " ")
 end
 
 -- Runs fn with DoApp standing in for Dorico's and print recorded; gives back what was printed.
@@ -285,16 +293,22 @@ return {
     t:eq(#printed, 0, "nothing printed")
   end,
 
-  reader_helper_finds_lib_in_the_repository_and_beside_the_script = function(t)
+  read_copy_puts_its_lib_folders_first_once = function(t)
     local dir = "C:/plugins/examples/fundamentals/"
-    local reader = assert(load(helpers.text(SAVED_COPY, "reader") .. "\nreturn reader", "@" .. dir .. "x.lua"))()
+    local mine = dir .. "../../lib/?.lua;" .. dir .. "lib/?.lua;"
+    local other = "C:/other/lib/?.lua;"
+    local readCopy = assert(load(helpers.text(SAVED_COPY, "readCopy") .. "\nreturn readCopy", "@" .. dir .. "x.lua"))()
     local before = package.path
+    package.path = other .. mine .. before
     package.loaded["scorereader.fake"] = true
-    reader()
+    local printed = withDorico({}, function() readCopy({ currentScore = {}, save = function() return false end }) end)
     local after = package.path
     package.path = before
-    t:eq(after:find(dir .. "../../lib/?.lua;" .. dir .. "lib/?.lua;", 1, true), 1, after)
+    t:eq(after:sub(1, #mine + #other), mine .. other, "ahead of another copy of the library")
+    t:eq(select(2, after:gsub("C:/plugins/", "")), 2, "each folder once")
     t:eq(package.loaded["scorereader.fake"], nil, "an earlier run's module is cleared")
+    t:eq(printed[1], "The reader couldn't read this project: "
+      .. "scorereader: Dorico could not save a copy of the project to read")
   end,
 
   bars_from_time_signatures = function(t)
@@ -308,18 +322,14 @@ return {
   a_time_signature_partway_through_a_bar_cuts_it_short = function(t)
     local starts = helpers.load(BARS, "bars").starts({ { pos = 0, numerator = 4, denominator = 4 },
       { pos = 6, numerator = 2, denominator = 4 } }, 10)
-    local got = {}
-    for _, b in ipairs(starts) do got[#got + 1] = b.pos .. "+" .. b.length end
-    t:eq(table.concat(got, " "), "0+4 4+2 6+2 8+2")
+    t:eq(spans(starts), "0+4 4+2 6+2 8+2")
   end,
 
   an_additive_time_signature_and_a_barline_only_division = function(t)
     local bars = helpers.load(BARS, "bars")
     t:eq(bars.starts({ { pos = 0, numerator = "3+2", denominator = 8 } }, 5)[1].length, 2.5, "3+2/8")
-    local starts = bars.starts({ { pos = 0, numerator = 4, denominator = 4 }, { pos = 6 } }, 14)
-    local got = {}
-    for _, b in ipairs(starts) do got[#got + 1] = b.pos end
-    t:eq(table.concat(got, " "), "0 4 6 10", "a barline starts a bar and keeps the signature")
+    t:eq(spans(bars.starts({ { pos = 0, numerator = 4, denominator = 4 }, { pos = 6 } }, 14)), "0+4 4+2 6+4 10+4",
+      "a barline starts a bar and keeps the signature")
   end,
 
   a_flow_with_no_time_signature_is_one_bar = function(t)
@@ -356,9 +366,7 @@ return {
   a_barline_before_the_first_time_signature = function(t)
     local bars = helpers.load(BARS, "bars")
     local starts = bars.starts({ { pos = 2 }, { pos = 6, numerator = 4, denominator = 4 } }, 14)
-    local got = {}
-    for _, b in ipairs(starts) do got[#got + 1] = b.pos .. "+" .. b.length end
-    t:eq(table.concat(got, " "), "0+2 2+4 6+4 10+4")
+    t:eq(spans(starts), "0+2 2+4 6+4 10+4")
     local bar, beat = bars.at(starts, 3)
     t:eq(bar .. "/" .. beat, "2/2")
   end,
@@ -368,9 +376,7 @@ return {
     for _, numerator in ipairs({ "X", 0 }) do
       local starts = bars.starts({ { pos = 0, numerator = numerator, denominator = 4 },
         { pos = 10, numerator = 4, denominator = 4 } }, 18)
-      local got = {}
-      for _, b in ipairs(starts) do got[#got + 1] = b.pos .. "+" .. b.length end
-      t:eq(table.concat(got, " "), "0+10 10+4 14+4", "numerator " .. tostring(numerator))
+      t:eq(spans(starts), "0+10 10+4 14+4", "numerator " .. tostring(numerator))
     end
   end,
 
@@ -403,6 +409,19 @@ return {
     t:eq(#starts, 1)
     local bar, beat = bars.at(starts, 0)
     t:eq(bar .. "/" .. beat, "1/1")
+  end,
+
+  where_names_an_entry_s_context = function(t)
+    local where = helpers.load(LAYOUTS, "where")
+    local names = { [0] = "Full score", [5] = "Flute" }
+    t:eq(where({ layout = -1, instance = -1, frameChain = -1 }, names), "every layout")
+    t:eq(where({ layout = 0, instance = -1, frameChain = -1, offset = "" }, names), "layout Full score")
+    t:eq(where({ layout = -1, instance = 1014, frameChain = -1, offset = "0:0:1:0" }, names),
+      "every layout, block instance 1014", "an offset of 0 is the note's start")
+    t:eq(where({ layout = 5, instance = 12, frameChain = 3, staveType = "kCondensed", offset = "0:1:2:0" }, names),
+      "layout Flute, block instance 12, frame chain 3, condensed staves, 1/2 quarter notes into the note")
+    t:eq(where({ layout = 9, instance = -1, frameChain = -1, staveType = "kNormal" }, names), "layout 9",
+      "a layout with no name, on normal staves")
   end,
 
   read_the_saved_copy_reports_a_save_that_fails = function(t)

@@ -35,19 +35,25 @@ local function guard()
 end
 -- end helper: guard
 
--- helper: reader
--- Puts the reader library on the module path: lib/ two folders up in this repository, or a lib folder beside the
--- script once both are copied into Script Plug-ins. Dorico keeps one Lua state, so the library's modules from an
--- earlier run are cleared first.
-local function reader()
+-- helper: readCopy
+-- Reads a saved copy of the open project with the reader library, or prints why it couldn't and gives nil. The
+-- library is lib/ two folders up in this repository, or a lib folder beside the script once both are copied into
+-- Script Plug-ins. Dorico keeps one Lua state, so the library's modules from an earlier run are cleared, and its
+-- folders are moved to the front of the module path, where no other copy of the library can come before them.
+local function readCopy(app)
   local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])") or ""
-  local paths = here .. "../../lib/?.lua;" .. here .. "lib/?.lua"
+  local paths = here .. "../../lib/?.lua;" .. here .. "lib/?.lua;"
   for name in pairs(package.loaded) do
     if name:match("^scorereader") then package.loaded[name] = nil end
   end
-  if not package.path:find(paths, 1, true) then package.path = paths .. ";" .. package.path end
+  local at = package.path:find(paths, 1, true)
+  if at then package.path = package.path:sub(1, at - 1) .. package.path:sub(at + #paths) end
+  package.path = paths .. package.path
+  local ok, s = pcall(function() return require("scorereader.dorico.savedcopy").read(app) end)
+  if ok then return s end
+  print("The reader couldn't read this project: " .. tostring(s))
 end
--- end helper: reader
+-- end helper: readCopy
 
 -- helper: bars
 -- Where bars start, from a flow's bar divisions, and the bar and beat of a position. Positions are quarter notes from
@@ -63,7 +69,6 @@ end
 local bars = {}
 do
   local function beats(numerator)
-    if type(numerator) == "number" then return numerator end
     local sum = 0
     for part in tostring(numerator):gmatch("%d+") do sum = sum + tonumber(part) end
     return sum
@@ -85,14 +90,14 @@ do
       end
       local stop = divisions[i + 1] and divisions[i + 1].pos or endPos
       local pos = d.pos
-      if not length and pos < stop then add(pos, stop - pos) end
       if length and d.numerator and d.pickup and d.pickup > 0 and pos < stop then
         add(pos, math.min(d.pickup, stop - pos), length - d.pickup)
         pos = pos + d.pickup
       end
-      while length and pos < stop do
-        add(pos, math.min(length, stop - pos))
-        pos = pos + length
+      while pos < stop do
+        local len = math.min(length or stop - pos, stop - pos)
+        add(pos, len)
+        pos = pos + len
       end
     end
     if #out == 0 then add(0, endPos) end
@@ -104,7 +109,6 @@ do
     for _, b in ipairs(starts) do
       if b.pos <= pos then found = b else break end
     end
-    if not found then return 1, pos + 1 end
     return found.bar, pos - found.pos + 1 + found.offset
   end
 end
@@ -201,18 +205,12 @@ end
 
 local app, project = guard()
 if not project then return end
-reader()
-local savedcopy = require("scorereader.dorico.savedcopy")
+local s = readCopy(app)
+if not s then return end
 local commands = require("scorereader.dorico.commands")
 local edit = require("scorereader.dorico.edit")
 local score = require("scorereader.score")
 local values = require("scorereader.values")
-
-local ok, s = pcall(savedcopy.read, app)
-if not ok then
-  print("The reader couldn't read this project: " .. tostring(s))
-  return
-end
 
 local player
 for _, p in ipairs(s.players) do

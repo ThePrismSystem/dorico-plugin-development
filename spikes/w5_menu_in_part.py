@@ -22,12 +22,14 @@ def main():
     client = dws.DoricoClient()
     client.connect()
     scratch = None
+    verified = False
     try:
         code, found, scratch = run_lua.run(SCRIPT, open_file=REPO / "fixtures" / "6.2.30" / "reading.dorico",
                                            keep_open=True, extra_args={"stage": "find"}, client=client)
         facts = (found or {}).get("facts") or {}
+        verified = bool(facts.get("scratchVerified"))
         print(json.dumps(facts, indent=2))
-        if code != 0 or not facts.get("scratchVerified"):
+        if code != 0 or not verified:
             return code or 2
         show(client, scratch, facts["partLayoutId"])
         code, result, _ = run_lua.run(SCRIPT, on_active=True, client=client,
@@ -38,7 +40,7 @@ def main():
         show(client, scratch, facts["fullScoreId"])
         return code
     finally:
-        if scratch is not None:
+        if scratch is not None and verified:
             run_lua.close_scratch(client, scratch)
         client.close()
 

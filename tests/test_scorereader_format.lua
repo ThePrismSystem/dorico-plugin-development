@@ -46,7 +46,8 @@ local function sample()
 end
 
 local MINIMAL_XML = "<kScore><fileVersion>1.1412</fileVersion><info><lastSavedVersion>6.1.5</lastSavedVersion></info>"
-  .. '<flows><array array="true"/></flows><scorePlayers/><layouts/></kScore>'
+  .. '<library><instruments><entities array="true"/></instruments></library><flows><array array="true"/></flows>'
+  .. '<scorePlayers><array array="true"/></scorePlayers><layouts><array array="true"/></layouts></kScore>'
 
 return {
   every_fixture_is_a_known_format = function(t)
@@ -87,6 +88,15 @@ return {
     local blocks = tree.path(s, 0, "flows/array/flow/blocks")
     local err = errorOf(function() return format.detect(withName(s, blocks, "blockz")) end)
     t:ok(err and err:find("a flow has no blocks", 1, true), tostring(err))
+  end,
+  a_list_the_readers_walk_is_missing = function(t)
+    local s = sample()
+    local players = tree.path(s, 0, "scorePlayers/array")
+    local err = errorOf(function() return format.detect(withName(s, players, "arrayz")) end)
+    t:ok(err and err:find("the root has no scorePlayers/array", 1, true), tostring(err))
+    local streams = tree.path(s, 0, "flows/array/flow/eventStreams/array")
+    err = errorOf(function() return format.detect(withName(s, streams, "arrayz")) end)
+    t:ok(err and err:find("a flow has no eventStreams/array", 1, true), tostring(err))
   end,
   no_file_version = function(t)
     local err = errorOf(function() return format.detect(xml.decode("<kScore><info/></kScore>")) end)

@@ -101,6 +101,62 @@ return {
     t:eq(parsed.events[4].kind, "other")
     t:eq(#dump.notes(parsed), 2)
   end,
+  the_dump_parser_reads_positions_and_durations = function(t)
+    local parsed = dump.parse(table.concat({
+      "Start block id: 7 position: 0",
+      "13/2 (6.5) dur: 1/3 (0.333333): kNoteEvent (id:5) at 13/2 (6.5), duration 1/3 (0.333333)  Cb4 "
+        .. "(ends 41/6 (6.83333))",
+      "6 (6): kGraceNoteEvent (id:6) at 6  secondary pos -1/2 (-0.5), notated duration: 1/2 (0.5), Dx4 ",
+      "Start block id: 8 position: 16",
+      "0 (0): kRestEvent (id:9) at 0, duration 4",
+      "2 (2): kTextEvent (id:10) at 2 : dolce",
+    }, "\r\n"))
+    local note, grace, rest, text = parsed.events[1], parsed.events[2], parsed.events[3], parsed.events[4]
+    t:eq(note.pos, 6.5, "the fraction, not the rounded decimal")
+    t:eq(note.duration, 1 / 3)
+    t:eq(note.spelling, "Cb4")
+    t:eq(note.instance, 7)
+    t:eq(grace.pos, 6)
+    t:eq(grace.duration, nil, "a grace note's duration is its notated one")
+    t:eq(grace.spelling, "Dx4")
+    t:eq(grace.grace, true)
+    t:eq(rest.kind, "rest")
+    t:eq(rest.duration, 4)
+    t:eq(rest.instance, 8, "the next block instance")
+    t:eq(text.text, "dolce", "no carriage return from a CRLF dump")
+  end,
+  lines_from_real_dumps = function(t)
+    local ev = dump.parse(table.concat({
+      "Start block id: 1061 position: 0",
+      "0 (0) dur: 1: kNoteEvent (id:7932) at 0, duration 1  E5 (ends 1)",
+      "0 (0) dur: 1: kRestEvent (id:216) at 0, duration 1  ",
+      "8 (8): kGraceNoteEvent (id:200) at 8  secondary pos -1/2 (-0.5), notated duration: 1/2 (0.5), B6 ",
+      "1.5 (3/2 (1.5)) dur: 1/2 (0.5): kNoteEvent (id:2884) at 3/2 (1.5), duration 1/2 (0.5)  Eb4 (ends 2)",
+      "0 (0): kTextEvent (id:2740) at 0 : CANTOR",
+      "0 (0): kLyricEvent (id:3) at 0  element ID = 0,  duration 0",
+    }, "\n") .. "\n").events
+    t:eq(ev[1].kind, "note")
+    t:eq(ev[1].spelling, "E5")
+    t:eq(ev[1].pos, 0)
+    t:eq(ev[1].duration, 1)
+    t:eq(ev[1].instance, 1061)
+    t:eq(ev[2].kind, "rest")
+    t:eq(ev[3].kind, "grace")
+    t:eq(ev[3].spelling, "B6")
+    t:eq(ev[3].pos, 8)
+    t:eq(ev[4].pos, 1.5)
+    t:eq(ev[4].duration, 0.5)
+    t:eq(ev[4].spelling, "Eb4")
+    t:eq(ev[5].text, "CANTOR")
+    t:eq(ev[6].kind, "other")
+  end,
+  the_block_id_of_an_event_in_a_lua_stream = function(t)
+    local parsed = dump.parse("Start block id: 1014 position: 0\n"
+      .. "4 (4): kNoteEvent (id:276) at 4, duration 1  G5 (ends 5)")
+    local stream = { blockInstances = { { id = 1013, block = { id = 9 } }, { id = 1014, block = { id = 10 } } } }
+    t:eq(edit.blockIdOf(stream, 276, parsed), 10, "the block of the instance the dump names")
+    t:eq(errorOf(function() return edit.blockIdOf(stream, 999, parsed) end), "scorereader: no block holds event 999")
+  end,
   matching_a_dump_to_the_file = function(t)
     local s = score.readFile(SAMPLE)
     local stream = s.flows[1].streams[#s.flows[1].streams]
@@ -116,6 +172,15 @@ return {
     table.remove(parsed.events, 2)
     m = match.stream(s, s.flows[1].id, stream.id, parsed)
     t:eq(#m.unmatched, 3, "an extra event, a moved one, a missing one: " .. table.concat(m.unmatched, "; "))
+  end,
+  matching_a_stream_the_file_lacks = function(t)
+    local s = score.readFile(SAMPLE)
+    local flowId, streamId = s.flows[1].id, s.flows[1].streams[1].id
+    local m = match.stream(s, flowId, 99999, { events = {} })
+    t:eq(m.unmatched[1], "the file has no stream 99999 in flow " .. flowId)
+    m = match.stream(s, 99999, streamId, { events = {} })
+    t:eq(m.unmatched[1], "the file has no stream " .. streamId .. " in flow 99999")
+    t:eq(m.count, 0)
   end,
   matching_compares_spellings_and_words = function(t)
     local s = score.readFile(READING)
@@ -153,6 +218,18 @@ return {
   a_save_that_fails = function(t)
     local err = errorOf(function() return savedcopy.read(stubApp(nil), { dir = DIR }) end)
     t:eq(err, "scorereader: Dorico could not save a copy of the project to read")
+  end,
+  a_save_that_writes_no_file = function(t)
+    local app = { currentScore = {}, save = function() return true end }
+    local err = errorOf(function() return savedcopy.read(app, { dir = DIR }) end)
+    t:eq(err, "scorereader: the saved copy " .. DIR .. "scorereader-copy.dorico could not be read")
+  end,
+  a_folder_outside_ascii_is_refused_before_saving = function(t)
+    local saved = false
+    local app = { currentScore = {}, save = function() saved = true return true end }
+    local err = errorOf(function() return savedcopy.read(app, { dir = "C:/Users/Zo\235/AppData/Local/Temp/" }) end)
+    t:ok(err and err:find("^scorereader: ") and err:find("opts.dir", 1, true), tostring(err))
+    t:eq(saved, false, "nothing was saved")
   end,
   a_copy_that_cannot_be_read_is_still_removed = function(t)
     local err = errorOf(function() return savedcopy.read(stubApp("not a zip"), { dir = DIR }) end)

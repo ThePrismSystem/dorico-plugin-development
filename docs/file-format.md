@@ -4,7 +4,7 @@ A Dorico project file holds the whole score as a tree, and a Lua script can read
 format. Everything below was worked out by decoding saved projects, and each fact says how it is known. The reader
 library in [`lib/scorereader`](../lib/scorereader) implements it.
 
-The evidence is 52 projects: the fixtures in [`fixtures/`](../fixtures), copies of the 7 example projects Dorico 6
+The evidence is 53 projects: the fixtures in [`fixtures/`](../fixtures), copies of the 7 example projects Dorico 6
 installs, and the 39 projects published at <https://ancientgroove.co.uk/dorico/index.html>. Together they were saved
 by Dorico 6.0.22, 6.1.0, 6.1.5, 6.1.10, 6.2.0, 6.2.20 and 6.2.30. The probes are in [`spikes/`](../spikes), and
 [`spikes.md`](spikes.md) records what each one found.
@@ -43,7 +43,8 @@ u32 nodeCount, then one record per node, node 0 the root:
   when the tag's 2 bit is set: child count, then that many child node ids
 ```
 
-The tag's 1 bit marks a node whose children are a list. Each distinct value is stored once and shared. Stock Lua
+The tag's 1 bit marks a node whose children are a list. Saved files use every value in the tag's other six bits,
+and what they mean isn't known, so the reader ignores them. Each distinct value is stored once and shared. Stock Lua
 decodes a 2.5 MB `score.dtn` in about 0.1 s, and every binary file from 6.0.22 to 6.2.30 starts with the same `4, 1`
 header.
 
@@ -150,6 +151,7 @@ block instances to their blocks. In the reading fixture and in a 6.2.20 project 
 | one per staff | `kInstrumentStaveStream` | clefs, dynamics, and text imported from MusicXML |
 | one per voice | `kVoiceStream` | notes, grace notes, rests, tuplets, slurs, lyrics, playing techniques, and text made with `createText` |
 | one per player | `kPlayerStream` | events that belong to the whole player |
+| one per automation target | `kAutomationStream` | `AutomationEventDefinition` points (a `data` node with `controllerDefinition`, `value` and `type`) |
 
 A flow's `flowPlayers` says who owns what. Each `flowPlayer` names its `playerID` and its player stream
 (`eventStreamID`), and each of its `flowPlayerInstruments` names the `instrumentID` with its stave streams
@@ -158,12 +160,20 @@ A flow's `flowPlayers` says who owns what. Each `flowPlayer` names its `playerID
 reader gives as the voice's `staff`). That's the same ownership Lua gives through `flow.instruments[i]`, which owns
 `flow.voiceStreams[i]`.
 
+Two kinds of stream are left out of `flowPlayers`, so the reader gives them no owner. The flow's
+`automationStreamTable/entries` names each automation stream with its `automationTarget` (text such as `kIRV:0:-1`).
+In the 53 projects, 998 automation streams held 34,553 points. When a flow condenses staves,
+`condensedStreams/condensedStreams/streams/condensedStreams` lists a stave stream for each condensed staff
+(`staveStreams/staveStreamInfo`, with the players it combines in `condensedStaveID/players`) and sometimes a player
+stream (`playerStreams/playerStreamInfo`). Those streams hold the condensation labels. 13 of the 53 projects condense
+staves.
+
 ### Events
 
 Every event definition has `eventID`, `position`, `secondaryPosition`, `duration`, `secondaryEndOffset` and a
 `propertyTable`. Positions and durations are in quarter notes, written as integers or exact fractions (`13/2`).
 
-The probes found 46 kinds. These are the ones a plug-in is most likely to read, with the fields they add:
+The 53 projects hold 47 kinds. These are the ones a plug-in is most likely to read, with the fields they add:
 
 | Definition | Extra fields |
 | ---------- | ------------ |
@@ -196,7 +206,7 @@ The rest are `AutomationEventDefinition`, `FiguredBassEventDefinition`, `TrillEv
 `GlissandoLineEventDefinition`, `StaveCountChangeEventDefinition`, `RepeatEndingLineEventDefinition`,
 `PercussionLegendEventDefinition`, `MIDITriggerEventDefinition`, `InstrumentChangeEventDefinition`,
 `VerticalLineEventDefinition`, `GenerativeSlashEventDefinition`, `CutawayEventDefinition` and
-`MultiRestEventDefinition`. None of the 52 projects has a chord symbol; the reading fixture has five.
+`MultiRestEventDefinition`. The reading fixture's five chord symbols are the only ones in the 53 projects.
 
 ### Reading common items
 
@@ -245,13 +255,16 @@ the `text`, a `syllableType` (`kStart`, `kMiddle`, `kEnd`, `kWholeWord`), a `lin
 
 #### Time and key signatures
 
-A `BarDivisionEventDefinition` in the timebase stream points by `barDivisionElementID` to
-`barDivisionData/timeSignature/timeSignaturesAndDivisions/timeSignatureAndDivision/timeSignature`, with `numerator`,
-`denominator` and the beat grouping. A pickup is `barDivisionData/irregularBarLength`, the first bar's length in quarter
-notes: `1` for the one-beat pickup in 4/4 of `fixtures/6.2.30/pickup.dorico`, an import of `fixtures/pickup.musicxml`.
-The reader gives it as the time signature's `pickup`. A `TonalityDivisionEventDefinition` points to
-`tonalityDivisionData/keySignature`, whose `root` has a `tonalityType` (`kKeySigMajor`) and a `root` note (`noteName`
-`G`, `accidentalID` `accidental.12et.western.natural`).
+A `BarDivisionEventDefinition` in the timebase stream points by `barDivisionElementID`
+to `barDivisionData/timeSignature/timeSignaturesAndDivisions/timeSignatureAndDivision/timeSignature`, with
+`numerator`, `denominator` and the beat grouping. The list is empty in 29 of the 961 bar divisions in the 53
+projects, most of them barline changes; the reader gives those `barlineOnly`. A pickup is
+`barDivisionData/irregularBarLength`, the first bar's length in quarter notes: `1` for the one-beat pickup in 4/4 of
+`fixtures/6.2.30/pickup.dorico`, an import of `fixtures/pickup.musicxml`. The reader gives it as the time signature's
+`pickup`. A `TonalityDivisionEventDefinition` points to `tonalityDivisionData/keySignature`, whose `root` has a
+`tonalityType` (`kKeySigMajor`) and a `root` note (`noteName` `G`, `accidentalID` `accidental.12et.western.natural`).
+Every major and minor key has a root note. Steinberg's Smith example uses another tonality system, and its flat keys
+name `accidental.24et.western.flat.gould`; the reader gives such a key its `accidentalID` but no `root` or `fifths`.
 
 #### Tuplets, tempos and techniques
 
@@ -308,6 +321,8 @@ A `propertyOffset` of `0:<num>:<den>:0` puts a value partway through a note, `<n
 start. In Fauré's *Dolly* a note crosses a barline with `kNoteSpelling` `E` at `0:0:1:0` and `F` at `0:1:1:0`, so it
 is written E sharp before the barline and F after it. The dump and the reader give the spelling at 0. Offsets starting
 with 1, 2 or 3 appear on lines, slurs, pauses and divisi labels, and the reader doesn't interpret them.
+`score.value` reads only a value set at the event's start (no offset, or `0:0:<den>:0`). It leaves out a value from
+later in an event, such as a pedal line's retake notch at `0:6:1:0`, and every offset starting with 1, 2 or 3.
 
 How a value was set decides its context. The reading fixture's notes were set each way, then saved and decoded:
 
@@ -350,12 +365,13 @@ an older project, at least for that step. The handbells plug-in found the same f
 ## Adding a Dorico version
 
 When a new Dorico comes out, `python tools/resave_fixtures.py` saves the fixtures in its format and runs the tests
-([fixtures/README.md](../fixtures/README.md)).
+([fixtures/README.md](../fixtures/README.md)). If any save fails, the run keeps none of the new fixtures and can be run
+again.
 
 - One test always fails on a new version's files: `every_fixture_is_a_known_format`, because the new `fileVersion`
   isn't in the `dorico6` profile's list yet. If that's the only failure, nothing the reader relies on changed. Add the
   number to the profile's list in [`lib/scorereader/format.lua`](../lib/scorereader/format.lua) and to the version
-  table above, and commit the new fixtures folder.
+  table above, and commit the new fixtures folder with `fixtures/versions.json`, which the tool rewrites to list it.
 - If a test fails, its message names the node, the value and the format. `spikes/f1_changes.lua`, run over the old
   and new fixtures, lists the paths that appeared or went, and `spikes/tree_dump.lua` shows any part of a tree.
 - To teach the reader the change, add a profile to `format.PROFILES` with the new `fileVersion` and checks for the

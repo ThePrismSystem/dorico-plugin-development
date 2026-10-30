@@ -4,16 +4,17 @@ local checks = require("checks")
 
 return function(p, run)
   local styled = checks.expected().styled
-  local others = {}
-  for _, line in ipairs(run.printed) do
-    local f = checks.fields(line)
-    if #f == 6 and f[1] ~= "format" then
-      if f[2] == styled.player and tonumber(f[3]) == styled.pos then
-        p:check("the styled note keeps its colour", f[6] == styled.colour, f[6])
-      elseif f[6] ~= "-" then
-        others[#others + 1] = line
-      end
+  local notes = checks.noteLines(run)
+  local found, others = 0, {}
+  for _, note in ipairs(notes) do
+    if checks.isStyled(note) then
+      found = found + 1
+      p:check("the styled note keeps its colour", note.colour == styled.colour, note.colour)
+    elseif note.colour ~= "-" then
+      others[#others + 1] = note.line
     end
   end
+  p:check("04 read every note", #notes == #checks.noteKeys(), #notes)
+  p:check("the styled note was found once", found == 1, found)
   p:check("no other note has a colour", #others == 0, table.concat(others, " / "))
 end

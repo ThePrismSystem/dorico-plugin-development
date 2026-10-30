@@ -40,20 +40,16 @@ end
 
 -- dynamics = {{kind (immediate, gradual, force, combined), name, position, duration (gradual only)}}.
 function dynamics.group(ctx, e, node)
-  local id = ctx.int(node, "dynamicGroupID")
-  local el = (ctx.flow.elements.DynamicGroupElementTableDefinition or {})[id]
-    or ctx.fail("dynamic " .. e.id .. " points to no element " .. id)
+  local el = ctx.element(e, node, "dynamicGroupID", "DynamicGroupElementTableDefinition", "dynamic")
   e.dynamics = {}
-  local subs = tree.child(ctx.t, el, "subElements")
-  for _, sub in ipairs(subs and tree.children(ctx.t, subs) or {}) do
+  for _, sub in ipairs(ctx.list(el, "subElements")) do
     local definition = tree.name(ctx.t, sub)
-    local d = { position = values.add(e.position, ctx.read(values.position, ctx.text(sub, "position"),
-      "a dynamic's position")) }
+    local d = { position = values.add(e.position, ctx.position(sub, "position", "a dynamic's position")) }
     if definition == "ImmediateChangeDynamicDefinition" then
       d.kind, d.name = "immediate", immediateName(ctx, ctx.text(sub, "intensity"))
     elseif definition == "GradualChangeDynamicDefinition" then
       d.kind, d.name = "gradual", gradualName(ctx, sub)
-      d.duration = ctx.read(values.position, ctx.text(sub, "duration"), "a hairpin's duration")
+      d.duration = ctx.position(sub, "duration", "a hairpin's duration")
     elseif definition == "ForceDynamicDefinition" then
       local kind = ctx.text(sub, "type")
       d.kind, d.name = "force", (kind:match("^kForceDynamic(%a+)$")

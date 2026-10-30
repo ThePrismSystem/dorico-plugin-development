@@ -1,10 +1,12 @@
 <#
 Lists the titles of the visible top-level windows that Dorico and PowerShell (the plug-in's dialog) have open, one
-per line. For run_lua.py's timeout message, which names what Dorico is waiting on.
-  powershell -NoProfile -File tools/titles.ps1
+per line. For run_lua.py's timeout message, which names what Dorico is waiting on, and for the prompts it answers
+while opening a copy, which look at Dorico's windows only (-Process Dorico6).
+  powershell -NoProfile -File tools/titles.ps1 [-Process <name>]
 Win32 reads another program's window titles without asking it, so a Dorico waiting on a dialog can't hold this up,
 as it holds up UI Automation and capture.ps1 -All.
 #>
+param([string[]]$Process = @("Dorico6", "powershell"))
 Add-Type @"
 using System;
 using System.Collections.Generic;
@@ -35,4 +37,4 @@ public static class HbucTitles {
     }
 }
 "@
-[HbucTitles]::Of(@("Dorico6", "powershell"))
+[HbucTitles]::Of($Process)

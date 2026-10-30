@@ -113,20 +113,49 @@ function checks.texts(flowNumber)
   return out
 end
 
--- "<flow>|<player>|<pos>|<spelling>" for every note in the sample higher than spelling (sounding pitch).
-function checks.notesAbove(spelling)
-  local midi = checks.helper("examples/fundamentals/12-select-by-id.lua", { "midi" }, "midi")
+-- "<flow>|<player>|<pos>|<spelling>" for every note in the sample, or every note keep(note) is true for.
+function checks.noteKeys(keep)
   local keys = {}
   for n, flow in ipairs(checks.expected().flows) do
     for _, player in ipairs(flow.players) do
       for _, note in ipairs(player.notes) do
-        if midi(note.spelling) > midi(spelling) then
+        if not keep or keep(note) then
           keys[#keys + 1] = table.concat({ n, player.name, tostring(note.pos), note.spelling }, "|")
         end
       end
     end
   end
   return keys
+end
+
+-- The keys of every note in the sample higher than spelling (sounding pitch).
+function checks.notesAbove(spelling)
+  local midi = checks.helper("examples/fundamentals/12-select-by-id.lua", { "midi" }, "midi")
+  return checks.noteKeys(function(note) return midi(note.spelling) > midi(spelling) end)
+end
+
+-- What 04-read-the-saved-copy.lua printed: its note lines as {key, player, pos, spelling, notehead, colour, line},
+-- the key as checks.noteKeys makes it; the format line's columns; and every other line.
+function checks.noteLines(run)
+  local notes, format, others = {}, nil, {}
+  for _, line in ipairs(run.printed) do
+    local f = checks.fields(line)
+    if f[1] == "format" and not format then
+      format = f
+    elseif #f == 6 then
+      notes[#notes + 1] = { key = table.concat({ f[1], f[2], f[3], f[4] }, "|"), player = f[2], pos = tonumber(f[3]),
+        spelling = f[4], notehead = f[5], colour = f[6], line = line }
+    else
+      others[#others + 1] = line
+    end
+  end
+  return notes, format, others
+end
+
+-- True when a note line from checks.noteLines is the sample's styled trumpet note.
+function checks.isStyled(note)
+  local styled = checks.expected().styled
+  return note.player == styled.player and note.pos == styled.pos
 end
 
 -- The chord symbols in a flow's timebase stream (stream type 0), as "<pos>|<name>": the dump names each one after its

@@ -131,14 +131,14 @@ Probes: `s8_properties.lua`, `s8_colour_read.lua`.
 - `UI.InvokePropertyChangeValue?Type=kNoteheadSetOverride&Value=string: "noteheadset.diamondNoteheads"` changed
   nothing.
 
+The route fundamental 04 (`04-noteheads-and-colours.lua`, replaced by the reader in commit 93e7005) took before the
+reader: add a flow with `Project.Flow.New` and remove the players the music flow lacks; select the music flow's whole
+range (`EventEdit.Select` its first note, `Edit.SelectToStartOfFlow`, `Edit.SelectAtEndOfFlow`, and
+`EventEdit.NavigateDownExtend` once per further staff); `Filter.NotesAndChords` and `Edit.Copy`; paste onto a temporary
+note in the new flow's first voice; delete the slurs and other lines the filter keeps; read `stream.events` and
+`propertyTable:get`; and take the flow away with one `Edit.Undo`. It merged unisons in two voices, listed chord notes in
+a different order each time, replaced the clipboard and the selection, and still couldn't read a colour set by command.
 
-The route fundamental 04 took before the reader: add a flow with `Project.Flow.New` and remove the players the music
-flow lacks; select the music flow's whole range (`EventEdit.Select` its first note, `Edit.SelectToStartOfFlow`,
-`Edit.SelectAtEndOfFlow`, and `EventEdit.NavigateDownExtend` once per further staff); `Filter.NotesAndChords` and
-`Edit.Copy`; paste onto a temporary note in the new flow's first voice; delete the slurs and other lines the filter
-keeps; read `stream.events` and `propertyTable:get`; and take the flow away with one `Edit.Undo`. It merged unisons in
-two voices, listed chord notes in a different order each time, replaced the clipboard and the selection, and still
-couldn't read a colour set by command.
 ## S1: reading the selection
 
 Probes: `s1_read_selection.lua`, driven by `s1_selection.py`; `select_note.lua` makes the selections.
@@ -267,7 +267,8 @@ fixtures, copies of the 7 example projects Dorico installs, and the 39 projects 
   installed example with 695,427 nodes, took 4.4 s in stock Lua, most of it unzipping.
 - The catalogue lists every node path with its values. It found 46 kinds of event definition, from
   `NoteEventDefinition` (533,846 of them) to a single `MultiRestEventDefinition`. None of the projects has a chord
-  symbol or a tab staff. [file-format.md](file-format.md) describes the tree it found.
+  symbol or a tab staff. [file-format.md](file-format.md) describes the tree it found. The reading fixture came
+  later, with five chord symbols, and makes 53 projects and 47 kinds.
 - `fileVersion` changed with every release, patch releases included: 1.1392 from 6.0.22, 1.1416 from 6.1.0, 1.1417
   from 6.1.10, 1.1444 from 6.2.0, 1.1450 from 6.2.20 and 1.1452 from 6.2.30. The installed examples say 6.1.5 and
   1.1412.
@@ -318,6 +319,13 @@ The reading fixture also showed what Dorico 6.2.30's MusicXML import does with t
 above the staff whatever its `placement`, a direction with two `<words>` keeps only the last, and `font-weight` is
 dropped. `pizz.` and `arco` arrive as playing techniques, not text. The texts fixture's "poco dolce" and
 "dolce cantando" came in as "dolce".
+
+## Reading speed
+
+Measured on 30 October 2026 on Windows 11 with Dorico 6.2.30. `tests/dorico/test_reader.py` read each fixture inside
+Dorico in 0.8 to 1.6 s, `app:save` included: 0.8 s for the smallest (1,281 events), 1.6 s for Figaro (13,420). In
+stock Lua 5.2, `score.readFile` decoded the sample in 0.5 s and Holst's *The Planets* from ancientgroove.co.uk
+(122,366 events) in 6.7 s.
 
 ## W1 to W7: changing what the reader found
 

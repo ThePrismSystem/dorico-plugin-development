@@ -5,7 +5,7 @@
 --             octave (onto the C5) and back down, and reports the voice's notes after each step. Takes it all back
 --             with the run's one Edit.Undo.
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
-local mine = here .. "?.lua;" .. here .. "lib/?.lua;" .. here .. "../fixtures/?.lua"
+local mine = here .. "?.lua;" .. here .. "lib/?.lua;" .. here .. "../fixtures/?.lua;" .. here .. "../lib/?.lua"
 for name in pairs(package.loaded) do
   if package.searchpath(name, mine) then package.loaded[name] = nil end
 end
@@ -21,7 +21,8 @@ local function lines(stream, pattern)
 end
 
 probe.run("tuplet_and_unison", function(p)
-  local dumpparse = require("dumpparse")
+  local dump = require("scorereader.dorico.dump")
+  local edit = require("scorereader.dorico.edit")
   local app = DoApp.DoApp()
   if p.args.step == "tuplet" then
     for i, s in ipairs(app.currentScore.flows[1].voiceStreams) do p:fact("voice" .. i, lines(s)) end
@@ -37,10 +38,10 @@ probe.run("tuplet_and_unison", function(p)
   voice:createNote(DoCore.RhythmicLength(0), DoCore.RhythmicLength(1), DoCore.MIDIPitchWithSpelling.fromString("C5"))
   local lowId = low.id
   voice = app.currentScore.flows[#app.currentScore.flows].voiceStreams[1]
-  local parsed = dumpparse.parse(voice:dump())
+  local parsed = dump.parse(voice:dump())
   app:doCommand("Edit.SelectNone")
   app:doCommand(string.format("EventEdit.Select?FlowID=%d&EventID=%d&EventBlockID=%d", flow.id, lowId,
-    dumpparse.blockIdOf(voice, lowId, parsed)))
+    edit.blockIdOf(voice, lowId, parsed)))
   p:fact("before", lines(voice, "Note"))
   app:doCommand("NoteEdit.PitchUpOctave")
   p:fact("afterUp", lines(app.currentScore.flows[#app.currentScore.flows].voiceStreams[1], "Note"))

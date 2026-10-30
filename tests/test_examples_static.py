@@ -1,6 +1,6 @@
 """Rules every example follows, checked without Dorico: each guards for no project, selects by block ids from
 stream.blockInstances, says in its header what it changes and how to undo it, names only examples that exist, loads
-the reader through the reader helper, and keeps copied helpers identical."""
+the reader through the readCopy helper, and keeps copied helpers identical."""
 import re
 import shutil
 import tempfile
@@ -48,8 +48,8 @@ def problems(root):
         if "guard" not in own:
             found.append(f"{name}: no guard helper (the no-project check)")
         code = code_only(text)
-        if 'require("scorereader' in code and "reader" not in own:
-            found.append(f"{name}: requires the reader without the reader helper")
+        if 'require("scorereader' in code and "readCopy" not in own:
+            found.append(f"{name}: requires the reader without the readCopy helper")
         if "EventEdit.Select" in code and ("blockIdOf" not in own or re.search(r"-\s*1000\b", code)):
             found.append(f"{name}: selects without the blockIdOf helper")
         head = header(text)
@@ -110,9 +110,9 @@ class RuleTests(unittest.TestCase):
         self.write("bad.lua", GOOD.replace("-- Undo: nothing to undo.\n", ""))
         self.assertEqual(problems(self.root), ["examples/bad.lua: header has no 'Undo:' line"])
 
-    def test_a_reader_example_carries_the_reader_helper(self):
+    def test_a_reader_example_carries_the_read_copy_helper(self):
         self.write("bad.lua", GOOD + 'local score = require("scorereader.score")\n')
-        self.assertEqual(problems(self.root), ["examples/bad.lua: requires the reader without the reader helper"])
+        self.assertEqual(problems(self.root), ["examples/bad.lua: requires the reader without the readCopy helper"])
 
     def test_a_header_names_only_examples_that_exist(self):
         self.write("bad.lua", GOOD.replace("-- Builds on: nothing.", "-- Builds on: 01-good.lua and\n-- 99-gone.lua."))

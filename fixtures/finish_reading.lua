@@ -3,7 +3,7 @@
 -- flow. A "part" property is left to fixtures/build_reading.py, which needs the part on screen; this script reports
 -- that note's ids. fixtures/build_reading.py runs it.
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
-local mine = here .. "?.lua;" .. here .. "../spikes/lib/?.lua"
+local mine = here .. "?.lua;" .. here .. "../spikes/lib/?.lua;" .. here .. "../lib/?.lua"
 for name in pairs(package.loaded) do
   if package.searchpath(name, mine) then package.loaded[name] = nil end
 end
@@ -17,7 +17,9 @@ local function fraction(s)
 end
 
 probe.run("finish_reading", function(p)
-  local dumpparse = require("dumpparse")
+  local dump = require("scorereader.dorico.dump")
+  local edit = require("scorereader.dorico.edit")
+  local commands = require("scorereader.dorico.commands")
   local json = require("json")
   local f = assert(io.open(here .. "reading.expected.json", "rb"))
   local expected = json.decode(f:read("*a"))
@@ -38,10 +40,10 @@ probe.run("finish_reading", function(p)
     local want = player.instruments[1].id
     for i, s in ipairs(flow.voiceStreams) do
       if flow.instruments[i].id == want then
-        local parsed = dumpparse.parse(s:dump())
+        local parsed = dump.parse(s:dump())
         for _, ev in ipairs(parsed.events) do
           if ev.kind == "note" and ev.spelling == prop.spelling and math.abs(ev.pos - fraction(prop.pos)) < 1e-9 then
-            return { stream = s, id = ev.id, block = dumpparse.blockIdOf(s, ev.id, parsed) }
+            return { stream = s, id = ev.id, block = edit.blockIdOf(s, ev.id, parsed) }
           end
         end
       end
@@ -50,8 +52,7 @@ probe.run("finish_reading", function(p)
   end
 
   local function select(note)
-    app:doCommand("Edit.SelectNone")
-    app:doCommand(string.format("EventEdit.Select?FlowID=%d&EventID=%d&EventBlockID=%d", flow.id, note.id, note.block))
+    edit.select(app, { flowId = flow.id, id = note.id, blockId = note.block })
   end
 
   local deferred = {}
@@ -72,10 +73,9 @@ probe.run("finish_reading", function(p)
         p:check("set " .. label, ok, err)
       elseif prop.how == "command" then
         select(note)
-        app:doCommand("Edit.SetNoteheadSetOverride?NoteheadSetEntityID=" .. prop.value)
+        app:doCommand(commands.build("Edit.SetNoteheadSetOverride", { { "NoteheadSetEntityID", prop.value } }))
       elseif prop.how == "byId" then
-        app:doCommand(string.format("EventEdit.ChangeProperty?FlowID=%d&EventID=%d&EventBlockID=%d&Type=%s&Value=%s",
-          flow.id, note.id, note.block, prop.property, prop.value))
+        app:doCommand(commands.changeProperty(flow.id, note.id, note.block, prop.property, prop.value))
       elseif prop.how == "menu" then
         select(note)
         app:doCommand(prop.value == "kSquareBrackets" and "Edit.ShowAccidentalInBrackets"
@@ -104,7 +104,7 @@ probe.run("finish_reading", function(p)
     if not before[fl.id] then second = fl end
   end
   if not p:check("a second flow was added", second ~= nil) then return end
-  app:doCommand(string.format("Project.Flow.Rename?FlowID=%d&Name=%s", second.id, expected.flows[2].title))
+  app:doCommand(commands.build("Project.Flow.Rename", { { "FlowID", second.id }, { "Name", expected.flows[2].title } }))
   local fluteId = app.currentScore.players[1].instruments[1].id
   local flute
   for i, s in ipairs(second.voiceStreams) do

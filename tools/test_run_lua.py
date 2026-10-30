@@ -2,6 +2,7 @@ import io
 import json
 import os
 import re
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -142,6 +143,45 @@ class RunTests(unittest.TestCase):
             run_lua.run(self.script, open_file=self.source, client=client)
         self.assertEqual(len(client.closes()), 2)
 
+    def test_a_copy_that_stays_open_exits_2(self):
+        titles = iter([[]] + [["Song in scratch*"]] * 5)
+        with mock.patch.object(run_lua, "window_titles", side_effect=lambda: next(titles)), \
+                mock.patch.object(run_lua.time, "sleep", return_value=None), \
+                mock.patch.object(sys, "stderr", io.StringIO()):
+            client = FakeClient(self.run_dir, self.ok_result(True))
+            code, result, _ = run_lua.run(self.script, open_file=self.source, client=client)
+        self.assertEqual(code, 2)
+        self.assertTrue(result["ok"], "the result is still handed back")
+        self.assertEqual(len(client.closes()), 5)
+
+    def test_a_close_that_cant_be_confirmed_exits_2(self):
+        # With no Dorico6 process (a later Dorico) capture.ps1 fails, and an empty list would read as a closed copy.
+        listed = iter([[]])
+
+        def titles():
+            try:
+                return next(listed)
+            except StopIteration:
+                raise run_lua.WindowListError("no Dorico6") from None
+
+        err = io.StringIO()
+        with mock.patch.object(run_lua, "window_titles", side_effect=titles), \
+                mock.patch.object(run_lua.time, "sleep", return_value=None), \
+                mock.patch.object(sys, "stderr", err):
+            client = FakeClient(self.run_dir, self.ok_result(True))
+            code, _, _ = run_lua.run(self.script, open_file=self.source, client=client)
+        self.assertEqual(code, 2)
+        self.assertEqual(len(client.closes()), 1, "a failed listing isn't retried")
+        self.assertIn("no Dorico6", err.getvalue())
+
+    def test_refuses_to_open_when_the_windows_cant_be_listed(self):
+        with mock.patch.object(run_lua, "window_titles", side_effect=run_lua.WindowListError("no Dorico6")), \
+                mock.patch.object(sys, "stderr", io.StringIO()) as err, \
+                mock.patch.object(run_lua.dws, "DoricoClient") as connect:
+            self.assertEqual(run_lua.main([str(self.script), "--open", str(self.source)]), 2)
+        connect.assert_not_called()
+        self.assertIn("no Dorico6", err.getvalue())
+
     def test_refuses_while_a_scratch_copy_is_still_open(self):
         # Copying over scratch.dorico under an open copy makes Dorico ask about a file modified on disk.
         with mock.patch.object(run_lua, "window_titles", return_value=["Song in scratch*", "Fugue in Bach"]):
@@ -247,24 +287,78 @@ class RunTests(unittest.TestCase):
         self.assertFalse(any(c.startswith("Script.RunScript") for c in client.commands))
 
 
-if __name__ == "__main__":
-    unittest.main()
+class WindowTitleTests(unittest.TestCase):
+    def test_a_failed_listing_is_an_error_not_an_empty_list(self):
+        failed = subprocess.CompletedProcess([], 1, stdout="",
+                                             stderr="Get-Process : Cannot find a process with the name \"Dorico6\".\n")
+        with mock.patch.object(run_lua.subprocess, "run", return_value=failed), \
+                self.assertRaises(run_lua.WindowListError) as raised:
+            run_lua.window_titles()
+        self.assertIn("Dorico6", str(raised.exception))
+
+    def test_lists_the_titles(self):
+        listed = subprocess.CompletedProcess([], 0, stdout="w-0.png\t800 x 600\tSong in scratch*\n", stderr="")
+        with mock.patch.object(run_lua.subprocess, "run", return_value=listed):
+            self.assertEqual(run_lua.window_titles(), ["Song in scratch*"])
+
+    @unittest.skipUnless(os.name == "nt", "capture.ps1 needs Windows")
+    def test_capture_lists_nothing_for_a_process_with_no_windows(self):
+        # Dorico with no project open shows no window, as after the tests close their copy when nothing else is open.
+        # This Python process has none either.
+        with tempfile.TemporaryDirectory() as folder:
+            capture = run_lua.PRESS.parent / "capture.ps1"
+            proc = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(capture),
+                                   "-All", "-Out", str(Path(folder) / "w.png"), "-ProcessId", str(os.getpid())],
+                                  capture_output=True, text=True)
+        self.assertEqual((proc.returncode, proc.stdout.strip()), (0, ""), proc.stderr)
 
 
 class PromptTests(unittest.TestCase):
-    def test_answers_the_update_notice_by_its_ok_button(self):
-        # Opening a project an older Dorico saved shows "Dorico" with only an OK button. It is clicked by name, so a
-        # "Dorico" prompt without an OK button, such as a save prompt, is left alone.
-        with mock.patch.object(run_lua.subprocess, "run") as ran:
+    def answer(self, titles, ran=None):
+        """The calls answer_known_prompts makes while Dorico's own windows have these titles."""
+        with mock.patch.object(run_lua, "open_windows", return_value=titles) as listed, \
+                mock.patch.object(run_lua.subprocess, "run", ran or mock.Mock()) as run:
             run_lua.answer_known_prompts()
-        calls = [c.args[0] for c in ran.call_args_list]
-        clicks = [c for c in calls if str(run_lua.CLICK) in c]
+        listed.assert_called_once_with(run_lua.DORICO_PROCESS)
+        return run.call_args_list
+
+    def test_answers_the_update_notice_by_its_only_button(self):
+        # Opening a project an older Dorico saved shows "Dorico" with only an OK button. click.ps1 -OnlyButton presses
+        # it only when it is the window's one button, so a "Dorico" prompt that asks to save is left alone.
+        calls = self.answer(["Song in scratch", "Dorico"])
+        clicks = [c.args[0] for c in calls if str(run_lua.CLICK) in c.args[0]]
         self.assertEqual(len(clicks), 1)
         self.assertEqual(clicks[0][clicks[0].index("-Window") + 1], "Dorico")
         self.assertEqual(clicks[0][clicks[0].index("-Button") + 1], "OK")
+        self.assertIn("-OnlyButton", clicks[0])
+
+    def test_runs_nothing_while_dorico_has_no_prompt_open(self):
+        # Without a window titled exactly "Dorico", click.ps1 would search Dorico's whole UI Automation tree on every
+        # poll, which can stall for minutes on a busy Dorico.
+        self.assertEqual(self.answer(["Dorico Pro 6", "Song in scratch"]), [])
 
     def test_still_presses_escape_on_the_playback_prompt(self):
-        with mock.patch.object(run_lua.subprocess, "run") as ran:
-            run_lua.answer_known_prompts()
-        presses = [c.args[0] for c in ran.call_args_list if str(run_lua.PRESS) in c.args[0]]
+        calls = self.answer(["Activate Project for Playback"])
+        presses = [c.args[0] for c in calls if str(run_lua.PRESS) in c.args[0]]
         self.assertEqual(presses[0][presses[0].index("-Title") + 1], "Activate Project for Playback")
+        self.assertEqual(presses[0][presses[0].index("-Keys") + 1], "{ESC}")
+
+    def test_a_prompt_that_hangs_is_given_up(self):
+        # the open waits at most 60s, so no answer may take longer than its own limit
+        calls = self.answer(["Activate Project for Playback", "Dorico"],
+                            mock.Mock(side_effect=subprocess.TimeoutExpired("powershell", 1)))
+        self.assertEqual(len(calls), 2, "a hung answer doesn't stop the next")
+        for c in calls:
+            self.assertEqual(c.kwargs.get("timeout"), run_lua.PROMPT_TIMEOUT)
+
+    def test_lists_only_doricos_own_windows(self):
+        with mock.patch.object(run_lua.os, "name", "nt"), \
+                mock.patch.object(run_lua.subprocess, "run",
+                                  return_value=subprocess.CompletedProcess([], 0, stdout="Dorico\r\n")) as ran:
+            self.assertEqual(run_lua.open_windows(run_lua.DORICO_PROCESS), ["Dorico"])
+        command = ran.call_args.args[0]
+        self.assertEqual(command[command.index("-Process") + 1], "Dorico6")
+
+
+if __name__ == "__main__":
+    unittest.main()

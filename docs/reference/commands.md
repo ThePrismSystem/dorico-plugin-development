@@ -15,17 +15,17 @@ Remote Control API's `getcommands` lists them all.
 | ------- | ---------- | ------ | ----- |
 | `EventEdit.Select` | `FlowID`, `EventID`, `EventBlockID` | verified | Selects one event, replacing the selection. The block id comes from `stream.blockInstances` ([12](../../examples/fundamentals/12-select-by-id.lua)). |
 | `EventEdit.NavigateRightExtend` | | verified | Adds the next item to the right to the selection. |
-| `EventEdit.NavigateDownExtend` | | verified | Extends the selection one staff down ([S8](../spikes.md#s8-reading-and-setting-note-properties)). |
+| `EventEdit.NavigateDownExtend` | | verified | Extends the selection one staff down (the old fundamental 04, in [S8](../spikes.md#s8-reading-and-setting-note-properties)). |
 | `Edit.SelectNone` | | verified | Clears the selection. |
 | `Edit.SelectAll` | | verified | Selects everything in the flow (`spikes/pitch_up_down.lua`). |
-| `Edit.SelectToStartOfFlow`, `Edit.SelectAtEndOfFlow` | | verified | Extend the selection to the flow's ends ([S8](../spikes.md#s8-reading-and-setting-note-properties)). |
+| `Edit.SelectToStartOfFlow`, `Edit.SelectAtEndOfFlow` | | verified | Extend the selection to the flow's ends (the old fundamental 04, in [S8](../spikes.md#s8-reading-and-setting-note-properties)). |
 | `Filter.NotesAndChords` | | verified | Keeps only notes and chords in the selection, and the lines attached to them. |
 
 ## Editing
 
 | Command | Parameters | Status | Notes |
 | ------- | ---------- | ------ | ----- |
-| `Edit.Copy`, `Edit.Paste`, `Edit.Delete` | | verified | On the selection ([S8](../spikes.md#s8-reading-and-setting-note-properties)). |
+| `Edit.Copy`, `Edit.Paste`, `Edit.Delete` | | verified | On the selection (the old fundamental 04, in [S8](../spikes.md#s8-reading-and-setting-note-properties); `Edit.Delete` in W1 to W3). |
 | `Edit.Undo` | | verified | Inside a script, takes back everything the run has done so far. Only the first in a run is safe ([18](../../examples/fundamentals/18-undo.lua)). |
 | `Edit.RemoveRests` | | verified | On the selection. Leaves no trace in the dump. |
 | `Edit.HideAccidental` | | verified | On the selected note (the handbells plug-in). |

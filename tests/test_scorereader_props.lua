@@ -83,6 +83,7 @@ return {
     refused(t, { layoutChild(3), { "blockInstanceID", "x" } }, "instance")
     refused(t, { layoutChild(3), { "blockInstanceID", "-1" }, { "assignedStaveType", "kSmall" } }, "stave type")
     refused(t, { layoutChild(3), { "blockInstanceID", "-1" }, { "voiceIndex", "1" } }, "unknown child")
+    refused(t, { layoutChild(3), { "blockInstanceID", "-1" }, { "propertyOffset", "int: 3" } }, "int offset")
     refused(t, { { "blockInstanceID", "1010" } }, "no layout")
     refused(t, { layoutChild(3) }, "no instance")
   end,
@@ -101,6 +102,23 @@ return {
   values_for_a_frame_chain_or_a_condensed_staff_are_left_out = function(t)
     t:eq(props.pick({ e("F", 0, -1, { frameChain = 2 }) }, "kNoteheadSetOverride", 0, 1010), nil)
     t:eq(props.pick({ e("K", -1, -1, { staveType = "kCondensed" }) }, "kNoteheadSetOverride", 0, 1010), nil)
+  end,
+  a_value_from_partway_through_the_event_is_left_out = function(t)
+    local later = e("Later", -1, -1, { offset = "0:6:1:0" })
+    local v, elsewhere = props.pick({ later }, "kNoteheadSetOverride", 0, 1010)
+    t:eq(v, nil, "a notch along a pedal line is not the line's value")
+    t:eq(elsewhere, false)
+    local start = e("Start", -1, -1, { offset = "0:0:1:0" })
+    local tied = e("Tied", -1, -1, { offset = "0:120:1:0" })
+    t:eq(props.pick({ start, tied }, "kNoteheadSetOverride", 0, 1010), 'string: "Start"')
+    t:eq(props.pick({ tied, start }, "kNoteheadSetOverride", 0, 1010), 'string: "Start"', "in either order")
+  end,
+  offsets_at_the_start = function(t)
+    t:eq(props.atStart(nil), true, "no offset")
+    t:eq(props.atStart(""), true)
+    t:eq(props.atStart("0:0:1:0"), true)
+    t:eq(props.atStart("0:6:1:0"), false)
+    t:eq(props.atStart("0:1:2:0"), false)
   end,
   get_decodes_the_value = function(t)
     t:eq(props.get({ e("A", -1, -1) }, "kNoteheadSetOverride", 0, 1010), "A")

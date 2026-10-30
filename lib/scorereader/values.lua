@@ -11,32 +11,35 @@ local function fail(raw, form)
   error("values: cannot read '" .. tostring(raw) .. "' as " .. form, 0)
 end
 
--- {num, den} from "13/2" or "4", the form positions and durations take.
-function values.position(raw)
-  local n, d = tostring(raw):match("^(%-?%d+)/(%d+)$")
-  if not n then
-    n, d = tostring(raw):match("^(%-?%d+)$"), "1"
-  end
-  if not n or tonumber(d) == 0 then fail(raw, "a position") end
-  return { num = tonumber(n), den = tonumber(d) }
-end
-
-function values.toNumber(p)
-  return p.num / p.den
-end
-
 local function gcd(a, b)
   a, b = math.abs(a), math.abs(b)
   while b ~= 0 do a, b = b, a % b end
   return a
 end
 
--- a + b, exactly, in lowest terms.
-function values.add(a, b)
-  local num, den = a.num * b.den + b.num * a.den, a.den * b.den
+local function lowest(num, den)
   local g = gcd(num, den)
   if g > 1 then num, den = num / g, den / g end
   return { num = num, den = den }
+end
+
+-- {num, den} in lowest terms from "13/2" or "4", the form positions and durations take.
+function values.position(raw)
+  local n, d = tostring(raw):match("^(%-?%d+)/(%d+)$")
+  if not n then
+    n, d = tostring(raw):match("^(%-?%d+)$"), "1"
+  end
+  if not n or tonumber(d) == 0 then fail(raw, "a position") end
+  return lowest(tonumber(n), tonumber(d))
+end
+
+function values.toNumber(p)
+  return p.num / p.den
+end
+
+-- a + b, exactly, in lowest terms.
+function values.add(a, b)
+  return lowest(a.num * b.den + b.num * a.den, a.den * b.den)
 end
 
 -- Back to the file's own form: "13/3", or "16" for a whole number.
