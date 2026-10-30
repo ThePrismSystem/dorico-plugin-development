@@ -100,7 +100,7 @@ local written = 0
 for _, flow in ipairs(s.flows) do
   for _, stream in ipairs(flow.streams) do
     if stream.type == "voice" and stream.playerId == player.id then
-      local transposition = (s.instruments[stream.instrumentId] or {}).transposition
+      local transposition = s.instruments[stream.instrumentId].transposition
       -- One label per position, so a chord gets one.
       local at, order = {}, {}
       for _, e in ipairs(stream.events) do

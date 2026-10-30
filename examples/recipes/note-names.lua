@@ -2,21 +2,24 @@
 -- What it does: reads a saved copy, asks for the naming system and where the names go, then writes one staff text per
 -- note, or per chord with its names stacked top first, in the players and flows chosen. Transposing instruments get
 -- their written notes' names unless you untick that. Tick "Only remove names" to take the names off and add none.
+-- It prints each text it deletes, with its flow, bar, beat and player, then how many names it wrote and removed.
 -- Changes: adds a staff text at each note, and in those players and flows deletes each text that reads as the names
 -- of the chord under it, as an earlier run wrote them, which takes a text you typed that reads that way too.
 -- Undo: Edit > Undo takes the whole run back in one step.
--- Builds on: 04-read-the-saved-copy.lua, 09-bars-keys-and-times.lua (key signatures), 13-set-a-property-by-id.lua,
--- 14-add-notes-rests-text.lua and 17-ask-and-report.lua (the form helper). Open Script > Show Script Console to read
--- what it prints.
+-- Builds on: 04-read-the-saved-copy.lua, 09-bars-keys-and-times.lua (bars and key signatures),
+-- 13-set-a-property-by-id.lua, 14-add-notes-rests-text.lua and 17-ask-and-report.lua (the form helper). Open
+-- Script > Show Script Console to read what it prints.
 --
 -- A tied note is one note, so it gets one name. Grace notes get none. Accidentals come from each note's own spelling,
 -- and movable do and scale degrees follow the key signature in force at the note, in the written key when the names
--- are for written pitch (movable do keeps the major key's do in a minor key). Under an atonal key signature, or one
--- the reader can't give the fifths of, movable do and scale degrees name nothing, and the run says how many notes
--- that left. A name is an ordinary staff text, so a run first deletes, in the players and flows chosen, every text in
--- a voice that sits on a note or chord and has a line for each of its notes, every line a name this script could
--- write for some note: a letter name, a solfa syllable or a scale degree, with or without an octave. A text you typed
--- that reads that way goes too. Writing a text takes about 60 ms, so a long score takes a while.
+-- are for written pitch (movable do keeps the major key's do in a minor key). Before a flow's first key signature they
+-- take the key as concert C major, so a note gets the same name with no key signature as under a C major one. Under
+-- an atonal key signature, or one the reader can't give the fifths of, movable do and scale degrees name nothing, and
+-- the run says how many notes that left. A name is an ordinary staff text, so a run first deletes, in the players and
+-- flows chosen, every text in a voice that sits on a note or chord and has a line for each of its notes, every line a
+-- name this script could write for some note: a letter name, a solfa syllable or a scale degree, with or without an
+-- octave. A text you typed that reads that way goes too, and the run prints each text it deletes. Writing a text
+-- takes about 60 ms, so a long score takes a while.
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. The read of app.currentScore goes
@@ -262,7 +265,8 @@ end
 --   names.chord(spellings, system, opts) -> the names of a chord's notes, one per line, highest first
 --   names.written(spelling, transposition) -> the written spelling, transposition = {diatonic, chromatic} as the
 --     reader gives an instrument's (nil for none)
---   names.writtenKey(key, transposition) -> the key the instrument's part is written in, for written names
+--   names.writtenKey(key, transposition) -> the key the instrument's part is written in, for written names; no key
+--     (nil) is concert C major
 --   names.isName(words) -> whether every line of words is a name this helper could give one note, in any system and
 --     key, with or without its octave
 local names = {}
@@ -371,9 +375,11 @@ do
   end
 
   -- A transposition moves the key by 7 fifths for each semitone and back 12 for each letter step: a major second up
-  -- (1 step, 2 semitones) is 2 fifths, so concert C is written in D.
+  -- (1 step, 2 semitones) is 2 fifths, so concert C is written in D. No key is concert C major, as names.of takes it,
+  -- so the same music gets the same names with or without a C major key signature.
   function names.writtenKey(key, transposition)
-    if not key or not transposition then return key end
+    key = key or { fifths = 0, mode = "major" }
+    if not transposition then return key end
     return { fifths = key.fifths + 7 * transposition.chromatic - 12 * transposition.diatonic, mode = key.mode }
   end
 
@@ -407,6 +413,65 @@ do
 end
 -- end helper: names
 
+-- helper: bars
+-- Where bars start, from a flow's bar divisions, and the bar and beat of a position. Positions are quarter notes from
+-- the start of the flow. A bar is numerator * 4 / denominator quarter notes long ("3+2" counts as 5). A time
+-- signature partway through a bar starts a new bar there, and so does a barline-only division, keeping the time
+-- signature. Where there is no length to go by (before the first time signature, or an open meter with no beats), a
+-- bar runs to the next division. A flow with no time signature is one bar. A time signature's pickup makes its first
+-- bar that long; that bar's beats count back from its end, so a one-beat pickup in 4/4 is on beat 4, and a pickup at
+-- the start of the flow is bar 0.
+--   bars.starts(divisions, endPos) -> {{bar, pos, length, offset}}; divisions: {{pos, numerator, denominator,
+--     pickup}} in order, with no numerator for a barline-only division and pickup in quarter notes or nil
+--   bars.at(starts, pos) -> bar, beat (from 1)
+local bars = {}
+do
+  local function beats(numerator)
+    local sum = 0
+    for part in tostring(numerator):gmatch("%d+") do sum = sum + tonumber(part) end
+    return sum
+  end
+
+  function bars.starts(divisions, endPos)
+    local out, length = {}, nil
+    local d1 = divisions[1]
+    local base = (d1 and d1.pos == 0 and d1.numerator and d1.pickup and d1.pickup > 0) and -1 or 0
+    local function add(pos, len, offset)
+      out[#out + 1] = { bar = #out + 1 + base, pos = pos, length = len, offset = offset or 0 }
+    end
+    local first = d1 and d1.pos or endPos
+    if first > 0 then add(0, first) end
+    for i, d in ipairs(divisions) do
+      if d.numerator then
+        local n = beats(d.numerator) * 4 / d.denominator
+        length = n > 0 and n or nil
+      end
+      local stop = divisions[i + 1] and divisions[i + 1].pos or endPos
+      local pos = d.pos
+      if length and d.numerator and d.pickup and d.pickup > 0 and pos < stop then
+        add(pos, math.min(d.pickup, stop - pos), length - d.pickup)
+        pos = pos + d.pickup
+      end
+      while pos < stop do
+        local len = math.min(length or stop - pos, stop - pos)
+        add(pos, len)
+        pos = pos + len
+      end
+    end
+    if #out == 0 then add(0, endPos) end
+    return out
+  end
+
+  function bars.at(starts, pos)
+    local found = starts[1]
+    for _, b in ipairs(starts) do
+      if b.pos <= pos then found = b else break end
+    end
+    return found.bar, pos - found.pos + 1 + found.offset
+  end
+end
+-- end helper: bars
+
 local TITLE = "Note names"
 local SYSTEMS = {
   { "English (C, D, E)", "english" }, { "German (C, D, E, H)", "german" }, { "Fixed do (Italian)", "fixed-it" },
@@ -422,6 +487,24 @@ if not s then return end
 local commands = require("scorereader.dorico.commands")
 local edit = require("scorereader.dorico.edit")
 local values = require("scorereader.values")
+
+-- helper: barsOf
+-- Where a flow's bars start, through the bars helper, from the time signatures in its timebase stream. A time
+-- signature in any other stream is left out.
+local function barsOf(flow)
+  local divisions, endPos = {}, 0
+  for _, e in ipairs(flow.events) do
+    local pos = values.toNumber(e.position)
+    endPos = math.max(endPos, pos + values.toNumber(e.duration))
+    if e.kind == "timeSignature" and flow.streamById[e.streamId].type == "timebase" then
+      divisions[#divisions + 1] = { pos = pos, numerator = e.numerator, denominator = e.denominator,
+        pickup = e.pickup and values.toNumber(e.pickup) }
+    end
+  end
+  table.sort(divisions, function(a, b) return a.pos < b.pos end)
+  return bars.starts(divisions, endPos)
+end
+-- end helper: barsOf
 
 local systemLabels, playerLabels, flowLabels = {}, { ALL_PLAYERS }, { ALL_FLOWS }
 for _, sys in ipairs(SYSTEMS) do systemLabels[#systemLabels + 1] = sys[1] end
@@ -463,7 +546,7 @@ local function keysOf(flow)
 end
 
 -- The key in force at a position, from keysOf: nil before the first key signature, which the names helper takes as
--- C major.
+-- concert C major.
 local function keyAt(keys, pos)
   local key
   for _, k in ipairs(keys) do
@@ -482,16 +565,16 @@ app:doCommand(commands.build("Window.SwitchMode", { { "WindowMode", "kWriteMode"
 
 local playerIds = {}
 for _, player in ipairs(s.players) do
-  if answers.player == ALL_PLAYERS or answers.player == player.name then playerIds[player.id] = true end
+  if answers.player == ALL_PLAYERS or answers.player == player.name then playerIds[player.id] = player.name end
 end
 
 -- In the flows and players asked for, gather each voice's chords, {stream, position, key, notes = {events}}, and take
 -- off every name an earlier run could have written: a text that reads as names, one line for each note of the chord
--- at its position.
+-- at its position. Each text taken off is printed, so a text you typed that reads as names can be put back.
 local removed, chords = 0, {}
 for n, flow in ipairs(s.flows) do
   if answers.flow == ALL_FLOWS or answers.flow == flowLabels[n + 1] then
-    local keys = keysOf(flow)
+    local keys, starts = keysOf(flow), barsOf(flow)
     for _, stream in ipairs(flow.streams) do
       if stream.type == "voice" and playerIds[stream.playerId] then
         local at, texts = {}, {}
@@ -511,6 +594,9 @@ for n, flow in ipairs(s.flows) do
         for _, e in ipairs(texts) do
           local chord = at[values.positionText(e.position)]
           if chord and lineCount(e.words) == #chord.notes then
+            local bar, beat = bars.at(starts, values.toNumber(e.position))
+            print(string.format("Deleted in flow %d, bar %d, beat %g, %s: %s", n, bar, beat, playerIds[stream.playerId],
+              (e.words:gsub("\n", " "))))
             edit.delete(app, e)
             removed = removed + 1
           end
@@ -537,7 +623,7 @@ for _, chord in ipairs(chords) do
   if needsKey and chord.key == false then
     keyless = keyless + 1
   else
-    local t = answers.written and (s.instruments[chord.stream.instrumentId] or {}).transposition
+    local t = answers.written and s.instruments[chord.stream.instrumentId].transposition
     local spellings = {}
     for k, e in ipairs(chord.notes) do spellings[k] = names.written(e.spelling, t) end
     local words = names.chord(spellings, system,

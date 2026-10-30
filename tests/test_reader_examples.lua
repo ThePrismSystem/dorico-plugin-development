@@ -468,7 +468,8 @@ return {
     local ok, printed, sent = pcall(runAnswering, NAMES_RECIPE, READING, namesAnswer({ remove = "True" }))
     package.preload["scorereader.dorico.savedcopy"] = nil
     t:ok(ok, tostring(printed))
-    t:eq(table.concat(printed, " / "), "Removed 2 names.")
+    t:eq(table.concat(printed, " / "), "Deleted in flow 1, bar 1, beat 1, Flute: C / Deleted in flow 1, bar 1, beat 1,"
+      .. " Piano: G E / Removed 2 names.")
     local deleted = 0
     for _, command in ipairs(sent) do
       if command == "Edit.Delete" then deleted = deleted + 1 end

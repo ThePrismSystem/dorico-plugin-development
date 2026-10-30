@@ -81,6 +81,17 @@ return {
     local fSharp = n.writtenKey({ fifths = 6, mode = "major" }, clarinet)
     t:eq(n.of(n.written("F#4", clarinet), "movable", { key = fSharp }), "do", "G# major, past seven sharps")
   end,
+  no_key_signature_is_concert_c_major = function(t)
+    local n = names()
+    local trumpet = { diatonic = 1, chromatic = 2 }
+    t:eq(n.writtenKey(nil, trumpet).fifths, 2, "a B-flat trumpet's part is in D major")
+    t:eq(n.writtenKey(nil, nil).fifths, 0, "an instrument in C is in C major")
+    local cMajor = n.writtenKey({ fifths = 0, mode = "major" }, trumpet)
+    for _, system in ipairs({ "movable", "degrees" }) do
+      local none = n.of(n.written("C5", trumpet), system, { key = n.writtenKey(nil, trumpet) })
+      t:eq(none, n.of(n.written("C5", trumpet), system, { key = cMajor }), system .. ": as with an explicit C major")
+    end
+  end,
   knows_every_name_it_could_write = function(t)
     local n = names()
     for _, words in ipairs({ "C", "F" .. SHARP .. "5", "Heses", "R\195\169", "Sol4", "ti", "fi", FLAT .. "7", "1",
