@@ -2,6 +2,7 @@
 
     python tools/run_tests.py            unit tests (Python and stock Lua 5.2) and a syntax check of every Lua file
     python tools/run_tests.py --dorico   also the checks inside Dorico (needs Dorico running with Remote Control on)
+    python tools/run_tests.py --inputs   also reads the local copies of Steinberg's examples (run folder, inputs/)
 """
 import argparse
 import subprocess
@@ -99,9 +100,21 @@ def dorico_checks():
     return ok
 
 
+def input_checks(lua):
+    """The reader on every project in the run folder's inputs/ subfolders: Steinberg's examples, as shipped and as
+    re-saved, which can't be committed."""
+    projects = sorted(str(p) for p in (run_lua.RUN_DIR / "inputs").glob("*/*.dorico"))
+    if not projects:
+        return step("inputs: none in " + str(run_lua.RUN_DIR / "inputs"), True)
+    proc = subprocess.run([lua, "tests/inputs.lua", *projects], cwd=ROOT, capture_output=True, text=True)
+    print(proc.stdout.rstrip())
+    return step(f"inputs: {len(projects)} projects read", proc.returncode == 0)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dorico", action="store_true")
+    ap.add_argument("--inputs", action="store_true")
     ns = ap.parse_args()
     ok = True
     proc = subprocess.run([sys.executable, "-m", "unittest", *py_tests()], cwd=ROOT, capture_output=True, text=True)
@@ -127,6 +140,8 @@ def main():
         ok &= step(f"luac -p on {len(files)} Lua files", not failures)
         for _, message in failures:
             print("      ", message)
+    if ns.inputs:
+        ok &= input_checks(lua)
     if ns.dorico:
         ok &= dorico_checks()
     print("ALL PASS" if ok else "SOME FAILED")

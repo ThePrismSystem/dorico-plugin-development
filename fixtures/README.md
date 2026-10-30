@@ -29,3 +29,11 @@ its Dorico version wrote.
 | `6.1.10/Somervell_Shropshire_Lad.dorico` | Arthur Somervell, *A Shropshire Lad* | Typeset by Ben Byram-Wigfield, released to the public domain (CC0 1.0) |
 | `6.2.0/Mozart_Figaro_Sinfonia.dorico` | Mozart, *Le nozze di Figaro*, sinfonia | Transcribed by Ben Byram-Wigfield, 2026 |
 | `6.2.20/Faure_Dolly.dorico` | Gabriel Fauré, *Dolly* | Typeset by Ben Byram-Wigfield, 2026 |
+
+## When a new Dorico comes out
+
+Start it with Remote Control on and run `python tools/resave_fixtures.py`. It saves the fixtures built here into a
+folder for the new version, adds them to `versions.json`, saves copies of Steinberg's examples into the run folder,
+and runs the tests. `python tools/run_tests.py --inputs` reads those copies again later. If the tests fail, the new
+version changed something the reader relies on; [docs/file-format.md](../docs/file-format.md) says how to teach the
+reader a new format.
