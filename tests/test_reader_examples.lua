@@ -389,6 +389,22 @@ return {
       .. "12@23/1 2 | 12@24/1 12 | 12@28/1 1")
   end,
 
+  -- A grace note has its main note's position, so a label there would join the main note's and read as a chord.
+  label_notes_give_a_grace_note_no_label = function(t)
+    local made = {}
+    package.preload["scorereader.dorico.savedcopy"] = changedCopy(SAMPLE, function(s)
+      local stream = s.flows[1].streamById[12]
+      local first = stream.events[1]
+      table.insert(stream.events, 1, { kind = "grace", id = 99999, pitch = first.pitch + 2, spelling = "C5",
+        position = first.position, streamId = 12, flowId = first.flowId })
+    end)
+    local ok, printed = pcall(run, "examples/recipes/label-notes.lua", SAMPLE, writableScore(SAMPLE, made))
+    package.preload["scorereader.dorico.savedcopy"] = nil
+    t:ok(ok, tostring(printed))
+    t:eq(made[1], "12@0/1 12", "the main note's label alone")
+    t:eq(#made, 18)
+  end,
+
   -- Stream 14 is the flute's, with one note at 0 and none at 7; stream 20 is the piano's, with E5 and G5 at 0.
   note_names_take_off_only_names_with_a_line_per_note_under_them = function(t)
     package.preload["scorereader.dorico.savedcopy"] = changedCopy(READING, function(s)

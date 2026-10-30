@@ -1,7 +1,8 @@
 -- Find out which notes are selected, then act on them: here, by writing each note's name above it.
 -- What it does: prints one line per selected note or grace note (flow number, player, position, spelling, with tabs
--- between), and puts a staff text naming the note at its position. With nothing selected it says so and stops.
--- Changes: adds a staff text for each selected note.
+-- between), and puts a staff text naming the note at its position: one for a chord, and none for a grace note. With
+-- nothing selected it says so and stops.
+-- Changes: adds a staff text for each selected note or chord.
 -- Undo: Edit > Undo takes the texts back in one step.
 -- Builds on: 03-read-notes.lua. Select some notes, run the script, then open Script > Show Script Console to read
 -- what it prints.
@@ -174,16 +175,19 @@ table.sort(selected, function(a, b)
   return a.spelling < b.spelling
 end)
 
--- One text for each position in a voice, naming every selected note there, so a chord gets one text.
+-- One text for each position in a voice, naming every selected note there, so a chord gets one text. A grace note
+-- has its main note's position, so its name would join the main note's and read as a chord: it gets none.
 local labels, order = {}, {}
 for _, note in ipairs(selected) do
   print(table.concat({ note.flow, note.player, note.pos, note.spelling }, "\t"))
-  local key = note.flow .. "/" .. note.voice .. "/" .. note.pos
-  if not labels[key] then
-    labels[key] = { note = note, names = {} }
-    order[#order + 1] = key
+  if not note.grace then
+    local key = note.flow .. "/" .. note.voice .. "/" .. note.pos
+    if not labels[key] then
+      labels[key] = { note = note, names = {} }
+      order[#order + 1] = key
+    end
+    table.insert(labels[key].names, note.spelling)
   end
-  table.insert(labels[key].names, note.spelling)
 end
 for _, key in ipairs(order) do
   local note = labels[key].note

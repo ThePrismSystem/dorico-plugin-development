@@ -11,7 +11,8 @@
 -- note is 2 semitones above the sounding one, and an instrument in C's is the same note. Valves are looked up for the
 -- written pitch, since that's what the player reads, and names are printed at sounding pitch.
 --
--- A chord gets one label, with its notes' labels in a row. A note the valve table doesn't cover gets "?".
+-- A chord gets one label, with its notes' labels in a row. A note the valve table doesn't cover gets "?". Grace notes
+-- get none: a grace note has its main note's position, so its label would join the main note's and read as a chord.
 
 local PLAYER = "Trumpet"
 local LABELS = "valves" -- or "names"
@@ -103,7 +104,7 @@ for _, flow in ipairs(s.flows) do
       -- One label per position, so a chord gets one.
       local at, order = {}, {}
       for _, e in ipairs(stream.events) do
-        if e.kind == "note" or e.kind == "grace" then
+        if e.kind == "note" then
           local pos = values.positionText(e.position)
           if not at[pos] then
             at[pos] = { position = e.position, labels = {} }
