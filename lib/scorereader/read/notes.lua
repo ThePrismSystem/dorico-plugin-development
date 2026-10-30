@@ -7,7 +7,10 @@ local notes = {}
 local SEMITONES = { C = 0, D = 2, E = 4, F = 5, G = 7, A = 9, B = 11 }
 
 -- "F#5" from the letter Dorico stores (kNoteSpelling holds only "F") and the sounding MIDI pitch: the octave is the
--- one whose natural is nearest the pitch, and the difference is the accidental. The same form as stream:dump().
+-- one whose natural is nearest the pitch, and the difference is the accidental. The same form as stream:dump(), which
+-- writes a double sharp as "x" ("Dx4") and a double flat as "bb".
+local ACCIDENTALS = { [-2] = "bb", [-1] = "b", [0] = "", [1] = "#", [2] = "x" }
+
 function notes.spelling(letter, pitch)
   local best
   for octave = -1, 9 do
@@ -17,8 +20,14 @@ function notes.spelling(letter, pitch)
     end
   end
   if not best then return nil end
-  local accidental = best.alter > 0 and string.rep("#", best.alter) or string.rep("b", -best.alter)
-  return letter .. accidental .. best.octave
+  return letter .. ACCIDENTALS[best.alter] .. best.octave
+end
+
+-- kNoteSpelling can have an entry for each tied part of a note that was respelled, with a propertyOffset of
+-- "0:<num>:<den>:0": where that part starts, in quarter notes from the note's start. The note's own spelling, the one
+-- stream:dump() shows, is the entry at 0.
+local function atStart(offset)
+  return offset == nil or offset == "" or offset:match("^0:0:%d+:") ~= nil
 end
 
 -- A note or grace note: pitch (sounding MIDI), spelling ("F#5"), and for a grace note its notated duration and
@@ -29,7 +38,9 @@ function notes.note(ctx, e, node)
   ctx.score.cache[e] = entries
   local letter
   for _, x in ipairs(entries) do
-    if x.property == "kNoteSpelling" and x.layout == -1 then letter = ctx.read(values.string, x.value, "a spelling") end
+    if x.property == "kNoteSpelling" and x.layout == -1 and atStart(x.offset) then
+      letter = ctx.read(values.string, x.value, "a spelling")
+    end
   end
   if not letter or not SEMITONES[letter] then ctx.fail("note " .. e.id .. " has no spelling the reader knows") end
   e.spelling = notes.spelling(letter, e.pitch) or ctx.fail("note " .. e.id .. " is spelled " .. letter

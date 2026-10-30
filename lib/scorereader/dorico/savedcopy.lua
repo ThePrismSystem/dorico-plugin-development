@@ -27,8 +27,8 @@ local function defaultDir()
 end
 
 -- The current project as scorereader.score.read gives it. opts: dir (a folder ending in a slash, the temp folder by
--- default), log (a function taking a line, told about a copy that can't be deleted), remove (how to delete the copy,
--- os.remove by default). app:save takes its path in UTF-8 and io.open in the code page, so the folder's path should
+-- default), log (a function taking a line, told about a copy that can't be deleted; print, which writes to the Script
+-- Console, by default), remove (how to delete the copy, os.remove by default). app:save takes its path in UTF-8 and io.open in the code page, so the folder's path should
 -- be plain ASCII.
 function savedcopy.read(app, opts)
   opts = opts or {}
@@ -36,7 +36,7 @@ function savedcopy.read(app, opts)
   local del = opts.remove or remove
   local function cleanUp()
     local gone, why = del(path)
-    if not gone and opts.log then opts.log("the saved copy " .. path .. " could not be deleted: " .. tostring(why)) end
+    if not gone then (opts.log or print)("the saved copy " .. path .. " could not be deleted: " .. tostring(why)) end
   end
   del(path)
   if app:save(app.currentScore, path) ~= true then

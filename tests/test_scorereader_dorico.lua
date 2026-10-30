@@ -10,6 +10,7 @@ local values = require("scorereader.values")
 
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])") or "./"
 local SAMPLE = here .. "../fixtures/6.2.30/sample.dorico"
+local READING = here .. "../fixtures/6.2.30/reading.dorico"
 
 local function readBytes(path)
   local f = assert(io.open(path, "rb"))
@@ -116,6 +117,34 @@ return {
     m = match.stream(s, s.flows[1].id, stream.id, parsed)
     t:eq(#m.unmatched, 3, "an extra event, a moved one, a missing one: " .. table.concat(m.unmatched, "; "))
   end,
+  matching_compares_spellings_and_words = function(t)
+    local s = score.readFile(READING)
+    local flow = s.flows[1]
+    local function parsedOf(streamId)
+      local parsed = { events = {} }
+      for _, e in ipairs(flow.streamById[streamId].events) do
+        parsed.events[#parsed.events + 1] = { id = e.id, pos = values.toNumber(e.position), kind = e.kind,
+          spelling = e.spelling, text = e.words }
+      end
+      return parsed
+    end
+    local function change(parsed, id, field, v)
+      for _, ev in ipairs(parsed.events) do
+        if ev.id == id then ev[field] = v end
+      end
+      return parsed
+    end
+    local note, text
+    for _, e in ipairs(flow.events) do
+      if not note and e.kind == "note" then note = e end
+      if not text and e.kind == "text" then text = e end
+    end
+    t:eq(#match.stream(s, flow.id, note.streamId, parsedOf(note.streamId)).unmatched, 0)
+    local m = match.stream(s, flow.id, note.streamId, change(parsedOf(note.streamId), note.id, "spelling", "Cx4"))
+    t:eq(m.unmatched[1], "event " .. note.id .. " is spelled Cx4 in Lua and " .. note.spelling .. " in the file")
+    m = match.stream(s, flow.id, text.streamId, change(parsedOf(text.streamId), text.id, "text", "other words"))
+    t:eq(m.unmatched[1], "event " .. text.id .. " says \"other words\" in Lua and \"" .. text.words .. "\" in the file")
+  end,
   a_saved_copy_is_read_and_removed = function(t)
     local s = savedcopy.read(stubApp(readBytes(SAMPLE)), { dir = DIR })
     t:eq(s.info.title, "Sample")
@@ -137,5 +166,15 @@ return {
     os.remove(DIR .. "scorereader-copy.dorico")
     t:ok(s.flows[1], "the read still worked")
     t:ok(lines[#lines]:find("could not be deleted: in use", 1, true), tostring(lines[#lines]))
+  end,
+  without_a_log_a_copy_that_cannot_be_removed_is_printed = function(t)
+    local printed, realPrint = {}, _G.print
+    _G.print = function(line) printed[#printed + 1] = line end
+    local ok, err = pcall(savedcopy.read, stubApp(readBytes(SAMPLE)), { dir = DIR,
+      remove = function() return nil, "in use" end })
+    _G.print = realPrint
+    os.remove(DIR .. "scorereader-copy.dorico")
+    t:ok(ok, tostring(err))
+    t:ok(printed[1] and printed[1]:find("could not be deleted: in use", 1, true), tostring(printed[1]))
   end,
 }

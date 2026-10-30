@@ -65,14 +65,40 @@ end
 
 local ACCIDENTALS = { kNatural = "", kSharp = "#", kFlat = "b", kDoubleSharp = "##", kDoubleFlat = "bb" }
 local QUALITIES = { kMajor = "major", kMinor = "minor", kAugmented = "augmented", kDiminished = "diminished" }
-local SUFFIX = { major = "", minor = "m", augmented = "+", diminished = "dim" }
 local INTERVALS = { kNone = "", k7 = "7", kMaj7 = "maj7", k6 = "6", k9 = "9", k11 = "11", k13 = "13" }
 
--- root ("G", "F#"), quality, interval, and a name ("G7", "Am") when the chord has no alterations and its quality and
--- interval are ones the reader knows; only major, minor and the dominant seventh are checked against Dorico's own
--- names so far. rawQuality and rawInterval are always there.
+-- The chords whose names have been checked against Dorico's own, as "quality interval", and what follows the root.
+local CHECKED = { ["kMajor kNone"] = "", ["kMinor kNone"] = "m", ["kMajor k7"] = "7" }
+
+-- The nodes a chord like the checked ones has. "empty" ones must hold nothing. A node not listed here, or an "empty" one
+-- that holds something, means the chord has more to it than the reader has checked, so it gets no name.
+local PLAIN = {
+  chordSymbolData = { primaryChord = "any", playedPrimaryPitches = "empty", playedSecondaryPitches = "empty" },
+  primaryChord = { definition = "any", root = "any" },
+  definition = { quality = "any", interval = "any", customChordDataEntityID = "empty", customChordName = "empty",
+    customChordIntervals = "empty", alterations = "empty" },
+}
+
+local function empty(t, n)
+  local v = tree.value(t, n) or ""
+  return #tree.children(t, n) == 0 and (v == "" or v:match("^steamVariantList:list:%s*$") ~= nil)
+end
+
+local function plain(t, n)
+  local allowed = PLAIN[tree.name(t, n)]
+  if not allowed then return true end
+  for _, k in ipairs(tree.children(t, n)) do
+    local rule = allowed[tree.name(t, k)]
+    if not rule or (rule == "empty" and not empty(t, k)) or (rule == "any" and not plain(t, k)) then return false end
+  end
+  return true
+end
+
+-- root ("G", "F#"), quality, interval, and a name ("C", "G7", "Am") only for a plain major, minor or dominant seventh
+-- chord, the shapes checked against Dorico's own names so far. rawQuality and rawInterval are always there.
 function text.chordSymbol(ctx, e, node)
-  local chord = ctx.node(node, "chordSymbolData/primaryChord")
+  local data = ctx.node(node, "chordSymbolData")
+  local chord = ctx.node(data, "primaryChord")
   local accidental = ctx.text(chord, "root/accidentalType")
   e.root = ctx.text(chord, "root/noteName") .. (ACCIDENTALS[accidental]
     or ctx.fail("chord symbol " .. e.id .. " has an accidental the reader doesn't know: " .. accidental))
@@ -80,7 +106,8 @@ function text.chordSymbol(ctx, e, node)
   e.quality, e.interval = QUALITIES[e.rawQuality], INTERVALS[e.rawInterval]
   local alterations = tree.path(ctx.t, chord, "definition/alterations")
   e.altered = alterations ~= nil and #tree.children(ctx.t, alterations) > 0
-  if e.quality and e.interval and not e.altered then e.name = e.root .. SUFFIX[e.quality] .. e.interval end
+  local suffix = CHECKED[e.rawQuality .. " " .. e.rawInterval]
+  if suffix and plain(ctx.t, data) then e.name = e.root .. suffix end
 end
 
 return text

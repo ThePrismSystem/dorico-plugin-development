@@ -2,6 +2,8 @@
 -- expected.json), and for consistency on the projects older Dorico versions saved.
 local score = require("scorereader.score")
 local values = require("scorereader.values")
+local tree = require("scorereader.tree")
+local notes = require("scorereader.read.notes")
 local json = require("json")
 
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])") or "./"
@@ -60,6 +62,25 @@ local function events(s, kind)
   return out
 end
 
+-- Changes to a decoded tree, for shapes no fixture has: a new value or a new name for one node.
+local function setValue(t, id, v)
+  t.values[#t.values + 1] = v
+  t.valueOf[id] = #t.values - 1
+end
+
+local function rename(t, id, name)
+  t.names[#t.names + 1] = name
+  t.nameIndex[name] = #t.names - 1
+  t.nameOf[id] = #t.names - 1
+end
+
+-- The reading fixture's first chord symbol, read again after change(tree, its chordSymbolData node).
+local function changedChord(change)
+  local s = score.readFile(fixtures .. "6.2.30/reading.dorico")
+  change(s.tree, tree.path(s.tree, events(s, "chordSymbol")[1].node, "chordSymbolData"))
+  return events(score.read(s.tree), "chordSymbol")[1]
+end
+
 local CHORD_SUFFIX = { major = "", dominant = "7", minor = "m" }
 local SYLLABLES = { begin = "begin", middle = "middle", ["end"] = "end", single = "single" }
 
@@ -100,6 +121,28 @@ return {
       end
     end
   end,
+  non_ascii_names_come_back_exactly = function(t)
+    local s = load("6.2.30/sample.dorico")
+    local want = readJson(fixtures .. "expected.json")
+    t:eq(s.players[2].name, want.flows[1].players[2].name, "Zoë, as UTF-8, with Dorico's flat token")
+    t:eq(s.players[2].name, "Trumpet Zo\195\171 (B{@flat@})")
+    local lilacs = load("6.0.22/Novello_Lilacs.dorico")
+    t:eq(lilacs.info.title, "WE\226\128\153LL GATHER LILACS", "a curly apostrophe")
+    t:eq(lilacs.events[1626].text, "We\226\128\153ll")
+    local dolly = load("6.2.20/Faure_Dolly.dorico")
+    t:eq(dolly.info.composer, "Gabriel FAUR\195\137")
+    t:eq(dolly.events[10695].text, "Pi\195\185  Lento")
+  end,
+  a_tied_note_respelled_partway_keeps_its_first_spelling = function(t)
+    local e = load("6.2.20/Faure_Dolly.dorico").events[8297]
+    t:eq(e.spelling, "E#4", "the dump's spelling; the tied part from beat 120 is spelled F")
+  end,
+  spellings_as_the_dump_writes_them = function(t)
+    t:eq(notes.spelling("D", 64), "Dx4", "a double sharp is x")
+    t:eq(notes.spelling("E", 62), "Ebb4")
+    t:eq(notes.spelling("B", 60), "B#3", "the octave goes with the letter")
+    t:eq(notes.spelling("C", 59), "Cb4")
+  end,
   texts_with_their_words = function(t)
     local s = load("6.2.30/reading.dorico")
     for _, want in ipairs(readJson(fixtures .. "reading.expected.json").texts) do
@@ -129,6 +172,26 @@ return {
       t:eq(got[i].root, want.root)
       t:eq(got[i].name, want.root .. CHORD_SUFFIX[want.chord])
     end
+  end,
+  chord_names_only_for_shapes_checked_against_dorico = function(t)
+    local minorMajor = changedChord(function(tr, data)
+      setValue(tr, tree.path(tr, data, "primaryChord/definition/quality"), "kMinor")
+      setValue(tr, tree.path(tr, data, "primaryChord/definition/interval"), "kMaj7")
+    end)
+    t:eq(minorMajor.quality, "minor")
+    t:eq(minorMajor.interval, "maj7")
+    t:eq(minorMajor.name, nil, "not Cmmaj7")
+    t:eq(changedChord(function(tr, data)
+      setValue(tr, tree.path(tr, data, "primaryChord/definition/customChordName"), "C(add9)")
+    end).name, nil, "a custom name")
+    t:eq(changedChord(function(tr, data)
+      setValue(tr, tree.path(tr, data, "playedSecondaryPitches"), "steamVariantList:list: {int: 52}")
+    end).name, nil, "secondary pitches")
+    local bass = changedChord(function(tr, data)
+      rename(tr, tree.path(tr, data, "playedSecondaryPitches"), "bassNote")
+    end)
+    t:eq(bass.root, "C", "the root still comes back")
+    t:eq(bass.name, nil, "a node the reader hasn't seen")
   end,
   dynamics_by_name = function(t)
     local s = load("6.2.30/reading.dorico")
@@ -235,7 +298,7 @@ return {
           t:ok(e.kind and e.definition, entry.path .. " event " .. e.id)
           if e.kind == "note" then
             notes = notes + 1
-            t:ok(e.spelling:match("^[A-G][#b]*%-?%d$"), entry.path .. " spelling " .. tostring(e.spelling))
+            t:ok(e.spelling:match("^[A-G][#bx]*%-?%d$"), entry.path .. " spelling " .. tostring(e.spelling))
           end
           if e.kind == "lyric" then t:ok(e.text, entry.path .. " lyric " .. e.id) end
           if e.kind == "dynamic" then t:ok(#e.dynamics > 0, entry.path .. " dynamic " .. e.id) end
