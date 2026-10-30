@@ -1,10 +1,12 @@
 -- Read texts, lyrics, chord symbols and dynamics from a saved copy, none of which Lua can read for itself.
 -- What it does: prints one line per item, with tabs between the columns:
---   text: flow, player, position, above or below, staff or system, paragraph style, words (and "formatted" when a
---     fragment has a style of its own)
+--   text: flow, player, position, above or below in the full score (or by the text's own placement when there is
+--     no full score), staff or system, paragraph style, words (and "formatted" when a fragment has a style of its
+--     own)
 --   lyric: flow, player, position, line, syllable (begin, middle, end or single), text, "melisma" or "-"
 --   chord: flow, position, root, name (or "-"), quality, interval
 --   dynamic: flow, player, position, name, kind (immediate, gradual, force or combined)
+--   total: how many texts, lyrics, chords and dynamics it printed
 -- Changes: nothing (read-only).
 -- Undo: nothing to undo.
 -- Builds on: 04-read-the-saved-copy.lua. Open Script > Show Script Console to read what it prints.
@@ -55,7 +57,14 @@ if not s then return end
 local score = require("scorereader.score")
 local values = require("scorereader.values")
 
-local function line(...) print(table.concat({ ... }, "\t")) end
+local counts = { text = 0, lyric = 0, chord = 0, dynamic = 0 }
+local function line(kind, ...)
+  counts[kind] = counts[kind] + 1
+  print(table.concat({ kind, ... }, "\t"))
+end
+
+-- Edit.FlipItem flips a text only in the layout on screen, so ask which side the full score shows.
+local fullScore = score.fullScoreOf(s)
 
 for n, flow in ipairs(s.flows) do
   for _, e in ipairs(flow.events) do
@@ -63,8 +72,10 @@ for n, flow in ipairs(s.flows) do
     local player = owner and owner.name or "-"
     local pos = values.positionText(e.position)
     if e.kind == "text" then
+      local above = e.above
+      if fullScore then above = score.above(s, e, fullScore.id) end
       local words = e.formatted and (e.words .. "\tformatted") or e.words
-      line("text", n, player, pos, e.above and "above" or "below", e.system and "system" or "staff",
+      line("text", n, player, pos, above and "above" or "below", e.system and "system" or "staff",
         e.paragraphs[1] and e.paragraphs[1].style or "-", words)
     elseif e.kind == "lyric" then
       line("lyric", n, player, pos, e.line, e.syllable, e.text, e.duration.num > 0 and "melisma" or "-")
@@ -77,3 +88,4 @@ for n, flow in ipairs(s.flows) do
     end
   end
 end
+print(table.concat({ "total", counts.text, counts.lyric, counts.chord, counts.dynamic }, "\t"))
