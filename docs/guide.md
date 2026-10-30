@@ -248,8 +248,10 @@ instrument transposes.
 
 ### `stream.events` fails on real music
 
-`stream.events` gives event objects, but it raises an error on any stream that holds a kind of event with no Lua
-class: lyrics, slurs, hairpins, playing techniques. Most real music has at least one of those.
+`stream.events` gives event objects, but it raises an error on any stream that holds a kind of event with no Lua class:
+lyrics, slurs, hairpins, playing techniques. Most real music has at least one of those. On the sample's flute voice,
+which holds a slur, it raised nothing, but the list stopped just before the slur, so a script can't count on either an
+error or every event.
 
 ### `stream:dump()` always works
 

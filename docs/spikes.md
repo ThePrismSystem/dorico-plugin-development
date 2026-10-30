@@ -164,6 +164,15 @@ up and down respelled them (G#4 came back as Ab4, E#4 as F4). Fundamental 11 use
 no undo and its later edits stay in its own undo step. Moving a chord's C4 up an octave onto the chord's own C5 left
 two C5s, not one merged note, and moving it back down restored both (`tuplet_and_unison.lua`).
 
+## TextEvent.text
+
+Probe: `text_event.lua`, on a scratch copy of the sample. `stream:createText` returns the new `TextEvent`, whose
+`tostring` is `TextEvent ID: 326 kTextEvent (id:326) at 0 : <words>` with the paragraph style on a second line.
+`text.text` reads the words as a string, a comma and an ampersand included, and setting it raises "property 'text' is
+read only", which leaves the words as they were. The probe's voice, the sample flute's, holds a slur, yet
+`stream.events` raised no error there: `ipairs` over it stopped after the first note, just before the slur, so the text
+came from `createText`'s return value.
+
 ## S4: creating items
 
 Probes: `s4_create.lua` (commands sent from Lua), `s4_record.py` (Dorico's popovers, typed into the scratch window,

@@ -82,13 +82,13 @@ a bad call can crash Dorico.
 | ------ | ---- | ------ | ----- |
 | `__eq` | operator | not tried |  |
 | `__len` | operator | not tried |  |
-| `__tostring` | operator | not tried | As on the base event; no example reads this kind. |
+| `__tostring` | operator | verified | `TextEvent ID: 326 kTextEvent (id:326) at 0 : <words>`, then the paragraph style on a line of its own ([text_event.lua](../spikes.md#texteventtext)). |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
 | `id` | property | not tried | As on the base event; no example reads this kind. |
 | `position` | member | not tried |  |
 | `propertyTable` | property | not tried | As on the base event; no example reads this kind. |
-| `text` | member | not tried |  |
+| `text` | member | verified | The words, as a string. Read-only: setting it raises "property 'text' is read only" ([text_event.lua](../spikes.md#texteventtext)). |
 
 ## `DoCore.TupletEvent`
 
