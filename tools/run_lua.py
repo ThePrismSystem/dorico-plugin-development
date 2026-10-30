@@ -296,8 +296,8 @@ def run(script: Path, open_file=None, keep_open=False, extra_args=None, timeout=
         launcher = write_launcher(Path(script).resolve(), args, run_id)
         reply = client.command(f"Script.RunScript?ScriptPath={fwd(launcher)}&ShowConsole=false")
         if reply.get("code") != "kOK":
-            # Dorico has run the script after such a reply, and a copy closed under a script crashed it, so the run
-            # is waited for all the same.
+            # A copy closed under a script that Dorico runs anyway crashes Dorico, so the run is waited for all the
+            # same.
             print(f"Dorico answered the script run with {reply}; waiting for the result anyway", file=sys.stderr)
         problems = []
         result = wait_for(lambda: read_result(run_id, problems), timeout)

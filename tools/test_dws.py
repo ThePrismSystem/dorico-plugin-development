@@ -158,6 +158,13 @@ class RequestTests(unittest.TestCase):
         ))
         self.assertEqual(client.status()["activeOpenScoreID"], 2)
 
+    def test_a_command_skips_the_messages_dorico_sends_unasked(self):
+        # Dorico sends selectionchanged after a script selects notes; taken as the next command's reply, it ended a
+        # run early
+        client = dws.DoricoClient(sock=FakeSocket(server_frame({"message": "selectionchanged", "openScoreID": 0})
+                                                  + server_frame({"message": "response", "code": "kOK"})))
+        self.assertEqual(client.command("Edit.Undo"), {"message": "response", "code": "kOK"})
+
     def test_request_expect_status(self):
         client = dws.DoricoClient(sock=FakeSocket(self.frames()))
         reply = client.request({"message": "getstatus"}, expect="status")

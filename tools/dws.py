@@ -161,7 +161,8 @@ class DoricoClient:
                 return reply
 
     def command(self, cmd: str) -> dict:
-        return self.request({"message": "command", "command": cmd})
+        # Dorico also sends messages such as selectionchanged unasked, so only a response answers a command.
+        return self.request({"message": "command", "command": cmd}, expect="response")
 
     def status(self) -> dict:
         """Dorico's status after merging the latest (possibly partial) status message."""
