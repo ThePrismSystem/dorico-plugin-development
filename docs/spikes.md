@@ -239,3 +239,31 @@ an `Info.lua` that returns a table whose `MenuCommands` entries have a `name` an
 up a new plug-in of either kind without a restart wasn't checked: that would mean adding files to the user's own
 Script Plug-ins folder, and if it needed a restart, trying the plug-in would too, which this repository's tests never
 do. The examples are single files, run with Script > Run Script.
+
+## F1: what a saved score holds
+
+Probes: `f1_catalogue.lua` and `f1_changes.lua`, both run on stock Lua outside Dorico over 52 projects: the
+fixtures, copies of the 7 example projects Dorico installs, and the 39 projects at
+<https://ancientgroove.co.uk/dorico/index.html>. Between them they were saved by every Dorico from 6.0.22 to 6.2.30.
+
+- Every project decoded, the 7 installed examples from `score.xml` and the rest from `score.dtn`. The biggest, an
+  installed example with 695,427 nodes, took 4.4 s in stock Lua, most of it unzipping.
+- The catalogue lists every node path with its values. It found 46 kinds of event definition, from
+  `NoteEventDefinition` (533,846 of them) to a single `MultiRestEventDefinition`. None of the projects has a chord
+  symbol or a tab staff. [file-format.md](file-format.md) describes the tree it found.
+- `fileVersion` changed with every release, patch releases included: 1.1392 from 6.0.22, 1.1416 from 6.1.0, 1.1417
+  from 6.1.10, 1.1444 from 6.2.0, 1.1450 from 6.2.20 and 1.1452 from 6.2.30. The installed examples say 6.1.5 and
+  1.1412.
+- `f1_changes.lua` looks for paths that every parent node has in some versions and none has in others. Across all 52
+  projects, every such path was an option (about 80 engraving, playback, notation and view options, such as
+  `repeatNotationOptions` from 6.2.0 on) or a library field, and each was an addition. Events, element tables,
+  players, layouts and project info kept the same paths in every version. Run on only a few projects, the probe also
+  reports content that some projects happen not to have, such as dynamics.
+
+## F7: XML and binary
+
+The installed example projects hold `score.xml` and `scorelibrary.xml`; every other project found holds `.dtn` files,
+including the 8 guided-tutorial projects in Dorico's program folder. Neither Dorico's `preferences.xml` nor its 1,090
+commands has anything that saves XML. Dorico 6.2.30 opens the XML projects, and the reader reads them into the same
+tree: for one installed example, `scorereader.xml` gave 238,312 nodes and Python's XML parser counted 238,312
+elements.
