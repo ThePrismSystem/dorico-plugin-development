@@ -327,15 +327,8 @@ with 1, 2 or 3 appear on lines, slurs, pauses and divisi labels, and the reader 
 `score.value` reads only a value set at the event's start (no offset, or `0:0:<den>:0`). It leaves out a value from
 later in an event, such as a pedal line's retake notch at `0:6:1:0`, and every offset starting with 1, 2 or 3.
 
-How a value was set decides its context. The reading fixture's notes were set each way, then saved and decoded:
-
-| Set by | Context stored |
-| ------ | -------------- |
-| `propertyTable:set` from Lua | none: every layout, any block instance |
-| `EventEdit.ChangeProperty` with the event's ids | none |
-| `Edit.SetNoteheadSetOverride` on a selection | layout -1 and the note's own block instance |
-| `UI.InvokePropertyChangeValue` with a part on screen | that part's layout |
-| `Edit.ShowAccidentalInBrackets` on a selection | the layout on screen: layout 0 with the full score showing, the part's layout with a part showing |
+How a value was set decides its context. The reading fixture's notes were set each way, then saved and decoded;
+[the guide's table](guide.md#values-per-layout) lists what each way stores.
 
 Other note properties the fixture holds: `kArticulationDuration` (`kStaccato`, `kTenuto`) and `kArticulationForce`
 (`kAccent`) for articulations, `kNoteStringIndex` (`int: 4` for a guitar's fifth string; the fret follows from the
