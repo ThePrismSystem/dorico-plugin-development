@@ -1,4 +1,4 @@
--- Checks a scratch copy of fixtures/sample.dorico against fixtures/expected.json: every player's notes in every
+-- Checks a scratch copy of fixtures/<version>/sample.dorico against fixtures/expected.json: every player's notes in every
 -- flow, by sounding spelling, position and duration. Read-only.
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
 local mine = here .. "?.lua;" .. here .. "../spikes/lib/?.lua"

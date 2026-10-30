@@ -1,7 +1,7 @@
 # What the spikes found
 
 Each spike asked one question about Dorico 6's Lua scripting that the examples needed answered. The probes are in
-`spikes/`, run on scratch copies with `python tools/run_lua.py spikes/<probe>.lua --open fixtures/sample.dorico`.
+`spikes/`, run on scratch copies with `python tools/run_lua.py spikes/<probe>.lua --open fixtures/6.2.30/sample.dorico`.
 Everything here was seen on Dorico 6.2.30 (build 6245) on Windows 11.
 
 ## The sample project's import

@@ -11,6 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import dws  # noqa: E402
+import fixture_versions  # noqa: E402
 import run_lua  # noqa: E402
 
 SCRATCH = {"path": run_lua.fwd(run_lua.RUN_DIR / "scratch.dorico")}
@@ -33,7 +34,7 @@ def read(client, label):
 def main():
     client = dws.DoricoClient()
     client.connect()
-    code, result, sid = run_lua.run(ROOT / "spikes" / "select_note.lua", open_file=ROOT / "fixtures" / "sample.dorico",
+    code, result, sid = run_lua.run(ROOT / "spikes" / "select_note.lua", open_file=fixture_versions.newest("sample.dorico"),
                                     keep_open=True, client=client,
                                     extra_args={"player": "Violin, solo & tutti", "pos": 0})
     verified = bool(result and result["facts"].get("scratchVerified"))

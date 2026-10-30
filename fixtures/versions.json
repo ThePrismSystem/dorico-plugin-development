@@ -1,0 +1,44 @@
+[
+  {
+    "path": "6.0.22/Novello_Lilacs.dorico",
+    "fileVersion": "1.1392",
+    "savedBy": "6.0.22",
+    "source": "https://ancientgroove.co.uk/dorico/Novello_Lilacs.dorico.zip",
+    "credit": "ancientgroove.co.uk (Ben Byram-Wigfield)"
+  },
+  {
+    "path": "6.1.0/Purcell_Remember.dorico",
+    "fileVersion": "1.1416",
+    "savedBy": "6.1.0",
+    "source": "https://ancientgroove.co.uk/dorico/Purcell_Remember.dorico.zip",
+    "credit": "Produced by Ben Byram-Wigfield, 2025 (ancientgroove.co.uk)"
+  },
+  {
+    "path": "6.1.10/Somervell_Shropshire_Lad.dorico",
+    "fileVersion": "1.1417",
+    "savedBy": "6.1.10",
+    "source": "https://ancientgroove.co.uk/dorico/Somervell_Shropshire_Lad.dorico.zip",
+    "credit": "Typeset by Ben Byram-Wigfield, released to the public domain under CC0 1.0 (ancientgroove.co.uk)"
+  },
+  {
+    "path": "6.2.0/Mozart_Figaro_Sinfonia.dorico",
+    "fileVersion": "1.1444",
+    "savedBy": "6.2.0",
+    "source": "https://ancientgroove.co.uk/dorico/Mozart_Figaro_Sinfonia.dorico.zip",
+    "credit": "Transcribed by Ben Byram-Wigfield, 2026 (ancientgroove.co.uk)"
+  },
+  {
+    "path": "6.2.20/Faure_Dolly.dorico",
+    "fileVersion": "1.1450",
+    "savedBy": "6.2.20",
+    "source": "https://ancientgroove.co.uk/dorico/Faure_Dolly.dorico.zip",
+    "credit": "Typeset by Ben Byram-Wigfield, 2026 (ancientgroove.co.uk)"
+  },
+  {
+    "path": "6.2.30/sample.dorico",
+    "fileVersion": "1.1452",
+    "savedBy": "6.2.30",
+    "source": "fixtures/build_sample.py",
+    "credit": ""
+  }
+]

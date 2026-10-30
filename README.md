@@ -102,10 +102,10 @@ running with Remote Control turned on in its preferences. The first time, Dorico
 and the session token is kept in `.dorico-token`. To use a client name Dorico already allows, set
 `DORICO_CLIENT_NAME` or put the name in `.dorico-client-name`.
 
-The tests never touch your own projects. Each copies `fixtures/sample.dorico` into a scratch folder,
-`%TEMP%\dorico-examples-run`, opens the copy, and closes it unsaved. The script inside Dorico checks that the active
-project is that copy before changing anything, and refuses if it isn't. Your own projects can stay open; Dorico goes
-back to them when the tests close their copy. The test for 12 answers the example's box itself, and Dorico runs
+The tests never touch your own projects. Each copies the sample (`fixtures/6.2.30/sample.dorico`) into a scratch
+folder, `%TEMP%\dorico-examples-run`, opens the copy, and closes it unsaved. The script inside Dorico checks that the
+active project is that copy before changing anything, and refuses if it isn't. Your own projects can stay open;
+Dorico goes back to them when the tests close their copy. The test for 12 answers the example's box itself, and Dorico runs
 nothing else while the box is open.
 
 ## Credits

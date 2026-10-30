@@ -10,6 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
+import fixture_versions  # noqa: E402
 import run_lua  # noqa: E402
 
 # test_*.py directly in these folders; tests/dorico/ holds the in-Dorico suites, which only --dorico runs
@@ -18,7 +19,7 @@ LUA_TESTS = ["tests/run.lua", "spikes/lib/test_json.lua"]
 LUA_CANDIDATES = ["lua52", "lua5.2", "C:/ProgramData/chocolatey/lib/lua52/tools/lua52.exe", "lua"]
 # Dorico skips a script with a syntax error without a word, so every Lua file in these folders is checked
 SYNTAX_FOLDERS = ["examples", "lib", "spikes", "tests", "fixtures", "types"]
-SAMPLE = ROOT / "fixtures" / "sample.dorico"
+SAMPLE = fixture_versions.newest("sample.dorico")
 
 
 def lua_version(exe):

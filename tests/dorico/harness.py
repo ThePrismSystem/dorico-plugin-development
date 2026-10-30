@@ -12,9 +12,10 @@ ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "tools"))
 import dws  # noqa: E402
+import fixture_versions  # noqa: E402
 import run_lua  # noqa: E402
 
-SAMPLE = ROOT / "fixtures" / "sample.dorico"
+SAMPLE = fixture_versions.newest("sample.dorico")
 SCRATCH = run_lua.RUN_DIR / "scratch.dorico"
 CLICK = ROOT / "tools" / "click.ps1"
 PRESS = ROOT / "tools" / "press.ps1"

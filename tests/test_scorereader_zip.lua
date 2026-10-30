@@ -1,10 +1,10 @@
--- Entries of a zip archive, as a .dorico project is: the sample project in fixtures/.
+-- Entries of a zip archive, as a .dorico project is: the sample project Dorico 6.2.30 saved.
 local zip = require("scorereader.zip")
 
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])") or "./"
 
 local function fixture()
-  local f = assert(io.open(here .. "../fixtures/sample.dorico", "rb"))
+  local f = assert(io.open(here .. "../fixtures/6.2.30/sample.dorico", "rb"))
   local bytes = f:read("*a")
   f:close()
   return bytes

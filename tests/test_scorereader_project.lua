@@ -42,7 +42,7 @@ return {
     t:ok(err and err:find("^zip: "), tostring(err))
   end,
   reads_a_file = function(t)
-    local p = project.readFile(here .. "../fixtures/sample.dorico")
+    local p = project.readFile(here .. "../fixtures/6.2.30/sample.dorico")
     t:eq(p.encoding, "dtn")
     t:eq(tree.name(p.tree, 0), "kScore")
   end,

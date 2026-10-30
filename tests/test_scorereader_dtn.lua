@@ -55,7 +55,7 @@ return {
   second_header_word = function(t) fails(t, TINY:sub(1, 4) .. "\2" .. TINY:sub(6), "2", "not a saved score") end,
   too_short = function(t) fails(t, TINY:sub(1, 8), "8 bytes", "not a saved score") end,
   fixture = function(t)
-    local f = assert(io.open(here .. "../fixtures/sample.dorico", "rb"))
+    local f = assert(io.open(here .. "../fixtures/6.2.30/sample.dorico", "rb"))
     local bytes = f:read("*a")
     f:close()
     local t2 = dtn.decode(zip.entry(bytes, "score.dtn"))

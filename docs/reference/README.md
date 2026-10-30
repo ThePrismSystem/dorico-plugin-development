@@ -30,7 +30,7 @@ The classes the examples use each have a page:
 
 ## How the reference is made
 
-1. `python tools/run_lua.py spikes/class_members.lua --open fixtures/sample.dorico` scans the registry on a scratch
+1. `python tools/run_lua.py spikes/class_members.lua --open fixtures/6.2.30/sample.dorico` scans the registry on a scratch
    copy of the sample and writes `members-raw.json` to the run folder. It reads names only and calls nothing.
 2. `python tools/members.py` names the tables of instance members by what they hold and writes
    [members.json](members.json).
