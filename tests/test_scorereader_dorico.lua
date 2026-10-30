@@ -1,6 +1,7 @@
 -- The Dorico layer outside Dorico: command strings, the dump parser, matching, and the saved-copy read with a stand-in
 -- for the app. tests/dorico/test_reader.py runs the same layer inside Dorico.
 local commands = require("scorereader.dorico.commands")
+local edit = require("scorereader.dorico.edit")
 local dump = require("scorereader.dorico.dump")
 local match = require("scorereader.dorico.match")
 local savedcopy = require("scorereader.dorico.savedcopy")
@@ -53,6 +54,32 @@ return {
     t:eq(commands.changeProperty(0, 7, 10, "kNoteAccidentalVisibility_v3", "kRoundBrackets"),
       "EventEdit.ChangeProperty?FlowID=0&EventID=7&EventBlockID=10&Type=kNoteAccidentalVisibility_v3"
       .. "&Value=kRoundBrackets")
+  end,
+  removing_a_property_by_id = function(t)
+    t:eq(commands.removeProperty(0, 7, 10, "kNoteAccidentalVisibility_v3"),
+      "EventEdit.ChangeProperty?FlowID=0&EventID=7&EventBlockID=10&Type=kNoteAccidentalVisibility_v3")
+  end,
+  edits_send_these_commands = function(t)
+    local sent = {}
+    local app = { doCommand = function(_, c) sent[#sent + 1] = c end }
+    local e = { flowId = 0, id = 7, blockId = 10 }
+    edit.delete(app, e)
+    edit.removeProperty(app, e, "kEventColour")
+    t:eq(table.concat(sent, " | "), "Edit.SelectNone | EventEdit.Select?FlowID=0&EventID=7&EventBlockID=10"
+      .. " | Edit.Delete | EventEdit.ChangeProperty?FlowID=0&EventID=7&EventBlockID=10"
+      .. "&Type=kEventColour")
+  end,
+  a_flipped_text_is_below_where_it_was_flipped = function(t)
+    local s = score.readFile(here .. "../fixtures/6.2.30/reading.dorico")
+    local text
+    for _, e in ipairs(s.flows[1].events) do
+      if e.kind == "text" and not text then text = e end
+    end
+    t:eq(score.above(s, text, 0), true, "as the file has it")
+    s.cache[text] = { { property = "kTextEventAboveOrBelow", value = 'string: "kBelow"', layout = 0, frameChain = -1,
+      instance = -1 } }
+    t:eq(score.above(s, text, 0), false, "flipped in the full score")
+    t:eq(score.above(s, text, 1), true, "not in a part")
   end,
   the_dump_parser = function(t)
     local parsed = dump.parse(table.concat({

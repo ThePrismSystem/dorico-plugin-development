@@ -222,4 +222,12 @@ function score.value(s, e, property, layoutId)
   return (props.get(score.entries(s, e), property, layoutId, e.instanceId))
 end
 
+-- Whether a text is above the staff in a layout. Edit.FlipItem stores the flip as kTextEventAboveOrBelow for the
+-- layout on screen, and the text keeps its own aboveOrBelow for the rest.
+function score.above(s, e, layoutId)
+  local flipped = score.value(s, e, "kTextEventAboveOrBelow", layoutId)
+  if flipped then return flipped == "kAbove" end
+  return e.above
+end
+
 return score

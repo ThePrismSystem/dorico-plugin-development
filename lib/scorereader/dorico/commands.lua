@@ -23,10 +23,17 @@ function commands.select(flowId, eventId, blockId)
 end
 
 -- Sets a property on one event by its ids, with nothing selected. Dorico stores the value with no context, so it
--- applies in every layout.
+-- applies in every layout. It stores any name and value it is given without checking either, and an accidental
+-- visibility it doesn't know becomes kHide (docs/spikes.md, W5).
 function commands.changeProperty(flowId, eventId, blockId, property, value)
   return commands.build("EventEdit.ChangeProperty", { { "FlowID", flowId }, { "EventID", eventId },
     { "EventBlockID", blockId }, { "Type", property }, { "Value", value } })
+end
+
+-- The same command with no value takes the property off the event.
+function commands.removeProperty(flowId, eventId, blockId, property)
+  return commands.build("EventEdit.ChangeProperty", { { "FlowID", flowId }, { "EventID", eventId },
+    { "EventBlockID", blockId }, { "Type", property } })
 end
 
 return commands
