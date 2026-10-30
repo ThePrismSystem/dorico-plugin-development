@@ -136,7 +136,7 @@
   "replace": {
    "lines": [
     "staff text\tflow 1\tbar 1, beat 1\tFlute\tdolce -> sweet",
-    "lyric\tflow 1\tbar 1, beat 1\tSoprano\tdolce: left as it is, only a whole-word lyric on line 1 can be replaced",
+    "lyric\tflow 1\tbar 1, beat 1\tSoprano\tdolce: left as it is, only a whole-word verse lyric on line 1 can be replaced",
     "staff text\tflow 1\tbar 2, beat 1\tFlute\tdolce e cantabile -> sweet e cantabile",
     "lyric\tflow 1\tbar 2, beat 1\tSoprano\tdolce -> sweet",
     "staff text\tflow 1\tbar 3, beat 1\tFlute\tDolce -> sweet",

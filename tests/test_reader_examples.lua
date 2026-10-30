@@ -88,6 +88,21 @@ local CAUTIONARY_RECIPE = "examples/recipes/cautionary-accidentals.lua"
 local CAUTIONARY_ANSWER = "lookBack=4 bars\nbrackets=Round brackets\nrestsCount=True\notherStaves=True\n"
   .. "otherInstruments=False\nremove=False\n"
 
+local TEXTS = FIXTURES .. "texts.dorico"
+local FIND_RECIPE = "examples/recipes/find-and-replace.lua"
+
+-- The find and replace box's answer: the defaults, with changes.
+local function findAnswer(changes)
+  local fields = { { "mode", "Find" }, { "query", "" }, { "replacement", "" }, { "matchCase", "False" },
+    { "wholeWord", "False" }, { "pattern", "False" }, { "flow", "All flows" }, { "player", "All players" },
+    { "from", "" }, { "to", "" } }
+  local lines = {}
+  for i, f in ipairs(fields) do lines[i] = f[1] .. "=" .. (changes[f[1]] or f[2]) end
+  return table.concat(lines, "\n") .. "\n"
+end
+local SOPRANO_FROM_BAR_2 = findAnswer({ mode = "Replace", query = "dolce", replacement = "sweet", wholeWord = "True",
+  player = "Soprano", from = "2" })
+
 -- Stands in for the saved copy: the fixture as the reader reads it, after change(s).
 local function changedCopy(fixture, change)
   local s = require("scorereader.score").readFile(fixture)
@@ -259,5 +274,49 @@ return {
     t:eq(#sent, 0, "nothing taken back")
     t:eq(printed2[#printed2], left, "an ordinary run leaves it too")
     t:eq(#sent2, 5, "and adds the others")
+  end,
+
+  find_and_replace_leaves_note_input_before_it_selects = function(t)
+    local printed, sent = runAnswering(FIND_RECIPE, TEXTS, findAnswer({ query = "dolce" }))
+    t:eq(printed[#printed], "Found 9; the first is selected.")
+    t:eq(table.concat(sent, " / ", 1, 3), "NoteInput.Exit / Window.SwitchMode?WindowMode=kWriteMode / Edit.SelectNone")
+  end,
+
+  find_and_replace_finding_nothing_changes_nothing = function(t)
+    local printed, sent = runAnswering(FIND_RECIPE, TEXTS, findAnswer({ query = "zzz" }))
+    t:eq(table.concat(printed, " / "), "Found nothing.")
+    t:eq(#sent, 0)
+  end,
+
+  find_and_replace_a_replacement_it_cant_work_out_changes_nothing = function(t)
+    local printed, sent = runAnswering(FIND_RECIPE, TEXTS,
+      findAnswer({ mode = "Replace", query = "dolce", replacement = "%3", pattern = "True" }))
+    t:eq(table.concat(printed, " / "),
+      "The replacement couldn't be worked out: the pattern has no capture 3. Nothing changed.")
+    t:eq(#sent, 0)
+  end,
+
+  -- The stand-in app changes nothing, so the copy read afterwards still has the old lyric.
+  find_and_replace_checks_each_lyric_it_replaced = function(t)
+    local printed = runAnswering(FIND_RECIPE, TEXTS, SOPRANO_FROM_BAR_2)
+    t:eq(table.concat(printed, " / "), "lyric\tflow 1\tbar 2, beat 1\tSoprano\tdolce -> sweet: check it, the old "
+      .. "one is still there / Replaced 0; left 0 as they were; 1 to check by hand.")
+  end,
+
+  find_and_replace_says_when_it_cant_read_the_project_back = function(t)
+    local reads = 0
+    package.preload["scorereader.dorico.savedcopy"] = function()
+      return { read = function()
+        reads = reads + 1
+        if reads > 1 then error("no copy", 0) end
+        return require("scorereader.score").readFile(TEXTS)
+      end }
+    end
+    local ok, printed = pcall(runAnswering, FIND_RECIPE, TEXTS, SOPRANO_FROM_BAR_2)
+    package.preload["scorereader.dorico.savedcopy"] = nil
+    t:ok(ok, tostring(printed))
+    t:eq(table.concat(printed, " / "), "The reader couldn't read this project: no copy / lyric\tflow 1\tbar 2, "
+      .. "beat 1\tSoprano\tdolce -> sweet: check it, the project couldn't be read back afterwards / Replaced 0; left 0 "
+      .. "as they were; 1 to check by hand.")
   end,
 }

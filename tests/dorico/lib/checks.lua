@@ -198,7 +198,8 @@ function checks.printed(run, line)
 end
 
 -- The texts fixture's texts, lyrics and chord symbols as the open project has them, and as texts.expected.json says
--- they should be after a row's changes (row.texts, row.lyrics and row.chords: new words by bar), each as one string.
+-- they should be after a row's changes (row.texts, row.lyrics and row.chords: new words by bar; row.gone: the bars
+-- whose text is gone), each as one string.
 function checks.textsNow(row)
   row = row or {}
   local want = readJson("texts.expected.json")
@@ -206,10 +207,14 @@ function checks.textsNow(row)
   local function changed(list, bar, words)
     return list and list[tostring(bar)] or words
   end
+  local gone = {}
+  for _, bar in ipairs(row.gone or {}) do gone[bar] = true end
   local expected = {}
   for _, t in ipairs(want.texts) do
-    expected[#expected + 1] = string.format("text %s|%g|%s|%s|%s", t.player, t.bar, changed(row.texts, t.bar, t.words),
-      tostring(t.above), tostring(t.system))
+    if not gone[t.bar] then
+      expected[#expected + 1] = string.format("text %s|%g|%s|%s|%s", t.player, t.bar,
+        changed(row.texts, t.bar, t.words), tostring(t.above), tostring(t.system))
+    end
   end
   for _, l in ipairs(want.lyrics) do
     local text = (l.line == 1 and l.beat == 1) and changed(row.lyrics, l.bar, l.text) or l.text

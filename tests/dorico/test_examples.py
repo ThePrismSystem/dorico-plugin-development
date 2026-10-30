@@ -35,9 +35,9 @@ def row(name, example, twice=False, args=None, check=None, before=None, after=()
                      "project": harness.PROJECTS[project]})
 
 
-def then_check(check, example=None):
+def then_check(check, example=None, args=None):
     """A step after the example: run another example (or none) on the same copy, and a check."""
-    return {"example": example, "check": CHECKS + check}
+    return {"example": example, "check": CHECKS + check, "args": args or {}}
 
 
 def then_dialog(check, example, dialog, args=None):
@@ -144,6 +144,13 @@ row("layout_and_notation_options", FUNDAMENTALS + "15-layout-and-notation-option
 row("flows_and_players", FUNDAMENTALS + "16-flows-and-players.lua",
     after=[then_command("Edit.Undo"), then_check("16-flows-and-players.undone.lua")])
 OPEN_FIRST = {"case": "case_open.lua"}
+
+
+def box(window, *fields):
+    """A recipe's box answered with OK, after setting fields as harness.answer_form takes them."""
+    return {"window": window, "button": "OK", "fields": list(fields)}
+
+
 ANSWER = "Hello, world & Zoë"
 row("ask_and_report", FUNDAMENTALS + "17-ask-and-report.lua", args={"answer": ANSWER}, before=OPEN_FIRST,
     dialog={"window": "Ask and report", "text": ANSWER, "button": "OK"})
@@ -175,16 +182,15 @@ row("hotkey_colour_cycle", HOTKEY,
            then_check("hotkey-colour-cycle.coloured.lua", READ_COLOURS)])
 
 PARALLELS = RECIPES + "parallel-fifths.lua"
-PARALLELS_OK = {"window": "Parallel fifths and octaves", "button": "OK", "fields": []}
+PARALLELS_OK = box("Parallel fifths and octaves")
 row("parallel_fifths", PARALLELS, project="parallels", before=OPEN_FIRST, dialog=PARALLELS_OK,
     after=[then_dialog("parallel-fifths.lua", PARALLELS, PARALLELS_OK, args={"before": ["default"]}),
            then_dialog("parallel-fifths.none.lua", PARALLELS,
-                       {"window": "Parallel fifths and octaves", "button": "OK", "fields": [("check", 6, True)]},
+                       box("Parallel fifths and octaves", ("check", 6, True)),
                        args={"removed": ["default"]})])
 row("parallel_fifths_with_hidden_and_contrary", PARALLELS, project="parallels", before=OPEN_FIRST,
     args={"findings": ["default", "hiddenAndContrary"]},
-    dialog={"window": "Parallel fifths and octaves", "button": "OK",
-            "fields": [("check", 0, True), ("check", 1, True)]},
+    dialog=box("Parallel fifths and octaves", ("check", 0, True), ("check", 1, True)),
     after=[then_dialog("parallel-fifths.lua", PARALLELS, PARALLELS_OK,
                        args={"before": ["default", "hiddenAndContrary"]})])
 row("parallel_fifths_undone", PARALLELS, project="parallels", before=OPEN_FIRST, dialog=PARALLELS_OK,
@@ -193,13 +199,12 @@ row("parallel_fifths_cancelled", PARALLELS, project="parallels", before=OPEN_FIR
     check=CHECKS + "parallel-fifths.none.lua", args={"cancelled": True},
     dialog={"window": "Parallel fifths and octaves", "button": "Cancel"})
 NAMES = RECIPES + "note-names.lua"
-NAMES_OK = {"window": "Note names", "button": "OK", "fields": []}
+NAMES_OK = box("Note names")
 row("note_names", NAMES, project="reading", before=OPEN_FIRST, dialog=NAMES_OK,
     after=[then_dialog("note-names.lua", NAMES, NAMES_OK, args={"second": True}),
-           then_dialog("note-names.none.lua", NAMES, {"window": "Note names", "button": "OK",
-                                                      "fields": [("check", 2, True)]})])
+           then_dialog("note-names.none.lua", NAMES, box("Note names", ("check", 2, True)))])
 row("note_names_at_sounding_pitch", NAMES, project="reading", before=OPEN_FIRST, args={"sounding": True},
-    dialog={"window": "Note names", "button": "OK", "fields": [("check", 1, False)]})
+    dialog=box("Note names", ("check", 1, False)))
 row("note_names_undone", NAMES, project="reading", before=OPEN_FIRST, dialog=NAMES_OK,
     after=[then_command("Edit.Undo"), then_check("note-names.none.lua")])
 row("note_names_cancelled", NAMES, project="reading", before=OPEN_FIRST, check=CHECKS + "note-names.none.lua",
@@ -207,22 +212,22 @@ row("note_names_cancelled", NAMES, project="reading", before=OPEN_FIRST, check=C
 # The Players list is the third list: 1 is the flute, 2 the clarinet.
 row("note_names_one_player_then_another", NAMES, project="reading", before=OPEN_FIRST,
     check=CHECKS + "note-names.two-players.lua", args={"players": ["Flute"]},
-    dialog={"window": "Note names", "button": "OK", "fields": [("choice", 2, 1)]},
+    dialog=box("Note names", ("choice", 2, 1)),
     after=[then_dialog("note-names.two-players.lua", NAMES,
-                       {"window": "Note names", "button": "OK", "fields": [("choice", 2, 2)]},
+                       box("Note names", ("choice", 2, 2)),
                        args={"players": ["Flute", "Clarinet (B{@flat@})"]})])
 CAUTIONARY = RECIPES + "cautionary-accidentals.lua"
-CAUTIONARY_OK = {"window": "Cautionary accidentals", "button": "OK", "fields": []}
+CAUTIONARY_OK = box("Cautionary accidentals")
 row("cautionary_accidentals", CAUTIONARY, project="cautionary", before=OPEN_FIRST, dialog=CAUTIONARY_OK,
     after=[then_dialog("cautionary-accidentals.lua", CAUTIONARY, CAUTIONARY_OK, args={"kept": True}),
            then_dialog("cautionary-accidentals.none.lua", CAUTIONARY,
-                       {"window": "Cautionary accidentals", "button": "OK", "fields": [("check", 3, True)]},
+                       box("Cautionary accidentals", ("check", 3, True)),
                        args={"takenBack": 5})])
 # Square brackets (the second item of the second list) and other instruments find the flute's B after the violin's
 # B flat too; a run on the defaults then takes that one off and puts round brackets on the rest.
 row("cautionary_accidentals_square_and_other_instruments", CAUTIONARY, project="cautionary", before=OPEN_FIRST,
     args={"findings": "otherInstruments", "value": "kSquareBrackets"},
-    dialog={"window": "Cautionary accidentals", "button": "OK", "fields": [("choice", 1, 1), ("check", 2, True)]},
+    dialog=box("Cautionary accidentals", ("choice", 1, 1), ("check", 2, True)),
     after=[then_dialog("cautionary-accidentals.lua", CAUTIONARY, CAUTIONARY_OK, args={"takenBack": 1})])
 row("cautionary_accidentals_undone", CAUTIONARY, project="cautionary", before=OPEN_FIRST, dialog=CAUTIONARY_OK,
     after=[then_command("Edit.Undo"), then_check("cautionary-accidentals.none.lua")])
@@ -235,7 +240,7 @@ FIND = RECIPES + "find-and-replace.lua"
 def find_box(*fields):
     """The find and replace box answered with OK. Text fields: 0 find, 1 replace with, 2 from bar, 3 to bar. Tick
     boxes: 0 match case, 1 whole words, 2 Lua pattern. Lists: 0 mode (1 is Replace), 1 flows, 2 players."""
-    return {"window": "Find and replace", "button": "OK", "fields": list(fields)}
+    return box("Find and replace", *fields)
 
 
 def selection_kept(test, client, printed):
@@ -243,8 +248,18 @@ def selection_kept(test, client, printed):
 
 
 REPLACE = ("choice", 0, 1)
+# Deleting the selection shows which item is selected: the first match, the flute's staff text in bar 1.
 row("find_and_replace_find", FIND, project="texts", before=OPEN_FIRST, args={"row": "find"},
-    dialog=find_box(("text", 0, "dolce")), after=[then_python(selection_kept)])
+    dialog=find_box(("text", 0, "dolce")),
+    after=[then_python(selection_kept), then_command("Edit.Delete"),
+           then_check("find-and-replace.none.lua", args={"gone": [1]})])
+row("find_and_replace_found_nothing", FIND, project="texts", before=OPEN_FIRST,
+    check=CHECKS + "find-and-replace.none.lua", args={"said": "Found nothing."},
+    dialog=find_box(("text", 0, "zzz")))
+row("find_and_replace_replacement_it_cant_work_out", FIND, project="texts", before=OPEN_FIRST,
+    check=CHECKS + "find-and-replace.none.lua",
+    args={"said": "The replacement couldn't be worked out: the pattern has no capture 3. Nothing changed."},
+    dialog=find_box(REPLACE, ("text", 0, "dolce"), ("text", 1, "%3"), ("check", 2, True)))
 row("find_and_replace_find_one_player_from_a_bar", FIND, project="texts", before=OPEN_FIRST,
     args={"row": "findSopranoFromBar2"}, dialog=find_box(("text", 0, "dolce"), ("choice", 2, 2), ("text", 2, "2")))
 row("find_and_replace_replace", FIND, project="texts", before=OPEN_FIRST, args={"row": "replace"},

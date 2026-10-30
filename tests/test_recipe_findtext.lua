@@ -73,6 +73,11 @@ return {
   a_broken_pattern_stops_with_an_error = function(t)
     t:ok(not pcall(findtext().matches, "dolce", "[d", { pattern = true }))
   end,
+  a_capture_the_pattern_doesnt_have_stops_with_an_error = function(t)
+    local ok, err = pcall(findtext().replace, "dolce", "(d)(o)", "%3", { pattern = true })
+    t:ok(not ok)
+    t:eq(err, "the pattern has no capture 3")
+  end,
   texts_that_can_be_rebuilt = function(t)
     t:eq(why("text"), "nil", "a plain text above the staff")
     t:eq(why("text", nil, { { "kTextEventAboveOrBelow", "kBelow" } }), "nil / kBelow", "below for every layout")
@@ -91,8 +96,9 @@ return {
   end,
   lyrics = function(t)
     t:eq(why("lyric"), "nil", "a whole word on line 1")
-    t:eq(why("lyric", { line = 2 }), "only a whole-word lyric on line 1 can be replaced")
-    t:eq(why("lyric", { syllable = "begin" }), "only a whole-word lyric on line 1 can be replaced")
+    t:eq(why("lyric", { line = 2 }), "only a whole-word verse lyric on line 1 can be replaced")
+    t:eq(why("lyric", { syllable = "begin" }), "only a whole-word verse lyric on line 1 can be replaced")
+    t:eq(why("lyric", { lineType = "chorus" }), "only a whole-word verse lyric on line 1 can be replaced")
     t:eq(why("lyric", { duration = { num = 1, den = 1 } }), "it has a melisma line")
     t:eq(why("lyric", { above = true }), "it is above the staff")
     t:eq(why("lyric", nil, { { "kEventColour", "#ff0000c0" } }), "it has settings of its own (kEventColour)")

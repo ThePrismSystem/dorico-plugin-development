@@ -1,25 +1,27 @@
 -- Find words in staff text, system text, lyrics and chord symbols, and replace them where a script can.
 -- What it does: reads a saved copy and asks what to find, whether to replace it, and where to look (a flow, a player,
 -- a range of bars). Find lists every match (what it is, flow, bar and beat, player, the words) and selects the first.
--- Replace rebuilds each match with the new words and lists those it can't rebuild exactly, which it leaves as they
--- are.
+-- Replace rebuilds each match with the new words, lists those it can't rebuild exactly, which it leaves as they are,
+-- and reads the project back to list any change Dorico didn't make as asked.
 -- Changes: in Replace, deletes each text or lyric it replaces and enters the new one in its place, and enters each new
--- chord symbol over the old one. Find changes nothing.
+-- chord symbol over the old one. Find changes nothing in the project, though it leaves note input and switches to
+-- Write mode to select the first match.
 -- Undo: Edit > Undo takes the whole run back in one step, except chord symbols: the chord-symbol commands make undo
 -- steps of their own, so each one replaced adds presses (a run that replaced one chord symbol took two).
 -- Builds on: 04-read-the-saved-copy.lua, 08-text-lyrics-chords-dynamics.lua, 09-bars-keys-and-times.lua,
 -- 12-select-by-id.lua, 13-set-a-property-by-id.lua, 14-add-notes-rests-text.lua and 17-ask-and-report.lua (the form
 -- helper). Open Script > Show Script Console to read what it prints.
 --
--- Lua can't change a text's words, so a text is deleted and created again with createText in the same stream at the
--- same position, put below the staff again by id if it was there, and made a system text again through
--- Edit.ChangeStaffTextToSystemText if it was one. A lyric is deleted and entered again with the lyric commands on the
--- note under it. A chord symbol is replaced by entering the new one over it with the chord-symbol commands, on a note
--- at its position; when Dorico can't read the new one, the old one stays and the script lists it. Deleting and
--- entering go through a selection, so the script leaves note input and switches to Write mode before it changes
--- anything. What can be rebuilt exactly is in the rebuild helper below; the rest is listed and left. Chord symbols are
--- matched by the names the reader gives (plain major, minor and seventh chords). The options for matching are in the
--- findtext helper.
+-- Lua can't change a text's words, so a text is deleted and created again with createText at the same position, in
+-- the same stream for a staff text and in the flow's first voice for a system text. It is put below the staff again by
+-- id if it was there, and made a system text again through Edit.ChangeStaffTextToSystemText if it was one. A lyric is
+-- deleted and entered again with the lyric commands on the note under it. A chord symbol is replaced by entering the
+-- new one over it with the chord-symbol commands, on a note at its position; when Dorico can't read the new one, the
+-- old one stays and the script lists it. Deleting and entering go through a selection, so the script leaves note
+-- input and switches to Write mode before it changes anything. What can be rebuilt exactly is in the rebuild helper
+-- below; the rest is listed and left. Chord symbols are matched by the names the reader gives, which it gives only to
+-- plain major and minor chords and dominant sevenths, so other chord symbols aren't searched. The options for matching
+-- are in the findtext helper.
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. The read of app.currentScore goes
@@ -373,9 +375,9 @@ end
 -- helper: rebuild
 -- Whether a text, lyric or chord symbol the reader found can be rebuilt with new words exactly, or why not. A text has
 -- to be what createText makes, one plain paragraph in the default paragraph style, with no property but a placement
--- above or below the staff for every layout, which goes back on by id. A lyric has to be a whole word on line 1, below
--- the staff, with no melisma line and no property, and the new one a single word. A chord symbol has to have no
--- property, and the new one has to be one word.
+-- above or below the staff for every layout, which goes back on by id. A lyric has to be a whole word in a verse, on
+-- line 1, below the staff, with no melisma line and no property, and the new one a single word. A chord symbol has to
+-- have no property, and the new one has to be one word.
 --   rebuild.why(e, entries, new, typed) -> nil or the reason; for a text that can be rebuilt, then "kBelow" when it
 --     goes below the staff; entries are score.entries(s, e) and typed is values.typed
 local rebuild = {}
@@ -399,15 +401,17 @@ do
       return nil, below and "kBelow" or nil
     elseif e.kind == "lyric" then
       if e.line ~= 1 or e.syllable ~= "single" or e.lineType ~= "verse" then
-        return "only a whole-word lyric on line 1 can be replaced"
+        return "only a whole-word verse lyric on line 1 can be replaced"
       end
       if e.duration.num > 0 then return "it has a melisma line" end
       if e.above then return "it is above the staff" end
-      if ownSettings(entries) then return ownSettings(entries) end
+      local own = ownSettings(entries)
+      if own then return own end
       if not new:match("^[^%s%-]+$") then return "the new lyric isn't a single word" end
       return nil
     end
-    if ownSettings(entries) then return ownSettings(entries) end
+    local own = ownSettings(entries)
+    if own then return own end
     if not new:match("^%S+$") then return "the new chord symbol isn't one word" end
   end
 end
@@ -475,10 +479,11 @@ local function barsOf(flow)
 end
 -- end helper: barsOf
 
+-- The words of a text, lyric or chord symbol, and nil for any other event.
 local function wordsOf(e)
   if e.kind == "text" then return e.words end
   if e.kind == "lyric" then return e.text end
-  return e.name
+  if e.kind == "chordSymbol" then return e.name end
 end
 
 local function kindOf(e)
@@ -491,17 +496,19 @@ end
 local found = {}
 local ok2, err = pcall(function()
   for n, flow in ipairs(s.flows) do
-    if answers.flow == ALL_FLOWS or answers.flow == n .. ": " .. flow.title then
+    if answers.flow == ALL_FLOWS or answers.flow == flowLabels[n + 1] then
       local starts = barsOf(flow)
       for _, e in ipairs(flow.events) do
-        local words = (e.kind == "text" or e.kind == "lyric" or e.kind == "chordSymbol") and wordsOf(e)
-        local owner = words and score.ownerOf(s, e)
-        local bar, beat = bars.at(starts, values.toNumber(e.position))
-        if words and (answers.player == ALL_PLAYERS or (owner and owner.name == answers.player))
-          and (not first or bar >= first) and (not last or bar <= last)
-          and #findtext.matches(words, answers.query, answers) > 0 then
-          found[#found + 1] = { e = e, flow = flow, n = n, bar = bar, beat = beat, words = words,
-            who = owner and owner.name or "-" }
+        local words = wordsOf(e)
+        if words then
+          local owner = score.ownerOf(s, e)
+          local bar, beat = bars.at(starts, values.toNumber(e.position))
+          if (answers.player == ALL_PLAYERS or (owner and owner.name == answers.player))
+            and (not first or bar >= first) and (not last or bar <= last)
+            and #findtext.matches(words, answers.query, answers) > 0 then
+            found[#found + 1] = { e = e, flow = flow, n = n, bar = bar, beat = beat, words = words,
+              who = owner and owner.name or "-" }
+          end
         end
       end
     end
@@ -523,12 +530,19 @@ local function where(f)
 end
 local function shown(words) return (words:gsub("\n", " / ")) end
 
+-- Selecting goes through EventEdit.Select, which needs Write mode and no note input.
+local function toWriteMode()
+  app:doCommand("NoteInput.Exit")
+  app:doCommand(commands.build("Window.SwitchMode", { { "WindowMode", "kWriteMode" } }))
+end
+
 if answers.mode == "Find" then
   for _, f in ipairs(found) do print(where(f) .. "\t" .. shown(f.words)) end
   if #found == 0 then
     print("Found nothing.")
     return
   end
+  toWriteMode()
   edit.select(app, found[1].e)
   print(string.format("Found %d; the first is selected.", #found))
   return
@@ -578,64 +592,94 @@ for _, flow in ipairs(app.currentScore.flows) do
   firstVoice[flow.id] = flow.voiceStreams[1]
 end
 
-local todo = 0
-for _, f in ipairs(found) do
-  if not f.why then todo = todo + 1 end
-end
-if todo > 0 then
-  app:doCommand("NoteInput.Exit")
-  app:doCommand("Window.SwitchMode?WindowMode=kWriteMode")
-end
+local todo = false
+for _, f in ipairs(found) do todo = todo or not f.why end
+if todo then toWriteMode() end
 
-local made, chords = {}, {}
 for _, f in ipairs(found) do
   local e = f.e
-  if not f.why and e.kind == "text" then
-    local stream = e.system and firstVoice[e.flowId] or streams[e.streamId]
-    edit.delete(app, e)
-    local t = stream:createText(DoCore.RhythmicLength(e.position.num, e.position.den), DoCore.RhythmicLength(0), f.new)
-    made[#made + 1] = { id = t.id, placement = not e.system and f.placement or nil, system = e.system }
-  elseif not f.why then
-    -- A lyric goes in on its own line, so the old one comes off first; a new chord symbol replaces the old one.
-    if e.kind == "lyric" then edit.delete(app, e) end
-    edit.select(app, f.note)
-    if e.kind == "lyric" then
-      app:doCommand("NoteInput.StartLyricInput")
-      app:doCommand(commands.build("NoteInput.AcceptCurrentLyricInput",
-        { { "LyricsEntryAdvanceType", "kEndInput" }, { "LyricText", f.new } }))
+  if not f.why then
+    if e.kind == "text" then
+      local stream = e.system and firstVoice[e.flowId] or streams[e.streamId]
+      edit.delete(app, e)
+      f.made = stream:createText(DoCore.RhythmicLength(e.position.num, e.position.den), DoCore.RhythmicLength(0),
+        f.new).id
     else
-      app:doCommand("NoteInput.StartChordSymbolInput")
-      app:doCommand(commands.build("NoteInput.AcceptCurrentChordSymbolTextInput",
-        { { "Definition", f.new }, { "ChordSymbolEntryAdvanceType", "kEndInput" } }))
-      chords[#chords + 1] = f
+      -- Entering a lyric doesn't replace the one already there, so the old one comes off first; a new chord symbol
+      -- replaces the old one.
+      if e.kind == "lyric" then edit.delete(app, e) end
+      edit.select(app, f.note)
+      if e.kind == "lyric" then
+        app:doCommand("NoteInput.StartLyricInput")
+        app:doCommand(commands.build("NoteInput.AcceptCurrentLyricInput",
+          { { "LyricsEntryAdvanceType", "kEndInput" }, { "LyricText", f.new } }))
+      else
+        app:doCommand("NoteInput.StartChordSymbolInput")
+        app:doCommand(commands.build("NoteInput.AcceptCurrentChordSymbolTextInput",
+          { { "Definition", f.new }, { "ChordSymbolEntryAdvanceType", "kEndInput" } }))
+      end
     end
   end
 end
 
--- A new text has the ids the file gives only once it is saved, so placements and system texts go on after a read.
--- The same read shows which chord symbols Dorico took: one it couldn't read leaves the old one, with its old id.
-local after = (#made > 0 or #chords > 0) and readCopy(app)
-for _, m in ipairs(made) do
-  local e = after.events[m.id]
-  if e and m.placement then edit.setProperty(app, e, PLACEMENT, m.placement) end
-  if e and m.system then
-    edit.select(app, e)
+-- The commands need a new text's block id as well as its id, and only a saved copy gives that, so placements and
+-- system texts go on after a read. The same read checks every change: the old item should be gone and the new one at
+-- its position. A chord symbol Dorico couldn't read leaves the old one, with its old id.
+local after = todo and readCopy(app)
+
+local function lyricAt(f)
+  for _, e in ipairs(after.flows[f.n].events) do
+    if e.kind == "lyric" and e.streamId == f.e.streamId and e.line == 1 and e.text == f.new
+      and values.positionText(e.position) == values.positionText(f.e.position) then
+      return true
+    end
+  end
+  return false
+end
+
+-- Puts a new text's placement back, and checks a change: f.why is set when Dorico left the old chord symbol, and
+-- f.wrong when the change needs checking by hand.
+local function settle(f)
+  local e = f.e
+  if not after then
+    f.wrong = "the project couldn't be read back afterwards"
+    return
+  end
+  if after.events[e.id] and e.kind == "chordSymbol" then
+    f.why = "Dorico couldn't read the new one, so the old one is still there"
+    return
+  end
+  local made = f.made and after.events[f.made]
+  if made and f.placement and not e.system then edit.setProperty(app, made, PLACEMENT, f.placement) end
+  if made and e.system then
+    edit.select(app, made)
     app:doCommand("Edit.ChangeStaffTextToSystemText")
   end
+  if after.events[e.id] then
+    f.wrong = "the old one is still there"
+  elseif (e.kind == "text" and not (made and made.words == f.new)) or (e.kind == "lyric" and not lyricAt(f)) then
+    f.wrong = "the new one isn't there"
+  end
 end
-for _, f in ipairs(chords) do
-  if after.events[f.e.id] then f.why = "Dorico couldn't read the new one, so the old one is still there" end
-end
-app:doCommand("Edit.SelectNone")
 
-local replaced, left = 0, 0
 for _, f in ipairs(found) do
+  if not f.why then settle(f) end
+end
+if todo then app:doCommand("Edit.SelectNone") end
+
+local replaced, left, toCheck = 0, 0, 0
+for _, f in ipairs(found) do
+  local line = where(f) .. "\t" .. shown(f.words)
   if f.why then
-    print(where(f) .. "\t" .. shown(f.words) .. ": left as it is, " .. f.why)
+    print(line .. ": left as it is, " .. f.why)
     left = left + 1
+  elseif f.wrong then
+    print(line .. " -> " .. shown(f.new) .. ": check it, " .. f.wrong)
+    toCheck = toCheck + 1
   else
-    print(where(f) .. "\t" .. shown(f.words) .. " -> " .. shown(f.new))
+    print(line .. " -> " .. shown(f.new))
     replaced = replaced + 1
   end
 end
-print(string.format("Replaced %d; left %d as they were.", replaced, left))
+local summary = string.format("Replaced %d; left %d as they were", replaced, left)
+print(summary .. (toCheck > 0 and string.format("; %d to check by hand.", toCheck) or "."))
