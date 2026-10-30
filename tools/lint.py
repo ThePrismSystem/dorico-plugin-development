@@ -18,6 +18,8 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
+from urllib.parse import urlparse
+from urllib.request import url2pathname
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -35,6 +37,13 @@ class Tool:
 def tracked(patterns, cwd=ROOT):
     """The tracked files matching any of the patterns, as repo-relative POSIX paths, sorted."""
     out = subprocess.run(["git", "ls-files", "-z", "--", *patterns], cwd=cwd, capture_output=True, check=True).stdout
+    return sorted(p for p in out.decode("utf-8").split("\0") if p)
+
+
+def text_files(cwd=ROOT):
+    """The tracked files that aren't binary, by git's own test, as repo-relative POSIX paths, sorted."""
+    # -I skips binary files, and the empty pattern matches every line, so each non-empty text file is listed once
+    out = subprocess.run(["git", "grep", "-I", "-l", "-z", "-e", ""], cwd=cwd, capture_output=True, check=True).stdout
     return sorted(p for p in out.decode("utf-8").split("\0") if p)
 
 
@@ -73,6 +82,44 @@ def ruff(exe, sarif_dir):
 def luacheck(exe, sarif_dir):
     argv = [exe, "--config", str(ROOT / ".luacheckrc"), "--codes", "--quiet", *tracked(["*.lua"])]
     return subprocess.run(argv, cwd=ROOT).returncode == 0
+
+
+def luals(exe, sarif_dir):
+    """lua-language-server's diagnostics, over a copy of the tracked files: it walks the folder itself."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        source, report = tmp / "source", tmp / "check.json"
+        copy_tracked(source)
+        argv = [exe, f"--check={source}", "--checklevel=Warning", f"--configpath={ROOT / '.luarc.json'}",
+                f"--logpath={tmp / 'log'}", f"--check_out_path={report}"]
+        proc = subprocess.run(argv, cwd=ROOT, capture_output=True, text=True)
+        if not report.exists():
+            print(proc.stdout[-2000:], proc.stderr[-2000:], sep="\n")
+            return False
+        # a clean run writes an empty list, and one with findings a map from file URI to diagnostics
+        found = json.loads(report.read_text(encoding="utf-8")) or {}
+        for uri, diagnostics in sorted(found.items()):
+            path = repo_path(url2pathname(urlparse(uri).path), source)
+            for d in diagnostics:
+                print(f"{path}:{d['range']['start']['line'] + 1} {d.get('code')} {d.get('message')}")
+    return proc.returncode == 0 and not found
+
+
+def markdownlint(exe, sarif_dir):
+    # a leading ":" makes markdownlint-cli2 take the path as it is rather than as a glob
+    files = [":" + f for f in tracked(["*.md"])]
+    return subprocess.run([exe, *files], cwd=ROOT).returncode == 0
+
+
+def typos(exe, sarif_dir):
+    """The tracked text files, listed on stdin, since the list could pass Windows' command-line limit. typos reads a
+    file it is given even when it's binary."""
+    listing = "".join(f + "\n" for f in text_files()).encode("utf-8")
+    return subprocess.run([exe, "--format", "brief", "--file-list", "-"], cwd=ROOT, input=listing).returncode == 0
+
+
+def actionlint(exe, sarif_dir):
+    return subprocess.run([exe, *tracked([".github/workflows/*.yml"])], cwd=ROOT).returncode == 0
 
 
 def zizmor(exe, sarif_dir):
@@ -183,9 +230,15 @@ def psscriptanalyzer(exe, sarif_dir):
 TOOLS = [
     Tool("ruff", "ruff", "pip install -r requirements-dev.txt", ruff),
     Tool("luacheck", "luacheck", "luarocks install luacheck 1.2.0", luacheck),
+    Tool("lua-language-server", "lua-language-server",
+         "Get it from https://github.com/LuaLS/lua-language-server/releases (lint.yml has the version).", luals),
     Tool("psscriptanalyzer", ("pwsh", "powershell"),
          "Install-Module PSScriptAnalyzer, InjectionHunter -Scope CurrentUser (the versions are in lint.yml)",
          psscriptanalyzer),
+    Tool("markdownlint", "markdownlint-cli2", "npm ci", markdownlint),
+    Tool("typos", "typos", "pip install -r requirements-dev.txt", typos),
+    Tool("actionlint", "actionlint",
+         "Get it from https://github.com/rhysd/actionlint/releases (lint.yml has the version).", actionlint),
     Tool("zizmor", "zizmor", "pip install -r requirements-dev.txt", zizmor),
     Tool("gitleaks", "gitleaks", "Get it from https://github.com/gitleaks/gitleaks/releases (lint.yml has the version).",
          gitleaks),

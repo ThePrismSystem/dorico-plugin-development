@@ -1,0 +1,8 @@
+{
+  "config": {
+    // Prose wraps at 120 columns, and tables and links run past that, so line length isn't checked.
+    "MD013": false,
+    // Table cells aren't padded to line up, which would only add churn.
+    "MD060": false
+  }
+}

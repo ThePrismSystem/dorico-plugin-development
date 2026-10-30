@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import urllib.parse
 from pathlib import Path
 from unittest import mock
 
@@ -56,6 +57,14 @@ class TrackedTests(unittest.TestCase):
         (folder / "b.lua").write_text("return 2\n")
         subprocess.run(["git", "add", "dir with space/a.lua"], cwd=tmp, check=True)
         self.assertEqual(lint.tracked(["*.lua"], cwd=tmp), ["dir with space/a.lua"])
+
+    def test_text_files_leave_out_binaries_and_untracked_files(self):
+        tmp = temp_repo(self)
+        (tmp / "a b.md").write_text("words\n")
+        (tmp / "score.dorico").write_bytes(bytes([80, 75, 3, 4, 0, 0]) + b"binary")
+        (tmp / "untracked.md").write_text("words\n")
+        subprocess.run(["git", "add", "a b.md", "score.dorico"], cwd=tmp, check=True)
+        self.assertEqual(lint.text_files(cwd=tmp), ["a b.md"])
 
 
 class RunToolTests(unittest.TestCase):
@@ -140,6 +149,87 @@ class LuacheckTests(unittest.TestCase):
         argv = run.call_args.args[0]
         self.assertEqual(argv[:3], ["luacheck", "--config", str(lint.ROOT / ".luacheckrc")])
         self.assertEqual(argv[-2:], files)
+
+
+def file_uri(path):
+    """A file URI as lua-language-server writes one: a Windows drive letter in lower case and its colon quoted."""
+    posix = Path(path).as_posix()
+    if posix[1:2] == ":":
+        posix = "/" + posix[0].lower() + posix[1:]
+    return "file://" + urllib.parse.quote(posix)
+
+
+class LuaLsTests(unittest.TestCase):
+    def run_luals(self, report, code):
+        """Runs the tool with lua-language-server faked: it writes report (unless None) and exits with code."""
+        calls = []
+
+        def run(argv, **_):
+            calls.append(argv)
+            source = Path(next(a for a in argv if a.startswith("--check=")).split("=", 1)[1])
+            out = Path(next(a for a in argv if a.startswith("--check_out_path=")).split("=", 1)[1])
+            if report is not None:
+                out.write_text(json.dumps(report(source)), encoding="utf-8")
+            return subprocess.CompletedProcess(argv, code, stdout="", stderr="")
+        with mock.patch.object(lint, "copy_tracked"), mock.patch("subprocess.run", side_effect=run):
+            clean, printed = quietly(tool("lua-language-server").run, "lua-language-server", None)
+        return clean, printed, calls[0]
+
+    def test_checks_a_copy_of_the_tracked_files(self):
+        _, _, argv = self.run_luals(lambda source: [], 0)
+        self.assertEqual(argv[0], "lua-language-server")
+        check = next(a for a in argv if a.startswith("--check=")).split("=", 1)[1]
+        self.assertNotEqual(Path(check), lint.ROOT, "a copy, never the folder")
+        self.assertIn("--checklevel=Warning", argv)
+        self.assertIn("--configpath=" + str(lint.ROOT / ".luarc.json"), argv)
+
+    def test_a_clean_report_passes(self):
+        # a clean run writes an empty list
+        clean, _, _ = self.run_luals(lambda source: [], 0)
+        self.assertTrue(clean)
+
+    def test_findings_fail_with_repo_paths(self):
+        def report(source):
+            return {file_uri(source / "examples" / "a b.lua"): [
+                {"code": "undefined-global", "message": "m", "range": {"start": {"line": 4, "character": 0}}}]}
+        clean, printed, _ = self.run_luals(report, 1)
+        self.assertFalse(clean)
+        self.assertIn("examples/a b.lua:5 undefined-global m", printed)
+
+    def test_no_report_fails(self):
+        # lua-language-server writes nothing when it crashes, such as on a path it can't read
+        clean, _, _ = self.run_luals(None, 1)
+        self.assertFalse(clean)
+
+
+class MarkdownlintTests(unittest.TestCase):
+    def test_runs_on_tracked_markdown_as_literal_paths(self):
+        files = ["README.md", "docs/a [b].md"]
+        with mock.patch.object(lint, "tracked", return_value=files), \
+                mock.patch("subprocess.run", return_value=subprocess.CompletedProcess([], 0)) as run:
+            self.assertTrue(tool("markdownlint").run("markdownlint-cli2", None))
+        # a leading ":" stops markdownlint-cli2 reading a path as a glob
+        self.assertEqual(run.call_args.args[0], ["markdownlint-cli2", ":README.md", ":docs/a [b].md"])
+
+
+class TyposTests(unittest.TestCase):
+    def test_reads_the_file_list_on_stdin(self):
+        # a list on the command line could pass Windows' 32,767-character limit
+        files = ["README.md", "examples/a b.lua", "docs/café.md"]
+        with mock.patch.object(lint, "text_files", return_value=files), \
+                mock.patch("subprocess.run", return_value=subprocess.CompletedProcess([], 0)) as run:
+            self.assertTrue(tool("typos").run("typos", None))
+        self.assertEqual(run.call_args.args[0], ["typos", "--format", "brief", "--file-list", "-"])
+        self.assertEqual(run.call_args.kwargs["input"], "README.md\nexamples/a b.lua\ndocs/café.md\n".encode("utf-8"))
+
+
+class ActionlintTests(unittest.TestCase):
+    def test_runs_on_tracked_workflows(self):
+        files = [".github/workflows/lint.yml", ".github/workflows/test.yml"]
+        with mock.patch.object(lint, "tracked", return_value=files), \
+                mock.patch("subprocess.run", return_value=subprocess.CompletedProcess([], 0)) as run:
+            self.assertTrue(tool("actionlint").run("actionlint", None))
+        self.assertEqual(run.call_args.args[0], ["actionlint", *files])
 
 
 class ZizmorTests(unittest.TestCase):

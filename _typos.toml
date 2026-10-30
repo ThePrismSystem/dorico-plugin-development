@@ -1,0 +1,29 @@
+[default]
+# The docs and comments use British spelling.
+locale = "en-gb"
+# AppleScript's own message on Cancel, and a probe's list of the property names it tried.
+extend-ignore-re = ['User canceled\.', '"color"']
+
+[default.extend-identifiers]
+# Names from other APIs, spelt their way: PSScriptAnalyzer, Windows Forms and SARIF.
+PSScriptAnalyzer = "PSScriptAnalyzer"
+PSScriptAnalyzerSettings = "PSScriptAnalyzerSettings"
+ScriptAnalyzer = "ScriptAnalyzer"
+CenterScreen = "CenterScreen"
+MaximizeBox = "MaximizeBox"
+MinimizeBox = "MinimizeBox"
+artifactLocation = "artifactLocation"
+
+[default.extend-words]
+# A group of notes played in the time of another number of them, such as a triplet.
+tuplet = "tuplet"
+tuplets = "tuplets"
+# German note names: E sharp and G flat.
+eis = "eis"
+ges = "ges"
+# "café" written with its é as escapes, in a test of accented letters.
+caf = "caf"
+# Dialog is the usual spelling for a software window, in British English too.
+dialogs = "dialogs"
+# CodeQL's subcommand and the code scanning job that runs it.
+analyze = "analyze"
