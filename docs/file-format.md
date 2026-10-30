@@ -135,8 +135,8 @@ A `flow` has:
   on). Every flow carries a full set; `scoreOptions/defaultNotationOptionsForFlow` holds the defaults new flows take.
   Layout options are in each layout's `layoutOptions`, with defaults in `scoreOptions/defaultLayoutOptionsMap`.
   The reader gives each flow's accidental options as `flow.options.accidentals`: `durationBehaviour`, plus the
-  `cautionaryOptions` and `commonOptions` groups under their own names. Values are Dorico's own (`kShow`, `kHide`,
-  `kParenthesise`), with `true` and `false` turned into booleans. Every fixture so far uses `kCommonPractice`.
+  `cautionaryOptions` and `commonOptions` groups as `cautionary` and `common`. Values are Dorico's own (`kShow`,
+  `kHide`, `kParenthesise`), with `true` and `false` turned into booleans. Every fixture so far uses `kCommonPractice`.
 
 ### Streams and what they hold
 
@@ -156,8 +156,9 @@ block instances to their blocks. In the reading fixture and in a 6.2.20 project 
 A flow's `flowPlayers` says who owns what. Each `flowPlayer` names its `playerID` and its player stream
 (`eventStreamID`), and each of its `flowPlayerInstruments` names the `instrumentID` with its stave streams
 (`staveStreamInfos`: `staveStreamID`, `staveID`, `nthStaveInInstrument`) and voice streams (`voiceStreamInfos`:
-`voiceStreamID`, `instrumentID`, and `defaultLogicalStaveID`, the `staveID` of the stave the voice is on, which the
-reader gives as the voice's `staff`). That's the same ownership Lua gives through `flow.instruments[i]`, which owns
+`voiceStreamID`, `instrumentID`, and `defaultLogicalStaveID`, the `staveID` of the stave the voice is on). The
+reader gives a stave's `nthStaveInInstrument`, counted from 0 at the top, as its `staff`, and a voice the `staff` of
+the stave it's on. That's the same ownership Lua gives through `flow.instruments[i]`, which owns
 `flow.voiceStreams[i]`.
 
 Two kinds of stream are left out of `flowPlayers`, so the reader gives them no owner. The flow's

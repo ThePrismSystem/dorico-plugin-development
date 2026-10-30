@@ -14,7 +14,7 @@ developer building a full plug-in.
 
 - [examples/fundamentals](examples/fundamentals): nineteen short scripts, one technique each, numbered in the order
   to read them.
-- [examples/recipes](examples/recipes): six scripts that do a real job by combining the fundamentals.
+- [examples/recipes](examples/recipes): ten scripts that do a real job by combining the fundamentals.
 - [docs/guide.md](docs/guide.md): how Dorico's Lua scripting works, what doesn't, and the workarounds.
 - [docs/reference](docs/reference/README.md): every class and member a scan of Dorico's Lua state found, each marked
   verified, failing or not tried, with the commands tried so far. `types/dorico.lua` has editor definitions.
@@ -79,8 +79,9 @@ A read of the fixtures takes 0.8 to 1.6 s in Dorico, `app:save` included. Large 
 
 To have a script in the Script menu, copy it into Dorico's Script Plug-ins folder (on Windows,
 `%APPDATA%\Steinberg\Dorico 6\Script Plug-ins\`) and restart Dorico. Each example is one file, and starts with comment
-lines saying what it does, what it changes, how to undo it, and which examples it builds on. Examples 04 to 09 and 13
-load the reader from `lib/`, so copy the `lib` folder into Script Plug-ins beside them.
+lines saying what it does, what it changes, how to undo it, and which examples it builds on. Fundamentals 04 to 09
+and 13, and every recipe but colour-by-pitch and hotkey-colour-cycle, load the reader from `lib/`, so copy the `lib`
+folder into Script Plug-ins beside them.
 
 ## The examples
 

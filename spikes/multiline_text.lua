@@ -22,7 +22,7 @@ probe.run("multiline_text", function(p)
   if p:check("the copy has the text", text ~= nil) then
     p:fact("words", text.words)
     p:fact("paragraphs", #text.paragraphs)
-    p:check("two paragraphs", #text.paragraphs == 2, #text.paragraphs)
+    p:check("one paragraph", #text.paragraphs == 1, #text.paragraphs)
     p:check("the words keep the newline", text.words == "E5\nC5", text.words)
   end
 end)

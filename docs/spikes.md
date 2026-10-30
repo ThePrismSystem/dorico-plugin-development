@@ -368,7 +368,7 @@ its events with the reader, acts on them by the ids the file gives, and reads th
 
 ## Probes for the recipes
 
-Probes: `multiline_text.lua` on a scratch copy of `fixtures/6.2.30/reading.dorico`, and `pickup.lua` on an import of
+Probes: `multiline_text.lua` on a scratch copy of `fixtures/6.2.30/sample.dorico`, and `pickup.lua` on an import of
 `fixtures/pickup.musicxml`. The rest came from building the recipes' fixtures and running their tests.
 
 - A newline in `createText`'s words stays in the text: "E5\nC5" is one paragraph, drawn as two stacked lines. The
@@ -384,5 +384,5 @@ Probes: `multiline_text.lua` on a scratch copy of `fixtures/6.2.30/reading.doric
   list's `CB_SETCURSEL` sets the item the form reads back.
 - `chord_replace.lua`, on a scratch copy of the texts fixture: entering a chord symbol with the chord-symbol commands
   over an existing one replaces it, giving it a new event id. A definition Dorico can't read, such as "Xyzzy", leaves
-  the old chord symbol as it was, with its old id. One chord symbol replaced this way took two Edit > Undo presses to
-  take back.
+  the old chord symbol as it was, with its old id. In the find and replace recipe's test
+  (`find_and_replace_chord_symbol`), one chord symbol replaced this way took two Edit > Undo presses to take back.
