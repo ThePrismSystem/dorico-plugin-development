@@ -214,14 +214,14 @@ its own file, its path and its unsaved mark, and nothing goes on the undo histor
 local savedcopy = require("scorereader.dorico.savedcopy")
 local score = require("scorereader.score")
 local s = savedcopy.read(DoApp.DoApp())
-local fullScore
-for _, layout in ipairs(s.layouts) do
-  if not fullScore and layout.type == "kFullScoreLayout" then fullScore = layout.id end
-end
+local fullScore = score.fullScoreOf(s)
 for _, e in ipairs(score.eventsOf(s, s.flows[1], s.players[1])) do
-  print(e.kind, e.id, e.spelling, score.value(s, e, "kEventColour", fullScore))
+  print(e.kind, e.id, e.spelling, fullScore and score.value(s, e, "kEventColour", fullScore.id))
 end
 ```
+
+`score.fullScoreOf` gives nil for a project whose full score layout was deleted, so check it before asking for a
+value in it.
 
 What it gives:
 

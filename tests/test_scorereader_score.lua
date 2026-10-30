@@ -519,6 +519,11 @@ return {
     t:eq(s.layouts[1].type, "kFullScoreLayout")
     t:eq(#s.layouts[1].playerIds, 6)
     t:eq(score.partOf(s, s.players[1]).playerIds[1], s.players[1].id)
+    t:eq(score.fullScoreOf(s), s.layouts[1])
+  end,
+  a_score_with_no_full_score_layout = function(t)
+    local s = { layouts = { { id = 3, type = "kPartLayout" }, { id = 4, type = "kPartLayout" } } }
+    t:eq(score.fullScoreOf(s), nil)
   end,
   an_empty_score_reads_cleanly = function(t)
     local s = score.read(xml.decode(EMPTY_SCORE))
