@@ -243,9 +243,12 @@ the `text`, a `syllableType` (`kStart`, `kMiddle`, `kEnd`, `kWholeWord`), a `lin
 
 A `BarDivisionEventDefinition` in the timebase stream points by `barDivisionElementID`
 to `barDivisionData/timeSignature/timeSignaturesAndDivisions/timeSignatureAndDivision/timeSignature`, with
-`numerator`, `denominator` and the beat grouping. A `TonalityDivisionEventDefinition` points to
-`tonalityDivisionData/keySignature`, whose `root` has a `tonalityType` (`kKeySigMajor`) and a `root` note
-(`noteName` `G`, `accidentalID` `accidental.12et.western.natural`).
+`numerator`, `denominator` and the beat grouping. The list is empty in 29 of the 961 bar divisions in the 53
+projects, most of them barline changes; the reader gives those `barlineOnly`. A `TonalityDivisionEventDefinition`
+points to `tonalityDivisionData/keySignature`, whose `root` has a `tonalityType` (`kKeySigMajor`) and a `root` note
+(`noteName` `G`, `accidentalID` `accidental.12et.western.natural`). Every major and minor key has a root note. Steinberg's
+Smith example uses another tonality system, and its flat keys name `accidental.24et.western.flat.gould`; the reader
+gives such a key its `accidentalID` but no `root` or `fifths`.
 
 #### Tuplets, tempos and techniques
 

@@ -104,6 +104,13 @@ return {
     }
     for _, c in ipairs(cases) do refused(t, errorWith(c[1], "kRenamed"), c[2], c[2]) end
   end,
+  a_major_key_with_no_root = function(t)
+    local tr = reading()
+    local el = elementOf(tr, firstEvent(tr, "TonalityDivisionEventDefinition"), "tonalityDivisionElementID",
+      "TonalityDivisionElementTableDefinition")
+    refused(t, errorWith(tree.path(tr, el, "tonalityDivisionData/keySignature/root/root/noteName"), "kRenamed"),
+      "is major but has no root", "a major key")
+  end,
   a_definition_missing_from_the_library = function(t)
     local tr = reading()
     local instrument = first(tr, first(tr, 0, "scorePlayers/array"), "instruments")

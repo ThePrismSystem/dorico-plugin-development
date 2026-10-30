@@ -82,6 +82,31 @@ local function changedChord(change)
   return events(score.read(s.tree), "chordSymbol")[1]
 end
 
+-- The element an event of the reading fixture points to, in the score s read from tree.
+local function elementOf(s, e, idField, tableName)
+  local id = tonumber(tree.value(s.tree, tree.child(s.tree, e.node, idField)))
+  for _, flow in ipairs(s.flows) do
+    if flow.id == e.flowId then return flow.elements[tableName][id] end
+  end
+end
+
+-- The reading fixture's first key signature, read again after change(tree, its keySignature node).
+local function changedKey(change)
+  local s = score.readFile(fixtures .. "6.2.30/reading.dorico")
+  local el = elementOf(s, events(s, "keySignature")[1], "tonalityDivisionElementID",
+    "TonalityDivisionElementTableDefinition")
+  change(s.tree, tree.path(s.tree, el, "tonalityDivisionData/keySignature"))
+  return events(score.read(s.tree), "keySignature")[1]
+end
+
+local function keyOf(mode, letter, accidental)
+  return changedKey(function(tr, key)
+    setValue(tr, tree.path(tr, key, "root/tonalityType"), mode)
+    setValue(tr, tree.path(tr, key, "root/root/noteName"), letter)
+    setValue(tr, tree.path(tr, key, "root/root/accidentalID"), "accidental.12et.western." .. accidental)
+  end)
+end
+
 -- A score with one empty flow, no players and no layouts: every list the reader walks is there, and empty.
 local EMPTY_SCORE = "<kScore><fileVersion>1.1452</fileVersion><info><title>Empty</title>"
   .. "<lastSavedVersion>6.2.30</lastSavedVersion></info>"
@@ -233,6 +258,33 @@ return {
       t:eq(times[i].numerator, x.beats)
       t:eq(times[i].denominator, x.beatType)
     end
+  end,
+  minor_and_flat_keys = function(t)
+    local bFlat = keyOf("kKeySigMajor", "B", "flat")
+    t:eq(bFlat.root, "Bb")
+    t:eq(bFlat.fifths, -2)
+    local gMinor = keyOf("kKeySigMinor", "G", "natural")
+    t:eq(gMinor.mode, "minor")
+    t:eq(gMinor.fifths, -2)
+    t:eq(keyOf("kKeySigMinor", "F", "sharp").fifths, 3, "F sharp minor")
+    t:eq(keyOf("kKeySigMajor", "C", "flat").fifths, -7, "C flat major")
+  end,
+  a_key_in_another_tonality_system_has_no_root = function(t)
+    local e = changedKey(function(tr, key)
+      setValue(tr, tree.path(tr, key, "root/root/accidentalID"), "accidental.24et.western.flat.gould")
+    end)
+    t:eq(e.mode, "major")
+    t:eq(e.accidentalID, "accidental.24et.western.flat.gould")
+    t:eq(e.root, nil, "not the bare letter")
+    t:eq(e.fifths, nil)
+  end,
+  a_bar_division_with_no_time_signature = function(t)
+    local s = score.readFile(fixtures .. "6.2.30/reading.dorico")
+    local el = elementOf(s, events(s, "timeSignature")[1], "barDivisionElementID", "BarDivisionElementTableDefinition")
+    s.tree.kidsOf[tree.path(s.tree, el, "barDivisionData/timeSignature/timeSignaturesAndDivisions")] = {}
+    local e = events(score.read(s.tree), "timeSignature")[1]
+    t:eq(e.barlineOnly, true)
+    t:eq(e.numerator, nil)
   end,
   tuplets_tempos_marks_and_techniques = function(t)
     local s = load("6.2.30/reading.dorico")
