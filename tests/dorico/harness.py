@@ -26,9 +26,11 @@ PROJECTS = {None: SAMPLE, "reading": fixture_versions.newest("reading.dorico"),
             "somervell": fixture_versions.newest("Somervell_Shropshire_Lad.dorico")}
 SCRATCH = run_lua.RUN_DIR / "scratch.dorico"
 CLICK = ROOT / "tools" / "click.ps1"
-PRESS = ROOT / "tools" / "press.ps1"
 FILL = ROOT / "tools" / "fill.ps1"
 SETFIELD = ROOT / "tools" / "setfield.ps1"
+# seconds for one click, fill or setfield: click.ps1 can fall back to searching Dorico's UI Automation tree, which can
+# stall for minutes on a busy Dorico
+ANSWER_TIMEOUT = 60
 
 
 def check(test, result, name):
@@ -44,7 +46,7 @@ def scratch(test, case, args=None, open_file=SAMPLE, timeout=600):
     """Open a copy, run the first case on it, keep it open for more, and close it (unsaved) at the end."""
     client = dws.DoricoClient()
     client.connect()
-    score_id, result = None, None
+    score_id, result, closed = None, None, True
     try:
         code, result, score_id = run_lua.run(HERE / case, open_file=open_file, keep_open=True, extra_args=args or {},
                                              timeout=timeout, client=client)
@@ -52,8 +54,10 @@ def scratch(test, case, args=None, open_file=SAMPLE, timeout=600):
         yield client, check(test, result, case)
     finally:
         if result and ((result.get("facts") or {}).get("scratchVerified")):
-            run_lua.close_scratch(client, score_id)
+            closed = run_lua.close_scratch(client, score_id)
         client.close()
+    # here, not in the next test, which would find the copy still open
+    test.assertTrue(closed, "the scratch copy could not be closed; close it in Dorico without saving")
 
 
 def run_more(test, client, case, args=None, timeout=600, expect_ok=True):
@@ -89,16 +93,18 @@ def options(client, kind, key, ident, wait=15):
         time.sleep(0.5)
 
 
+def _tool(script, *args):
+    """True when the PowerShell tool exits 0 within ANSWER_TIMEOUT."""
+    try:
+        proc = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script), *args],
+                              capture_output=True, text=True, timeout=ANSWER_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        return False
+    return proc.returncode == 0
+
+
 def click(window, button):
-    proc = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(CLICK),
-                           "-Window", window, "-Button", button], capture_output=True, text=True)
-    return proc.returncode == 0
-
-
-def press(title, keys):
-    proc = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(PRESS),
-                           "-Title", title, "-Keys", keys], capture_output=True, text=True)
-    return proc.returncode == 0
+    return _tool(CLICK, "-Window", window, "-Button", button)
 
 
 def answer(window, button, text=None, timeout=60):
@@ -106,11 +112,8 @@ def answer(window, button, text=None, timeout=60):
     True when the button was pressed."""
     if not run_lua.wait_for(lambda: window in run_lua.open_windows(), timeout):
         return False
-    if text is not None:
-        proc = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(FILL),
-                               "-Window", window, "-Text", text], capture_output=True, text=True)
-        if proc.returncode != 0:
-            return False
+    if text is not None and not _tool(FILL, "-Window", window, "-Text", text):
+        return False
     return click(window, button)
 
 
@@ -121,21 +124,9 @@ def answer_form(window, button, fields=(), timeout=60):
         return False
     for kind, index, value in fields:
         value = str(value).lower() if isinstance(value, bool) else str(value)
-        proc = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(SETFIELD),
-                               "-Window", window, "-Kind", kind, "-Index", str(index), "-Value", value],
-                              capture_output=True, text=True)
-        if proc.returncode != 0:
+        if not _tool(SETFIELD, "-Window", window, "-Kind", kind, "-Index", str(index), "-Value", value):
             return False
     return click(window, button)
-
-
-def wait_for_window(title, timeout=90):
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        if title in run_lua.window_titles():
-            return True
-        time.sleep(0.5)
-    return False
 
 
 class Background:
