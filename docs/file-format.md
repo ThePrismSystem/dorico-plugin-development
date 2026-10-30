@@ -365,7 +365,7 @@ again.
 - One test always fails on a new version's files: `every_fixture_is_a_known_format`, because the new `fileVersion`
   isn't in the `dorico6` profile's list yet. If that's the only failure, nothing the reader relies on changed. Add the
   number to the profile's list in [`lib/scorereader/format.lua`](../lib/scorereader/format.lua) and to the version
-  table above, and commit the new fixtures folder.
+  table above, and commit the new fixtures folder with `fixtures/versions.json`, which the tool rewrites to list it.
 - If a test fails, its message names the node, the value and the format. `spikes/f1_changes.lua`, run over the old
   and new fixtures, lists the paths that appeared or went, and `spikes/tree_dump.lua` shows any part of a tree.
 - To teach the reader the change, add a profile to `format.PROFILES` with the new `fileVersion` and checks for the
