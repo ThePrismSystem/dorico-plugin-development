@@ -38,9 +38,9 @@ local function noteKeys(s, flow, player)
   return out
 end
 
-local function expectedKeys(notes, asNumbers)
+local function expectedKeys(list, asNumbers)
   local out = {}
-  for _, n in ipairs(notes) do
+  for _, n in ipairs(list) do
     local p = asNumbers and tostring(n.pos) or n.pos
     local d = n.grace and "" or (asNumbers and tostring(n.duration) or n.duration)
     out[#out + 1] = table.concat({ n.spelling, p, d, tostring(n.grace) }, "|")
@@ -602,7 +602,7 @@ return {
     for _, entry in ipairs(readJson(fixtures .. "versions.json")) do
       local s = load(entry.path)
       t:ok(#s.flows > 0, entry.path)
-      local notes = 0
+      local noteCount = 0
       for fi, flow in ipairs(s.flows) do
         local condensed = condensedStreamIds(s, fi)
         for _, e in ipairs(flow.events) do
@@ -615,7 +615,7 @@ return {
           end
           t:ok(e.position.den > 0 and e.duration.num >= 0, where .. " position and duration")
           if e.kind == "note" or e.kind == "grace" then
-            notes = notes + 1
+            noteCount = noteCount + 1
             t:ok(e.pitch >= 0 and e.pitch <= 127, where .. " pitch " .. e.pitch)
             t:ok(e.spelling:match("^[A-G][#bx]*%-?%d$"), where .. " spelling " .. tostring(e.spelling))
           end
@@ -630,7 +630,7 @@ return {
           t:ok(score.entries(s, e), where .. " properties")
         end
       end
-      t:ok(notes > 0, entry.path .. " has notes")
+      t:ok(noteCount > 0, entry.path .. " has notes")
     end
   end,
 }

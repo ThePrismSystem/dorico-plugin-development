@@ -106,10 +106,10 @@ function xml.decode(text)
       if not name or not id or names[nameOf[id] + 1] ~= name then
         fail("</" .. tostring(name) .. "> doesn't close " .. (id and "<" .. names[nameOf[id] + 1] .. ">" or "anything"))
       end
-      local text = pending[#stack]
+      local content = pending[#stack]
       -- An empty list written across lines holds its indentation, which isn't a value: score.dtn gives it none.
-      if text and arrayOf[id] and not text:find("%S") then text = "" end
-      if text then valueOf[id] = intern(values, valueIndex, unescape(text)) end
+      if content and arrayOf[id] and not content:find("%S") then content = "" end
+      if content then valueOf[id] = intern(values, valueIndex, unescape(content)) end
       pending[#stack] = nil
       stack[#stack] = nil
       if #stack == 0 then rootClosed = true end
@@ -118,7 +118,6 @@ function xml.decode(text)
       local selfClosing = sub(tag, -1) == "/"
       local name, attrs = tag:match("^([%w_:%.%-]+)(.-)/?$")
       if not name then fail("a tag that isn't an element: <" .. tag .. ">") end
-      local depth = #stack
       if depth > 0 and pending[depth] then
         if pending[depth]:find("%S") then mixed(stack[depth]) end
         pending[depth] = false

@@ -17,7 +17,7 @@ local function guard()
 end
 -- end helper: guard
 
-local app, score = guard()
+local _, score = guard()
 if not score then return end
 
 -- tostring(player) is the player's name as the Setup panel shows it, except that Dorico's music symbols come out

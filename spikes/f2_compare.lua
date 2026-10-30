@@ -34,7 +34,7 @@ local kinds, problems = {}, 0
 for fi, flow in ipairs(lua.flows) do
   local fnode = flowNodes[fi]
   -- the file's streams and which blocks each holds, through the block instances
-  local streamType, blocksOf, instanceOf = {}, {}, {}
+  local streamType, blocksOf = {}, {}
   for _, s in ipairs(tree.children(t, tree.path(t, fnode, "eventStreams/array"))) do
     streamType[tonumber(value(s, "streamID"))] = value(s, "eventStreamType")
   end
@@ -42,7 +42,6 @@ for fi, flow in ipairs(lua.flows) do
     local sid, bid = tonumber(value(bi, "streamID")), tonumber(value(bi, "blockID"))
     blocksOf[sid] = blocksOf[sid] or {}
     table.insert(blocksOf[sid], bid)
-    instanceOf[bid] = tonumber(value(bi, "blockInstanceID"))
   end
   local eventsOfBlock = {}
   for _, b in ipairs(tree.children(t, tree.path(t, fnode, "blocks/array"))) do

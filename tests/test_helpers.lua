@@ -198,7 +198,7 @@ return {
     local guard = helpers.load(HELLO, "guard")
     local hub = setmetatable({}, { __index = function() error("No such property: currentScore") end })
     local score
-    local printed = withDorico(hub, function() _, score = guard() end)
+    local printed = withDorico(hub, function() score = select(2, guard()) end)
     t:eq(score, nil)
     t:eq(printed[1], "Open a project first, then run this script again.")
   end,
@@ -280,7 +280,7 @@ return {
     local chords = helpers.load(CHORDS, "chords")
     local starts = bars.starts({ { pos = 0, numerator = 4, denominator = 4 } }, 16)
     local function n(pos, duration, spelling) return { pos = pos, duration = duration, spelling = spelling } end
-    local function brief(list)
+    local function briefChords(list)
       local out = {}
       for i, c in ipairs(list) do out[i] = c.bar .. ":" .. c.name .. "@" .. c.pos end
       return table.concat(out, " ")
@@ -291,14 +291,14 @@ return {
       n(4, 4, "A3"), n(4, 2, "C4"), n(4, 2, "E4"), n(6, 1, "B4"),
       n(8, 4, "A3"), n(8, 4, "C4"), n(8, 4, "E4"),
       n(13, 3, "G3"), n(13, 3, "B3"), n(13, 3, "D4"), n(13, 3, "F4") }
-    t:eq(brief(barchords.of(notes, starts, chords.name)), "1:C@0 2:Am@4 4:G7@13")
+    t:eq(briefChords(barchords.of(notes, starts, chords.name)), "1:C@0 2:Am@4 4:G7@13")
     local tied = { n(0, 8, "C4"), n(0, 8, "E4"), n(0, 8, "G4"), n(8, 4, "F4"), n(8, 4, "A4"), n(8, 4, "C5") }
-    t:eq(brief(barchords.of(tied, starts, chords.name)), "1:C@0 3:F@8", "a chord tied into bar 2 isn't new there")
-    t:eq(brief(barchords.of({ n(0, 4, "C4"), n(0, 4, "G4") }, starts, chords.name)), "", "two pitch classes")
+    t:eq(briefChords(barchords.of(tied, starts, chords.name)), "1:C@0 3:F@8", "a chord tied into bar 2 isn't new there")
+    t:eq(briefChords(barchords.of({ n(0, 4, "C4"), n(0, 4, "G4") }, starts, chords.name)), "", "two pitch classes")
     -- C, then F struck on beat 3 and held through bar 2, where no note starts, then F struck again in bar 3
     local held = { n(0, 2, "C4"), n(0, 2, "E4"), n(0, 2, "G4"), n(2, 6, "F4"), n(2, 6, "A4"), n(2, 6, "C5"),
       n(8, 4, "F4"), n(8, 4, "A4"), n(8, 4, "C5"), n(12, 4, "G3"), n(12, 4, "B3"), n(12, 4, "D4"), n(12, 4, "F4") }
-    t:eq(brief(barchords.of(held, starts, chords.name)), "1:C@0 3:F@8 4:G7@12",
+    t:eq(briefChords(barchords.of(held, starts, chords.name)), "1:C@0 3:F@8 4:G7@12",
       "a chord reached by held notes goes in at the next bar where a note starts")
   end,
 
@@ -320,22 +320,22 @@ return {
   out_of_range_against_the_instruments_own_ranges = function(t)
     local outofrange, midi = helpers.load(PROOFREAD, "outofrange"), helpers.load(BY_ID, "midi")
     local flute = { standard = "C4-A6", advanced = "B3-D7" }
-    local function brief(pitch, range)
+    local function briefRange(pitch, range)
       local out = outofrange.check(pitch, range, midi)
       return out and table.concat({ out.side, out.which, out.from, out.to }, " ") or "in range"
     end
-    t:eq(brief(57, flute), "below advanced B3 D7", "A3 is past even the advanced range")
-    t:eq(brief(59, flute), "below standard C4 A6", "B3 is past only the standard range")
-    t:eq(brief(60, flute), "in range")
-    t:eq(brief(93, flute), "in range", "A6, the top of the standard range")
-    t:eq(brief(95, flute), "above standard C4 A6")
-    t:eq(brief(99, flute), "above advanced B3 D7")
+    t:eq(briefRange(57, flute), "below advanced B3 D7", "A3 is past even the advanced range")
+    t:eq(briefRange(59, flute), "below standard C4 A6", "B3 is past only the standard range")
+    t:eq(briefRange(60, flute), "in range")
+    t:eq(briefRange(93, flute), "in range", "A6, the top of the standard range")
+    t:eq(briefRange(95, flute), "above standard C4 A6")
+    t:eq(briefRange(99, flute), "above advanced B3 D7")
     local bassoon = { standard = "A#1-A4", advanced = "A1-E5" }
-    t:eq(brief(33, bassoon), "below standard A#1 A4", "A1, under a range that starts on a sharp")
-    t:eq(brief(32, bassoon), "below advanced A1 E5")
-    t:eq(brief(10, { standard = "A0-C8" }), "below standard A0 C8", "only a standard range")
-    t:eq(brief(10, {}), "in range", "no range, as for unpitched percussion")
-    t:eq(brief(10, nil), "in range")
+    t:eq(briefRange(33, bassoon), "below standard A#1 A4", "A1, under a range that starts on a sharp")
+    t:eq(briefRange(32, bassoon), "below advanced A1 E5")
+    t:eq(briefRange(10, { standard = "A0-C8" }), "below standard A0 C8", "only a standard range")
+    t:eq(briefRange(10, {}), "in range", "no range, as for unpitched percussion")
+    t:eq(briefRange(10, nil), "in range")
     t:ok(outofrange.readable(flute))
     t:ok(outofrange.readable({ standard = "A0-C8" }), "only a standard range")
     t:ok(not outofrange.readable({}), "no range")
@@ -346,8 +346,8 @@ return {
   guard_returns_the_open_project = function(t)
     local guard = helpers.load(HELLO, "guard")
     local project = { flows = {} }
-    local app, score
-    local printed = withDorico({ currentScore = project }, function() app, score = guard() end)
+    local score
+    local printed = withDorico({ currentScore = project }, function() score = select(2, guard()) end)
     t:eq(score, project)
     t:eq(#printed, 0, "nothing printed")
   end,
@@ -598,16 +598,16 @@ return {
     if package.config:sub(1, 1) ~= "\\" then return end
     local form = helpers.load(ASK, "form")
     local title = "x\226\128\153; Write-Output INJECTED; \226\128\152"
-    local script, parse, out = TMP .. "/form-test-box.ps1", TMP .. "/form-test-parse.ps1", TMP .. "/form-test-parse.txt"
+    local script, parser, out = TMP .. "/form-test-box.ps1", TMP .. "/form-test-parse.ps1", TMP .. "/form-test-parse.txt"
     writeFile(script, "\239\187\191" .. form.script(title,
       { { key = "k", label = "WE\226\128\153LL GATHER LILACS", kind = "text" } }))
-    writeFile(parse, PARSE_TITLE)
+    writeFile(parser, PARSE_TITLE)
     os.remove(out)
-    os.execute('powershell -NoProfile -ExecutionPolicy Bypass -File "' .. parse .. '" -Path "' .. script
+    os.execute('powershell -NoProfile -ExecutionPolicy Bypass -File "' .. parser .. '" -Path "' .. script
       .. '" -Out "' .. out .. '"')
     local text = readFile(out)
     os.remove(script)
-    os.remove(parse)
+    os.remove(parser)
     os.remove(out)
     t:eq(text, "0\n" .. title, "no parse errors, and the title is the whole string")
   end,

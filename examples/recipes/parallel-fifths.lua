@@ -487,10 +487,10 @@ do
             table.insert(ranks[rank], { id = n.e.id, pos = t, duration = stop - t, pitch = n.e.pitch })
           end
         end
-        for rank, notes in ipairs(ranks) do
+        for rank, rankNotes in ipairs(ranks) do
           local label = name .. (voices[name] > 1 and (" voice " .. voices[name]) or "")
           if #ranks > 1 then label = label .. ", note " .. rank .. " from the top" end
-          parts[#parts + 1] = { name = label, notes = notes }
+          parts[#parts + 1] = { name = label, notes = rankNotes }
         end
       end
     end
