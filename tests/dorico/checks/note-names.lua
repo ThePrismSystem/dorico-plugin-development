@@ -11,7 +11,7 @@ return function(p, run, args)
   for _, flow in ipairs(s.flows) do
     for _, stream in ipairs(flow.streams) do
       if stream.type == "voice" then
-        local player = score.ownerOf(s, stream.events[1] or { streamId = stream.id }) or {}
+        local player = score.ownerOf(s, stream.events[1] or { flowId = flow.id, streamId = stream.id }) or {}
         if flow == s.flows[1] and player.name and not firstVoice[player.name] then
           firstVoice[player.name] = stream.id
         end
