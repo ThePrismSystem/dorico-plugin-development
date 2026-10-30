@@ -1,22 +1,20 @@
 -- Recipe: write a label above every note one player plays: its note name, or the trumpet valves that play it.
--- What it does: finds the first player whose name starts with PLAYER, and puts a staff text at each of its notes in
--- every flow: the valve numbers for the written note when LABELS is "valves", or the note's name when it's "names".
--- It prints how many labels it wrote. Change the three settings below for another player or instrument.
+-- What it does: reads a saved copy, finds the first player whose name starts with PLAYER, and puts a staff text at
+-- each of its notes in every flow: the valve numbers for the written note when LABELS is "valves", or the note's name
+-- when it's "names". It prints how many labels it wrote. Change the two settings below for another player.
 -- Changes: adds a staff text at each note of that player.
 -- Undo: Edit > Undo takes all the labels back in one step.
--- Builds on: 03-read-notes.lua, 11-act-on-the-selection.lua (which labels notes the same way) and
--- 12-select-by-id.lua (for the midi helper). Open Script > Show Script Console to read what it prints.
+-- Builds on: 04-read-the-saved-copy.lua, 05-names-and-titles.lua (instruments) and 11-act-on-the-selection.lua
+-- (which labels notes the same way). Open Script > Show Script Console to read what it prints.
 --
--- The dump gives sounding pitch, and Lua can't read an instrument's transposition, so the script has to be told it:
--- TRANSPOSE is how many semitones the written note sits above the sounding one. A B-flat trumpet or clarinet is 2, an
--- instrument in C is 0, an E-flat alto saxophone 9. Names are printed at sounding pitch, as the dump spells them;
--- valves are looked up for the written pitch, since that's what the player reads.
+-- The saved copy spells notes at sounding pitch and gives each instrument's transposition: a B-flat trumpet's written
+-- note is 2 semitones above the sounding one, and an instrument in C's is the same note. Valves are looked up for the
+-- written pitch, since that's what the player reads, and names are printed at sounding pitch.
 --
 -- A chord gets one label, with its notes' labels in a row. A note the valve table doesn't cover gets "?".
 
 local PLAYER = "Trumpet"
 local LABELS = "valves" -- or "names"
-local TRANSPOSE = 2
 
 -- Three-valve trumpet fingerings by written pitch, as a MIDI note number, from F#3 to C6: "0" is open, "12" is the
 -- first and second valves together, and so on.
@@ -40,87 +38,19 @@ local function guard()
 end
 -- end helper: guard
 
--- helper: dump
--- stream:dump() as tables. Each event line reads "<pos> (<pos>)[ dur: <d>]: <event>", where <event> is what
--- tostring(event) gives, such as "kNoteEvent (id:7932) at 0, duration 1  E5 (ends 1)". A "Start block id:" line
--- starts each block instance; the events after it belong to that instance (EventEdit.Select needs it).
---   dump.parse(text) -> {events = {{kind, id, pos, duration, spelling, grace, instance, raw}}}
---   dump.event(text, instance) -> one event from tostring(event), or nil
---   dump.notes(parsed) -> the notes and grace notes, {{id, spelling, pos, duration, grace, instance}}
---   dump.owners(score, flow) -> {[voice stream id] = player name}
--- Kinds are "note", "grace", "rest", "text" and "other". Positions and durations are quarter notes.
-local dump = {}
-do
-  local KINDS = {
-    kNoteEvent = "note", kGraceNoteEvent = "grace", kRestEvent = "rest", kBarRestEvent = "rest", kTextEvent = "text",
-  }
-  local SPELLING = "[A-G][#bx]*%-?%d+"
-
-  -- "13/2 (6.5)" gives 6.5 and "4" gives 4: the exact fraction, where there is one, beats the rounded decimal.
-  local function number(s)
-    local raw = s and s:match("^([%-%d%./]+)")
-    if not raw then return nil end
-    local a, b = raw:match("^(%-?%d+)/(%d+)$")
-    if a then return tonumber(a) / tonumber(b) end
-    return tonumber(raw)
+-- helper: reader
+-- Puts the reader library on the module path: lib/ two folders up in this repository, or a lib folder beside the
+-- script once both are copied into Script Plug-ins. Dorico keeps one Lua state, so the library's modules from an
+-- earlier run are cleared first.
+local function reader()
+  local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])") or ""
+  local paths = here .. "../../lib/?.lua;" .. here .. "lib/?.lua"
+  for name in pairs(package.loaded) do
+    if name:match("^scorereader") then package.loaded[name] = nil end
   end
-
-  function dump.event(text, instance)
-    local s = text and text:match("^(k%a+ %(id:%d+%).*)$")
-    if not s then return nil end
-    local ev = { kind = KINDS[s:match("^(k%a+)")] or "other", raw = s, instance = instance }
-    ev.id = tonumber(s:match("%(id:(%d+)%)"))
-    ev.pos = number(s:match(" at (%S+)"))
-    ev.duration = number(s:match(", duration (%S+)"))
-    ev.grace = ev.kind == "grace"
-    if ev.kind == "note" then
-      ev.spelling = s:match("%s(" .. SPELLING .. ") %(ends")
-    elseif ev.kind == "grace" then
-      ev.spelling = s:match(",%s*(" .. SPELLING .. ")%s*$")
-      ev.duration = nil
-    elseif ev.kind == "text" then
-      ev.text = s:match(" : (.*)$")
-    end
-    return ev
-  end
-
-  function dump.parse(text)
-    local out, instance = { events = {} }, nil
-    for line in (text or ""):gmatch("[^\r\n]+") do
-      local start = line:match("^Start block id: (%d+)")
-      if start then
-        instance = tonumber(start)
-      else
-        local ev = dump.event(line:match(": (k%a+ %(id:%d+%).*)$"), instance)
-        if ev then out.events[#out.events + 1] = ev end
-      end
-    end
-    return out
-  end
-
-  function dump.notes(parsed)
-    local notes = {}
-    for _, ev in ipairs(parsed.events) do
-      if (ev.kind == "note" or ev.kind == "grace") and ev.spelling then
-        notes[#notes + 1] = { id = ev.id, spelling = ev.spelling, pos = ev.pos, duration = ev.duration,
-          grace = ev.grace, instance = ev.instance }
-      end
-    end
-    return notes
-  end
-
-  -- flow.instruments[i] owns flow.voiceStreams[i], and tostring(player) is the player's name.
-  function dump.owners(score, flow)
-    local nameOf = {}
-    for _, player in ipairs(score.players) do
-      for _, instrument in ipairs(player.instruments) do nameOf[instrument.id] = tostring(player) end
-    end
-    local owners = {}
-    for i, stream in ipairs(flow.voiceStreams) do owners[stream.id] = nameOf[flow.instruments[i].id] end
-    return owners
-  end
+  if not package.path:find(paths, 1, true) then package.path = paths .. ";" .. package.path end
 end
--- end helper: dump
+-- end helper: reader
 
 -- helper: length
 -- A position or duration in quarter notes, as the DoCore.RhythmicLength that createNote, createRest and createText
@@ -136,52 +66,58 @@ local function length(quarters)
 end
 -- end helper: length
 
--- helper: midi
--- A spelling from the dump, such as "F#5", "Eb4" or "Bbb2", as a MIDI note number (middle C, "C4", is 60), or nil.
--- The octave goes with the letter, so "Cb4" is 59 and "B#3" is 60. "#" is a sharp, "x" a double sharp, "b" a flat.
-local function midi(spelling)
-  local letter, accidentals, octave = tostring(spelling):match("^([A-G])([#bx]*)(%-?%d+)$")
-  if not letter then return nil end
-  local n = ({ C = 0, D = 2, E = 4, F = 5, G = 7, A = 9, B = 11 })[letter] + (tonumber(octave) + 1) * 12
-  for a in accidentals:gmatch(".") do
-    n = n + ({ ["#"] = 1, x = 2, b = -1 })[a]
-  end
-  return n
-end
--- end helper: midi
+local app, project = guard()
+if not project then return end
+reader()
+local savedcopy = require("scorereader.dorico.savedcopy")
+local values = require("scorereader.values")
 
-local app, score = guard()
-if not score then return end
-
-local key
-for _, player in ipairs(score.players) do
-  if not key and tostring(player):sub(1, #PLAYER) == PLAYER then key = player.instruments[1].id end
+local ok, s = pcall(savedcopy.read, app)
+if not ok then
+  print("The reader couldn't read this project: " .. tostring(s))
+  return
 end
-if not key then
+
+local player
+for _, p in ipairs(s.players) do
+  if not player and p.name:sub(1, #PLAYER) == PLAYER then player = p end
+end
+if not player then
   print(string.format("No player's name starts with %q. Change PLAYER at the top of the script.", PLAYER))
   return
 end
 
-local function label(spelling)
-  if LABELS == "names" then return spelling end
-  return VALVES[midi(spelling) + TRANSPOSE] or "?"
+local function label(e, transposition)
+  if LABELS == "names" then return e.spelling end
+  return VALVES[e.pitch + (transposition and transposition.chromatic or 0)] or "?"
+end
+
+-- Lua's voice streams by id, to write into.
+local streams = {}
+for _, flow in ipairs(project.flows) do
+  for _, stream in ipairs(flow.voiceStreams) do streams[stream.id] = stream end
 end
 
 local written = 0
-for _, flow in ipairs(score.flows) do
-  for i, stream in ipairs(flow.voiceStreams) do
-    if flow.instruments[i].id == key then
+for _, flow in ipairs(s.flows) do
+  for _, stream in ipairs(flow.streams) do
+    if stream.type == "voice" and stream.playerId == player.id then
+      local transposition = (s.instruments[stream.instrumentId] or {}).transposition
       -- One label per position, so a chord gets one.
       local at, order = {}, {}
-      for _, note in ipairs(dump.notes(dump.parse(stream:dump()))) do
-        if not at[note.pos] then
-          at[note.pos] = {}
-          order[#order + 1] = note.pos
+      for _, e in ipairs(stream.events) do
+        if e.kind == "note" or e.kind == "grace" then
+          local pos = values.toNumber(e.position)
+          if not at[pos] then
+            at[pos] = {}
+            order[#order + 1] = pos
+          end
+          table.insert(at[pos], label(e, transposition))
         end
-        table.insert(at[note.pos], label(note.spelling))
       end
+      table.sort(order)
       for _, pos in ipairs(order) do
-        stream:createText(length(pos), length(1), table.concat(at[pos], " "))
+        streams[stream.id]:createText(length(pos), length(1), table.concat(at[pos], " "))
         written = written + 1
       end
     end
