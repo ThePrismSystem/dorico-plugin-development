@@ -15,9 +15,8 @@ vulnerability**, and describe what you found. Please don't open a public issue f
 Most examples change the open project. Each one's opening comment lines say what it changes and how to undo it.
 
 The examples that read the whole score have Dorico save a copy of the open project into the temp folder, then read
-the copy and delete it. Saving the copy doesn't touch the project's own file, its unsaved mark or its undo history.
-Fundamental 15 has Dorico export the project's text frames as a CSV into the temp folder, then reads the CSV and
-deletes it.
+the copy and delete it. Saving the copy adds nothing to the project's undo history. Fundamental 15 has Dorico export
+every text in the project as a CSV into the temp folder, then reads the CSV and deletes it.
 
 ## Programs they start
 
@@ -52,7 +51,7 @@ written on purpose to disguise a call could still get past it.
 
 ## Files they read and write
 
-All of these go in the temp folder: `TEMP` (or `TMP`) on Windows, `TMPDIR` on a Mac.
+All of these go in the temp folder: `%TEMP%` on Windows, `$TMPDIR` on a Mac.
 
 - `scorereader-copy.dorico`, the saved copy of the open project. It's deleted once it has been read. If it can't be,
   the Script Console says so, and the next run deletes it first.
