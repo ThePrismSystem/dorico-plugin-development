@@ -23,12 +23,29 @@ local function rootHas(names)
   end
 end
 
--- Newest first. Readers add the checks for the paths they rely on to the profiles they read.
+-- What scorereader.score needs in every flow.
+local FLOW_PARTS = { "flowID", "flowName", "flowPlayers", "eventStreams", "blocks", "blockInstances", "elementTables" }
+
+local function flowsHave(names)
+  return function(t)
+    local array = tree.path(t, 0, "flows/array")
+    if not array then return false, "the root has no flows/array" end
+    for _, flow in ipairs(tree.children(t, array)) do
+      for _, n in ipairs(names) do
+        if not tree.child(t, flow, n) then return false, "a flow has no " .. n end
+      end
+    end
+    return true
+  end
+end
+
+-- Newest first. A reader that relies on a path adds a check for it here.
 format.PROFILES = {
   {
     name = "dorico6",
     fileVersions = { "1.1392", "1.1412", "1.1416", "1.1417", "1.1444", "1.1450", "1.1452" },
-    checks = { rootNamed("kScore"), rootHas({ "fileVersion", "info", "flows", "scorePlayers", "layouts" }) },
+    checks = { rootNamed("kScore"), rootHas({ "fileVersion", "info", "flows", "scorePlayers", "layouts" }),
+      flowsHave(FLOW_PARTS) },
   },
 }
 

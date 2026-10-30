@@ -22,6 +22,11 @@ return {
     t:eq(values.positionText(values.position("13/3")), "13/3")
     t:eq(values.positionText(values.position("16")), "16")
   end,
+  adding_positions_stays_exact = function(t)
+    t:eq(values.positionText(values.add(values.position("13/3"), values.position("1/3"))), "14/3")
+    t:eq(values.positionText(values.add(values.position("2/3"), values.position("1/3"))), "1")
+    t:eq(values.positionText(values.add(values.position("16"), values.position("-1/2"))), "31/2")
+  end,
   a_position_that_is_not_one = function(t)
     fails(t, function() return values.position("1.5") end, "decimal")
     fails(t, function() return values.position("") end, "empty")

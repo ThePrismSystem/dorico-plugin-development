@@ -25,6 +25,20 @@ function values.toNumber(p)
   return p.num / p.den
 end
 
+local function gcd(a, b)
+  a, b = math.abs(a), math.abs(b)
+  while b ~= 0 do a, b = b, a % b end
+  return a
+end
+
+-- a + b, exactly, in lowest terms.
+function values.add(a, b)
+  local num, den = a.num * b.den + b.num * a.den, a.den * b.den
+  local g = gcd(num, den)
+  if g > 1 then num, den = num / g, den / g end
+  return { num = num, den = den }
+end
+
 -- Back to the file's own form: "13/3", or "16" for a whole number.
 function values.positionText(p)
   return p.den == 1 and tostring(p.num) or (p.num .. "/" .. p.den)

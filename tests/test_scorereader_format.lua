@@ -82,6 +82,12 @@ return {
     local err = errorOf(function() return format.detect(withName(s, tree.child(s, 0, "flows"), "flowz")) end)
     t:ok(err and err:find("flows", 1, true), tostring(err))
   end,
+  a_flow_without_what_the_readers_need = function(t)
+    local s = sample()
+    local blocks = tree.path(s, 0, "flows/array/flow/blocks")
+    local err = errorOf(function() return format.detect(withName(s, blocks, "blockz")) end)
+    t:ok(err and err:find("a flow has no blocks", 1, true), tostring(err))
+  end,
   no_file_version = function(t)
     local err = errorOf(function() return format.detect(xml.decode("<kScore><info/></kScore>")) end)
     t:ok(err and err:find("^scorereader: .*fileVersion"), tostring(err))
