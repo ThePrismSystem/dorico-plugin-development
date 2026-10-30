@@ -1,0 +1,594 @@
+{
+ "flows": [
+  {
+   "title": "Sample",
+   "players": [
+    {
+     "name": "Flute",
+     "notes": [
+      {
+       "spelling": "C5",
+       "pos": 0,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "D5",
+       "pos": 1,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "E5",
+       "pos": 2,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "F5",
+       "pos": 3,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "G5",
+       "pos": 4,
+       "duration": 2,
+       "grace": false
+      },
+      {
+       "spelling": "A3",
+       "pos": 6,
+       "duration": 2,
+       "grace": false
+      },
+      {
+       "spelling": "E5",
+       "pos": 8,
+       "duration": 2,
+       "grace": false
+      },
+      {
+       "spelling": "D5",
+       "pos": 10,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "C5",
+       "pos": 11,
+       "duration": 3,
+       "grace": false
+      },
+      {
+       "spelling": "E5",
+       "pos": 16,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "F5",
+       "pos": 20,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "G5",
+       "pos": 24,
+       "duration": 2,
+       "grace": false
+      },
+      {
+       "spelling": "G5",
+       "pos": 26,
+       "duration": 2,
+       "grace": false
+      },
+      {
+       "spelling": "C6",
+       "pos": 28,
+       "duration": 4,
+       "grace": false
+      }
+     ]
+    },
+    {
+     "name": "Trumpet Zoë (B{@flat@})",
+     "notes": [
+      {
+       "spelling": "G4",
+       "pos": 0,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "G4",
+       "pos": 1,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "A4",
+       "pos": 2,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "B4",
+       "pos": 3,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "C5",
+       "pos": 4,
+       "duration": 2,
+       "grace": false
+      },
+      {
+       "spelling": "D5",
+       "pos": 6,
+       "duration": 2,
+       "grace": false
+      },
+      {
+       "spelling": "E5",
+       "pos": 8,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "D5",
+       "pos": 12,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "C5",
+       "pos": 13,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "B4",
+       "pos": 14,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "C5",
+       "pos": 15,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "G4",
+       "pos": 16,
+       "duration": 2,
+       "grace": false
+      },
+      {
+       "spelling": "E4",
+       "pos": 20,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "F4",
+       "pos": 21,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "G4",
+       "pos": 22,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "A4",
+       "pos": 23,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "G4",
+       "pos": 24,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "C5",
+       "pos": 28,
+       "duration": 4,
+       "grace": false
+      }
+     ]
+    },
+    {
+     "name": "Violin, solo & tutti",
+     "notes": [
+      {
+       "spelling": "G4",
+       "pos": 0,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "A4",
+       "pos": 1,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "B4",
+       "pos": 2,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "C5",
+       "pos": 3,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "E5",
+       "pos": 4,
+       "duration": 2,
+       "grace": false
+      },
+      {
+       "spelling": "F5",
+       "pos": 4,
+       "duration": null,
+       "grace": true
+      },
+      {
+       "spelling": "D5",
+       "pos": 6,
+       "duration": 2,
+       "grace": false
+      },
+      {
+       "spelling": "C5",
+       "pos": 8,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "B4",
+       "pos": 12,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "A4",
+       "pos": 13,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "G4",
+       "pos": 14,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "A4",
+       "pos": 15,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "B4",
+       "pos": 16,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "C5",
+       "pos": 20,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "D5",
+       "pos": 24,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "E5",
+       "pos": 25,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "F5",
+       "pos": 26,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "G5",
+       "pos": 27,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "E5",
+       "pos": 28,
+       "duration": 4,
+       "grace": false
+      }
+     ]
+    },
+    {
+     "name": "Piano",
+     "notes": [
+      {
+       "spelling": "C3",
+       "pos": 0,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "C4",
+       "pos": 0,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "E4",
+       "pos": 0,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "G4",
+       "pos": 0,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "A2",
+       "pos": 4,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "E4",
+       "pos": 4,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "A4",
+       "pos": 4,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "C5",
+       "pos": 4,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "F2",
+       "pos": 8,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "F4",
+       "pos": 8,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "A4",
+       "pos": 8,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "C5",
+       "pos": 8,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "G2",
+       "pos": 12,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "B3",
+       "pos": 12,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "D4",
+       "pos": 12,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "F4",
+       "pos": 12,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "C3",
+       "pos": 16,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "G4",
+       "pos": 16,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "D3",
+       "pos": 20,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "A4",
+       "pos": 20,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "C3",
+       "pos": 24,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "C5",
+       "pos": 24,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "E5",
+       "pos": 24,
+       "duration": 2,
+       "grace": false
+      },
+      {
+       "spelling": "C5",
+       "pos": 25,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "C5",
+       "pos": 26,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "E5",
+       "pos": 26,
+       "duration": 2,
+       "grace": false
+      },
+      {
+       "spelling": "C5",
+       "pos": 27,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "C3",
+       "pos": 28,
+       "duration": 4,
+       "grace": false
+      },
+      {
+       "spelling": "C5",
+       "pos": 28,
+       "duration": 4,
+       "grace": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "title": "Second movement",
+   "players": [
+    {
+     "name": "Flute",
+     "notes": [
+      {
+       "spelling": "C5",
+       "pos": 0,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "D5",
+       "pos": 1,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "E5",
+       "pos": 2,
+       "duration": 1,
+       "grace": false
+      },
+      {
+       "spelling": "F5",
+       "pos": 3,
+       "duration": 1,
+       "grace": false
+      }
+     ]
+    },
+    {
+     "name": "Trumpet Zoë (B{@flat@})",
+     "notes": []
+    },
+    {
+     "name": "Violin, solo & tutti",
+     "notes": []
+    },
+    {
+     "name": "Piano",
+     "notes": []
+    }
+   ]
+  }
+ ],
+ "outOfRange": [
+  {
+   "player": "Flute",
+   "spelling": "A3",
+   "bar": 2,
+   "beat": 3
+  }
+ ],
+ "parallelFifths": [
+  {
+   "player": "Piano",
+   "bar": 6,
+   "beat": 1
+  }
+ ],
+ "chords": [
+  {
+   "bar": 1,
+   "name": "C"
+  },
+  {
+   "bar": 2,
+   "name": "Am"
+  },
+  {
+   "bar": 3,
+   "name": "F"
+  },
+  {
+   "bar": 4,
+   "name": "G7"
+  }
+ ],
+ "styled": {
+  "player": "Trumpet Zoë (B{@flat@})",
+  "pos": 0,
+  "notehead": "noteheadset.diamondNoteheads",
+  "colour": "#ffc80000"
+ }
+}

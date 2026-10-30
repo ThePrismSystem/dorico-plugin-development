@@ -1,3 +1,6 @@
 __pycache__/
 *.pyc
 fixtures/build/
+# the Remote Control API session token, and an optional client name (tools/dws.py)
+.dorico-token
+.dorico-client-name
