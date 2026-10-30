@@ -161,7 +161,7 @@ class RunTests(unittest.TestCase):
         self.assertEqual(len(client.closes()), 5)
 
     def test_a_close_that_cant_be_confirmed_exits_2(self):
-        # With no Dorico6 process (a later Dorico) capture.ps1 fails, and an empty list would read as a closed copy.
+        # With no Dorico6 process (a later Dorico) titles.ps1 fails, and an empty list would read as a closed copy.
         listed = iter([[]])
 
         def titles():
@@ -310,17 +310,35 @@ class RunTests(unittest.TestCase):
 
 class WindowTitleTests(unittest.TestCase):
     def test_a_failed_listing_is_an_error_not_an_empty_list(self):
-        failed = subprocess.CompletedProcess([], 1, stdout="",
-                                             stderr="Get-Process : Cannot find a process with the name \"Dorico6\".\n")
+        failed = subprocess.CompletedProcess([], 3, stdout="", stderr="no process named Dorico6 is running\n")
         with mock.patch.object(run_lua.subprocess, "run", return_value=failed), \
                 self.assertRaises(run_lua.WindowListError) as raised:
             run_lua.window_titles()
         self.assertIn("Dorico6", str(raised.exception))
 
-    def test_lists_the_titles(self):
-        listed = subprocess.CompletedProcess([], 0, stdout="w-0.png\t800 x 600\tSong in scratch*\n", stderr="")
-        with mock.patch.object(run_lua.subprocess, "run", return_value=listed):
-            self.assertEqual(run_lua.window_titles(), ["Song in scratch*"])
+    def test_lists_the_titles_through_win32(self):
+        # capture.ps1 -All waits on a busy Dorico, and saved a picture of each of the user's own windows.
+        listed = subprocess.CompletedProcess([], 0, stdout="Song in scratch*\r\nFugue in Bach\r\n", stderr="")
+        with mock.patch.object(run_lua.subprocess, "run", return_value=listed) as ran:
+            self.assertEqual(run_lua.window_titles(), ["Song in scratch*", "Fugue in Bach"])
+        command = ran.call_args.args[0]
+        self.assertEqual(Path(command[command.index("-File") + 1]).name, "titles.ps1")
+        self.assertEqual(command[command.index("-Process") + 1], "Dorico6")
+        self.assertIsNotNone(ran.call_args.kwargs.get("timeout"))
+
+    def test_a_listing_that_hangs_is_an_error(self):
+        with mock.patch.object(run_lua.subprocess, "run", side_effect=subprocess.TimeoutExpired("powershell", 30)), \
+                self.assertRaises(run_lua.WindowListError):
+            run_lua.window_titles()
+
+    @unittest.skipUnless(os.name == "nt", "titles.ps1 needs Windows")
+    def test_titles_fails_when_the_process_isnt_running(self):
+        # an empty list would read as "no scratch copy open"
+        proc = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(run_lua.TITLES),
+                               "-Process", "NoSuchProcessForTheTitlesTest"], capture_output=True, text=True, timeout=60)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertEqual(proc.stdout.strip(), "")
+        self.assertIn("NoSuchProcessForTheTitlesTest", proc.stderr)
 
     @unittest.skipUnless(os.name == "nt", "capture.ps1 needs Windows")
     def test_capture_lists_nothing_for_a_process_with_no_windows(self):

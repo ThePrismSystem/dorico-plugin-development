@@ -44,6 +44,7 @@ CLICK = Path(__file__).resolve().parent / "click.ps1"
 TITLES = Path(__file__).resolve().parent / "titles.ps1"
 DORICO_PROCESS = "Dorico6"
 PROMPT_TIMEOUT = 15  # seconds for one answer, which the 60s open waits on
+WINDOW_LIST_TIMEOUT = 30  # seconds for titles.ps1 to list Dorico's windows
 # Prompts Dorico raises when opening a scratch copy, and the key that answers each safely.
 # Matched by exact window title only; anything else is left alone and the run times out.
 KNOWN_PROMPTS = {"Activate Project for Playback": "{ESC}"}  # Esc = "Do Not Activate"
@@ -95,18 +96,21 @@ def syntax_error(script: Path):
 
 
 class WindowListError(OSError):
-    """capture.ps1 couldn't list Dorico's windows: no Dorico6 process, or none of its windows visible."""
+    """titles.ps1 couldn't list Dorico's windows: no Dorico6 process, or the listing failed or took too long."""
 
 
 def window_titles():
-    """The titles of Dorico's visible windows (capture.ps1 -All lists one per line: path, size, title). A failed
-    listing raises WindowListError, since an empty list would say no scratch copy is open."""
-    proc = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(PRESS.parent / "capture.ps1"),
-                           "-All", "-Out", str(RUN_DIR / "windows.png")], capture_output=True, text=True)
+    """The titles of Dorico's visible windows, read through Win32 (titles.ps1), which doesn't wait on a busy Dorico.
+    A failed listing raises WindowListError, since an empty list would say no scratch copy is open."""
+    try:
+        proc = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(TITLES),
+                               "-Process", DORICO_PROCESS], capture_output=True, text=True, timeout=WINDOW_LIST_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        raise WindowListError(f"titles.ps1 did not list Dorico's windows within {WINDOW_LIST_TIMEOUT}s") from None
     if proc.returncode != 0:
         said = (proc.stderr or proc.stdout).strip().splitlines()
-        raise WindowListError(f"capture.ps1 could not list Dorico's windows: {said[0] if said else proc.returncode}")
-    return [line.split("\t")[2] for line in proc.stdout.splitlines() if line.count("\t") >= 2]
+        raise WindowListError(f"titles.ps1 could not list Dorico's windows: {said[0] if said else proc.returncode}")
+    return [line.strip() for line in proc.stdout.splitlines() if line.strip()]
 
 
 def open_windows(process=None):
