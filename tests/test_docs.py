@@ -54,6 +54,23 @@ def broken(root):
     return found
 
 
+NUMBERED = re.compile(r"\[(\d\d)(?:-[^\]]*)?\]\(([^)\s]+)\)")
+
+
+def mislabelled(root):
+    """Every link labelled with an example's number ("[08]" or "[08-name]") whose target is another numbered example,
+    as "<file>: <link>". A renumbering can update a target and leave its label behind."""
+    root = Path(root)
+    found = []
+    for path in docs(root):
+        text = re.sub(r"```.*?```", "", path.read_text(encoding="utf-8"), flags=re.S)
+        for m in NUMBERED.finditer(text):
+            name = m.group(2).split("#")[0].rsplit("/", 1)[-1]
+            if re.match(r"^\d\d-", name) and not name.startswith(m.group(1) + "-"):
+                found.append(f"{path.relative_to(root).as_posix()}: {m.group(0)}")
+    return found
+
+
 class RuleTests(unittest.TestCase):
     def setUp(self):
         self.root = Path(tempfile.mkdtemp())
@@ -81,10 +98,18 @@ class RuleTests(unittest.TestCase):
         self.write("`[x](nowhere.md)`\n\n```\n[y](nowhere.md)\n```\n")
         self.assertEqual(broken(self.root), [])
 
+    def test_a_numbered_label_names_its_target(self):
+        (self.root / "docs" / "12-select.lua").write_text("", encoding="utf-8")
+        self.write("[12](docs/12-select.lua) [12-select](docs/12-select.lua) [08](docs/12-select.lua)\n")
+        self.assertEqual(mislabelled(self.root), ["README.md: [08](docs/12-select.lua)"])
+
 
 class DocsTests(unittest.TestCase):
     def test_links_resolve(self):
         self.assertEqual(broken(ROOT), [])
+
+    def test_numbered_labels_name_their_targets(self):
+        self.assertEqual(mislabelled(ROOT), [])
 
 
 if __name__ == "__main__":

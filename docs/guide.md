@@ -47,10 +47,12 @@ local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
 local root = here .. "My Plug-in/"
 ```
 
-The examples here are single files with no modules, so any of them runs from Script > Run Script as it is. DoricoUse
-found a second kind of plug-in in Dorico's binary, a folder holding an `Info.lua` with `MenuCommands`; it's
-described in [spikes.md](spikes.md) (S7) and wasn't tried here. Whether Dorico notices a new plug-in of either kind
-without a restart wasn't checked either, so restart to be sure.
+Most examples are single files with no modules, so they run from Script > Run Script as they are. Fundamentals 04 to 09
+and 13 read a saved copy and load the reader from `lib/`: run from this repository they find it two folders up, and in
+Script Plug-ins they need the `lib` folder copied beside them. DoricoUse found a second kind of plug-in in Dorico's
+binary, a folder holding an `Info.lua` with `MenuCommands`; it's described in [spikes.md](spikes.md) (S7) and wasn't
+tried here. Whether Dorico notices a new plug-in of either kind without a restart wasn't checked either, so restart to
+be sure.
 
 ### Where print goes
 
@@ -210,8 +212,12 @@ its own file, its path and its unsaved mark, and nothing goes on the undo histor
 local savedcopy = require("scorereader.dorico.savedcopy")
 local score = require("scorereader.score")
 local s = savedcopy.read(DoApp.DoApp())
+local fullScore
+for _, layout in ipairs(s.layouts) do
+  if not fullScore and layout.type == "kFullScoreLayout" then fullScore = layout.id end
+end
 for _, e in ipairs(score.eventsOf(s, s.flows[1], s.players[1])) do
-  print(e.kind, e.id, e.spelling, score.value(s, e, "kEventColour", s.layouts[1].id))
+  print(e.kind, e.id, e.spelling, score.value(s, e, "kEventColour", fullScore))
 end
 ```
 

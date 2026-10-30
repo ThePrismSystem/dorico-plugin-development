@@ -8,10 +8,11 @@
 -- prints.
 --
 -- EventEdit.ChangeProperty?FlowID=&EventID=&EventBlockID=&Type=&Value= sets one property on one event, found by its
--- ids, without selecting it: scorereader.dorico.edit.setProperty builds the command from an event the reader found.
--- The value has no context, so every layout shows it, where 12's colour, set through the Properties panel's command,
--- shows only in the layout on screen. Leaving Value out takes the property off again (edit.removeProperty). The same
--- call puts an accidental in brackets: kNoteAccidentalVisibility_v3 with kRoundBrackets or kSquareBrackets.
+-- ids, without selecting it: scorereader.dorico.edit.setProperty builds the command from an event the reader found. The
+-- value has no context, so every layout shows it unless that layout has a value of its own: 12's colour, set through
+-- the Properties panel's command, is stored for the layout on screen and wins there. Leaving Value out takes the
+-- property off again (edit.removeProperty). The same call puts an accidental in brackets: kNoteAccidentalVisibility_v3
+-- with kRoundBrackets or kSquareBrackets.
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. The read of app.currentScore goes

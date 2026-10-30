@@ -13,7 +13,7 @@ Remote Control API's `getcommands` lists them all.
 
 | Command | Parameters | Status | Notes |
 | ------- | ---------- | ------ | ----- |
-| `EventEdit.Select` | `FlowID`, `EventID`, `EventBlockID` | verified | Selects one event, replacing the selection. The block id comes from `stream.blockInstances` ([08](../../examples/fundamentals/12-select-by-id.lua)). |
+| `EventEdit.Select` | `FlowID`, `EventID`, `EventBlockID` | verified | Selects one event, replacing the selection. The block id comes from `stream.blockInstances` ([12](../../examples/fundamentals/12-select-by-id.lua)). |
 | `EventEdit.NavigateRightExtend` | | verified | Adds the next item to the right to the selection. |
 | `EventEdit.NavigateDownExtend` | | verified | Extends the selection one staff down ([S8](../spikes.md#s8-reading-and-setting-note-properties)). |
 | `Edit.SelectNone` | | verified | Clears the selection. |
@@ -26,7 +26,7 @@ Remote Control API's `getcommands` lists them all.
 | Command | Parameters | Status | Notes |
 | ------- | ---------- | ------ | ----- |
 | `Edit.Copy`, `Edit.Paste`, `Edit.Delete` | | verified | On the selection ([S8](../spikes.md#s8-reading-and-setting-note-properties)). |
-| `Edit.Undo` | | verified | Inside a script, takes back everything the run has done so far. Only the first in a run is safe ([13](../../examples/fundamentals/18-undo.lua)). |
+| `Edit.Undo` | | verified | Inside a script, takes back everything the run has done so far. Only the first in a run is safe ([18](../../examples/fundamentals/18-undo.lua)). |
 | `Edit.RemoveRests` | | verified | On the selection. Leaves no trace in the dump. |
 | `Edit.HideAccidental` | | verified | On the selected note (the handbells plug-in). |
 | `EventEdit.ChangeProperty` | `FlowID`, `EventID`, `EventBlockID`, `Type`, `Value` | verified | Sets a property on one event by its ids, with nothing selected, stored for every layout; it joins the run's one undo step. With no `Value` it takes the property off. It stores any name and value without checking: an unknown accidental visibility becomes `kHide` (W5, `spikes/w5_accidentals.lua`). |
@@ -37,9 +37,9 @@ Remote Control API's `getcommands` lists them all.
 | `UI.InvokePropertyEnableSwitch` | `Type`, `Value` | verified | `Value=false` takes the property off the selection, as unticking it in the Properties panel does (W5, W7). Properties Dorico doesn't know are ignored. |
 | `Edit.CreateSystemBreak` | | verified | At the selection, which needs a barline there (the handbells plug-in). |
 | `Edit.GenerateChordSymbolsFromSelection` | | not tried | Dorico's own chord detection. |
-| `NoteEdit.PitchUpOctave`, `NoteEdit.PitchDownOctave` | | verified | Move the selected notes an octave, keeping their spelling ([07](../../examples/fundamentals/11-act-on-the-selection.lua)). |
+| `NoteEdit.PitchUpOctave`, `NoteEdit.PitchDownOctave` | | verified | Move the selected notes an octave, keeping their spelling ([11](../../examples/fundamentals/11-act-on-the-selection.lua)). |
 | `NoteEdit.PitchUpChromatic`, `NoteEdit.PitchDownChromatic` | | verified | Move them a semitone; up and back down can respell (G#4 comes back as Ab4). |
-| `UI.InvokePropertyChangeValue` | `Type`, `Value` | verified | Sets a property on the selection, as the Properties panel does: `Type=kEventColour&Value=#ffff0000` colours it ([08](../../examples/fundamentals/12-select-by-id.lua)). With `kNoteheadSetOverride` it changed nothing. |
+| `UI.InvokePropertyChangeValue` | `Type`, `Value` | verified | Sets a property on the selection, as the Properties panel does: `Type=kEventColour&Value=#ffff0000` colours it ([12](../../examples/fundamentals/12-select-by-id.lua)). With `kNoteheadSetOverride` it changed nothing. |
 
 ## Note input
 
@@ -59,15 +59,15 @@ Remote Control API's `getcommands` lists them all.
 
 | Command | Parameters | Status | Notes |
 | ------- | ---------- | ------ | ----- |
-| `Project.Flow.New` | | verified | Adds a flow at the end, holding every player ([09](../../examples/fundamentals/14-add-notes-rests-text.lua)). |
-| `Project.Flow.Rename` | `FlowID`, `Name` | verified | ([06](../../examples/fundamentals/10-commands.lua)) |
+| `Project.Flow.New` | | verified | Adds a flow at the end, holding every player ([14](../../examples/fundamentals/14-add-notes-rests-text.lua)). |
+| `Project.Flow.Rename` | `FlowID`, `Name` | verified | ([10](../../examples/fundamentals/10-commands.lua)) |
 | `Project.Flows.MoveToStart` | `FlowIDArray` | verified | A single id is the whole array (the handbells plug-in). |
 | `Project.Flows.Delete` | | verified | Needs Setup mode, and asks the user to confirm (the handbells plug-in). |
-| `Project.Player.Rename` | `PlayerID`, `Name`, `ShortName` | verified | Both names optional. Takes a player id, not an instrument id ([11](../../examples/fundamentals/16-flows-and-players.lua)). |
+| `Project.Player.Rename` | `PlayerID`, `Name`, `ShortName` | verified | Both names optional. Takes a player id, not an instrument id ([16](../../examples/fundamentals/16-flows-and-players.lua)). |
 | `Project.Players.DeleteEmpty` | | verified | Opens Dorico's "Delete Empty Players" dialog (the handbells plug-in). |
 | `Project.Layouts.Delete` | `LayoutIDArray` | verified | Deletes a layout silently (the handbells plug-in). |
-| `Project.Layout.SetOptions` | `Dictionary`, `OpenScoreID`, `LayoutIDArray` | verified | Sets layout options ([10](../../examples/fundamentals/15-layout-and-notation-options.lua)). |
-| `Project.Flow.SetNotationOptions` | `Dictionary`, `OpenScoreID`, `FlowIDArray` | verified | Sets a flow's notation options ([10](../../examples/fundamentals/15-layout-and-notation-options.lua)). |
+| `Project.Layout.SetOptions` | `Dictionary`, `OpenScoreID`, `LayoutIDArray` | verified | Sets layout options ([15](../../examples/fundamentals/15-layout-and-notation-options.lua)). |
+| `Project.Flow.SetNotationOptions` | `Dictionary`, `OpenScoreID`, `FlowIDArray` | verified | Sets a flow's notation options ([15](../../examples/fundamentals/15-layout-and-notation-options.lua)). |
 
 ## Files, scripts and the window
 
