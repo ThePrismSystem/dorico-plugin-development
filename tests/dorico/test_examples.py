@@ -163,6 +163,18 @@ row("parallel_fifths_undone", PARALLELS, project="parallels", before=OPEN_FIRST,
 row("parallel_fifths_cancelled", PARALLELS, project="parallels", before=OPEN_FIRST,
     check=CHECKS + "parallel-fifths.none.lua", args={"cancelled": True},
     dialog={"window": "Parallel fifths and octaves", "button": "Cancel"})
+NAMES = RECIPES + "note-names.lua"
+NAMES_OK = {"window": "Note names", "button": "OK", "fields": []}
+row("note_names", NAMES, project="reading", before=OPEN_FIRST, dialog=NAMES_OK,
+    after=[then_dialog("note-names.lua", NAMES, NAMES_OK, args={"second": True}),
+           then_dialog("note-names.none.lua", NAMES, {"window": "Note names", "button": "OK",
+                                                      "fields": [("check", 2, True)]})])
+row("note_names_at_sounding_pitch", NAMES, project="reading", before=OPEN_FIRST, args={"sounding": True},
+    dialog={"window": "Note names", "button": "OK", "fields": [("check", 1, False)]})
+row("note_names_undone", NAMES, project="reading", before=OPEN_FIRST, dialog=NAMES_OK,
+    after=[then_command("Edit.Undo"), then_check("note-names.none.lua")])
+row("note_names_cancelled", NAMES, project="reading", before=OPEN_FIRST, check=CHECKS + "note-names.none.lua",
+    args={"cancelled": True}, dialog={"window": "Note names", "button": "Cancel"})
 
 class Examples(unittest.TestCase):
     pass
