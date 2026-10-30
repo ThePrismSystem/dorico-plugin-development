@@ -154,6 +154,13 @@ return {
     local err = errorOf(function() return savedcopy.read(stubApp(nil), { dir = DIR }) end)
     t:eq(err, "scorereader: Dorico could not save a copy of the project to read")
   end,
+  a_folder_outside_ascii_is_refused_before_saving = function(t)
+    local saved = false
+    local app = { currentScore = {}, save = function() saved = true return true end }
+    local err = errorOf(function() return savedcopy.read(app, { dir = "C:/Users/Zo\235/AppData/Local/Temp/" }) end)
+    t:ok(err and err:find("^scorereader: ") and err:find("opts.dir", 1, true), tostring(err))
+    t:eq(saved, false, "nothing was saved")
+  end,
   a_copy_that_cannot_be_read_is_still_removed = function(t)
     local err = errorOf(function() return savedcopy.read(stubApp("not a zip"), { dir = DIR }) end)
     t:ok(err and err:find("^zip: "), tostring(err))

@@ -28,11 +28,17 @@ end
 
 -- The current project as scorereader.score.read gives it. opts: dir (a folder ending in a slash, the temp folder by
 -- default), log (a function taking a line, told about a copy that can't be deleted; print, which writes to the Script
--- Console, by default), remove (how to delete the copy, os.remove by default). app:save takes its path in UTF-8 and io.open in the code page, so the folder's path should
--- be plain ASCII.
+-- Console, by default), remove (how to delete the copy, os.remove by default).
 function savedcopy.read(app, opts)
   opts = opts or {}
-  local path = (opts.dir or defaultDir()) .. "scorereader-copy.dorico"
+  local dir = opts.dir or defaultDir()
+  -- app:save takes its path in UTF-8 and io.open in the code page, and the two agree only on ASCII. A save to the temp
+  -- folder of a user named Zoë would fail with no reason given, so a folder like that is refused before saving.
+  if dir:find("[\128-\255]") then
+    error("scorereader: the folder for the saved copy, " .. dir .. ", has characters outside ASCII, which Dorico and"
+      .. " Lua spell differently; pass opts.dir with an ASCII-only folder", 0)
+  end
+  local path = dir .. "scorereader-copy.dorico"
   local del = opts.remove or remove
   local function cleanUp()
     local gone, why = del(path)
