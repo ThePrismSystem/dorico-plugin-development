@@ -72,7 +72,9 @@ next. Three things follow:
   anything else. Give a global you mean to keep a name no other script would choose.
 - A plug-in with modules should clear them from `package.loaded` at the start of every run. Otherwise `require`
   hands back the version loaded by an earlier run, and an edited module doesn't take effect until Dorico restarts.
-- Add to `package.path` only once. Prepending a folder on every run makes the path grow without end.
+- Put a folder on `package.path` once. Prepending it on every run makes the path grow without end. To keep it first,
+  ahead of a folder another script added since, take the earlier copy out before prepending it again, as the
+  examples' `readCopy` helper does.
 
 ```lua
 for name in pairs(package.loaded) do

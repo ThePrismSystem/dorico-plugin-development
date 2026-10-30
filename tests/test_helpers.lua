@@ -263,16 +263,22 @@ return {
     t:eq(#printed, 0, "nothing printed")
   end,
 
-  reader_helper_finds_lib_in_the_repository_and_beside_the_script = function(t)
+  read_copy_puts_its_lib_folders_first_once = function(t)
     local dir = "C:/plugins/examples/fundamentals/"
-    local reader = assert(load(helpers.text(SAVED_COPY, "reader") .. "\nreturn reader", "@" .. dir .. "x.lua"))()
+    local mine = dir .. "../../lib/?.lua;" .. dir .. "lib/?.lua;"
+    local other = "C:/other/lib/?.lua;"
+    local readCopy = assert(load(helpers.text(SAVED_COPY, "readCopy") .. "\nreturn readCopy", "@" .. dir .. "x.lua"))()
     local before = package.path
+    package.path = other .. mine .. before
     package.loaded["scorereader.fake"] = true
-    reader()
+    local printed = withDorico({}, function() readCopy({ currentScore = {}, save = function() return false end }) end)
     local after = package.path
     package.path = before
-    t:eq(after:find(dir .. "../../lib/?.lua;" .. dir .. "lib/?.lua;", 1, true), 1, after)
+    t:eq(after:sub(1, #mine + #other), mine .. other, "ahead of another copy of the library")
+    t:eq(select(2, after:gsub("C:/plugins/", "")), 2, "each folder once")
     t:eq(package.loaded["scorereader.fake"], nil, "an earlier run's module is cleared")
+    t:eq(printed[1], "The reader couldn't read this project: "
+      .. "scorereader: Dorico could not save a copy of the project to read")
   end,
 
   bars_from_time_signatures = function(t)

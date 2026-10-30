@@ -26,30 +26,30 @@ local function guard()
 end
 -- end helper: guard
 
--- helper: reader
--- Puts the reader library on the module path: lib/ two folders up in this repository, or a lib folder beside the
--- script once both are copied into Script Plug-ins. Dorico keeps one Lua state, so the library's modules from an
--- earlier run are cleared first.
-local function reader()
+-- helper: readCopy
+-- Reads a saved copy of the open project with the reader library, or prints why it couldn't and gives nil. The
+-- library is lib/ two folders up in this repository, or a lib folder beside the script once both are copied into
+-- Script Plug-ins. Dorico keeps one Lua state, so the library's modules from an earlier run are cleared, and its
+-- folders are moved to the front of the module path, where no other copy of the library can come before them.
+local function readCopy(app)
   local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])") or ""
-  local paths = here .. "../../lib/?.lua;" .. here .. "lib/?.lua"
+  local paths = here .. "../../lib/?.lua;" .. here .. "lib/?.lua;"
   for name in pairs(package.loaded) do
     if name:match("^scorereader") then package.loaded[name] = nil end
   end
-  if not package.path:find(paths, 1, true) then package.path = paths .. ";" .. package.path end
+  local at = package.path:find(paths, 1, true)
+  if at then package.path = package.path:sub(1, at - 1) .. package.path:sub(at + #paths) end
+  package.path = paths .. package.path
+  local ok, s = pcall(function() return require("scorereader.dorico.savedcopy").read(app) end)
+  if ok then return s end
+  print("The reader couldn't read this project: " .. tostring(s))
 end
--- end helper: reader
+-- end helper: readCopy
 
 local app, project = guard()
 if not project then return end
-reader()
-local savedcopy = require("scorereader.dorico.savedcopy")
-
-local ok, s = pcall(savedcopy.read, app)
-if not ok then
-  print("The reader couldn't read this project: " .. tostring(s))
-  return
-end
+local s = readCopy(app)
+if not s then return end
 
 local function orDash(text) return (text and text ~= "") and text or "-" end
 

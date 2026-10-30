@@ -37,19 +37,24 @@ open project to the temp folder (`app:save` leaves the project, its file and its
 it and deletes it. Event ids in the copy are the ids Lua uses, so anything the reader finds can be selected or changed
 by id.
 
-This script sits two folders below the repository's root, as the examples do, so `../../lib` is the library. The
-saved copy goes in the temp folder, whose path must be all ASCII: `app:save` and Lua's `io.open` spell other
-characters differently. If it isn't, pass another folder as `savedcopy.read(app, { dir = ... })`.
+This script sits two folders below the repository's root, as the examples do, so `../../lib` is the library. Dorico
+keeps one Lua state, so it clears the library's modules an earlier run loaded. The saved copy goes in the temp folder,
+whose path must be all ASCII: `app:save` and Lua's `io.open` spell other characters differently. If it isn't, pass
+another folder as `savedcopy.read(app, { dir = ... })`.
 
 ```lua
 local lib = debug.getinfo(1, "S").source:match("^@(.*[/\\])") .. "../../lib/?.lua"
+for name in pairs(package.loaded) do
+  if name:match("^scorereader") then package.loaded[name] = nil end
+end
 if not package.path:find(lib, 1, true) then package.path = lib .. ";" .. package.path end
 local savedcopy = require("scorereader.dorico.savedcopy")
 local edit = require("scorereader.dorico.edit")
 local score = require("scorereader.score")
 
 local app = DoApp.DoApp()
-local s = savedcopy.read(app)
+local ok, s = pcall(savedcopy.read, app)
+if not ok then return print("The reader couldn't read this project: " .. tostring(s)) end
 for _, e in ipairs(score.eventsOf(s, s.flows[1], s.players[1])) do
   if e.kind == "note" and e.spelling:find("#") then
     edit.setProperty(app, e, "kNoteAccidentalVisibility_v3", "kRoundBrackets")
