@@ -66,7 +66,8 @@ end
 --     when no box could be shown; fields: {{key, label, kind = "text" | "check" | "choice", default, choices = {...}}}
 --   form.windows(title, fields, folder) and form.mac(title, fields): the two routes form.ask picks between
 --   form.script(title, fields) -> the PowerShell
---   form.parse(text, fields) -> the answers; nil for no answer; nil and the key of a field the answer leaves out
+--   form.parse(text, fields) -> the answers; nil for no answer; nil and the reason for an answer that leaves out a
+--     field or gives a choice the list doesn't offer
 local form = {}
 do
   -- A PowerShell single-quoted string doubles its quotes. PowerShell also takes the curly single quotes (U+2018 to
@@ -163,8 +164,15 @@ do
     local answers = {}
     for _, f in ipairs(fields) do
       local value = got[f.key]
-      if value == nil then return nil, f.key end
+      if value == nil then return nil, "its answer left out " .. f.key end
       if f.kind == "check" then value = value:lower() == "true" end
+      if f.kind == "choice" then
+        local offered = false
+        for _, choice in ipairs(f.choices) do offered = offered or choice == value end
+        if not offered then
+          return nil, string.format("its answer for %s, \"%s\", isn't one of the choices", f.label, value)
+        end
+      end
       answers[f.key] = value
     end
     return answers
@@ -187,9 +195,7 @@ do
     -- Cancel writes an empty answer, so no answer at all means PowerShell didn't run the box to the end.
     if not text then return nil, "PowerShell gave no answer" end
     if text == "" then return nil end
-    local answers, missing = form.parse(text, fields)
-    if not answers then return nil, "the box's answer left out " .. missing end
-    return answers
+    return form.parse(text, fields)
   end
 
   -- Not run on a Mac. Each answer comes back after "ok:", so an empty answer can be told from Cancel, which
@@ -250,7 +256,7 @@ end
 -- Ask before changing anything, so that Cancel leaves nothing to undo.
 local answers, noBox = form.ask(TITLE, { { key = "words", label = QUESTION, kind = "text", default = "" } })
 if noBox then
-  print("Couldn't show the box: " .. noBox)
+  print("The box didn't work: " .. noBox)
   return
 end
 local answer = answers and answers.words

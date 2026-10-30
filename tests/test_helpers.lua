@@ -524,7 +524,7 @@ return {
   form_parse_reads_each_kind = function(t)
     local form = helpers.load(ASK, "form")
     local fields = { { key = "words", kind = "text" }, { key = "loud", kind = "check" },
-      { key = "which", kind = "choice" } }
+      { key = "which", kind = "choice", choices = { "a", "b'c" } } }
     local answers = form.parse("words=a=b\r\nloud=True\nwhich=b'c\n", fields)
     t:eq(answers.words, "a=b")
     t:eq(answers.loud, true)
@@ -539,7 +539,18 @@ return {
     local fields = { { key = "words", kind = "text" } }
     t:eq(form.parse(nil, fields), nil)
     t:eq(form.parse("", fields), nil)
-    t:eq(form.parse("other=x\n", fields), nil, "an answer missing a field")
+    local answers, why = form.parse("other=x\n", fields)
+    t:eq(answers, nil, "an answer missing a field")
+    t:eq(why, "its answer left out words")
+  end,
+
+  form_parse_refuses_a_choice_the_box_doesnt_offer = function(t)
+    local form = helpers.load(ASK, "form")
+    local fields = { { key = "which", label = "Look back", kind = "choice", choices = { "2 bars", "No limit" } } }
+    local answers, why = form.parse("which=3 bars\n", fields)
+    t:eq(answers, nil)
+    t:eq(why, 'its answer for Look back, "3 bars", isn\'t one of the choices')
+    t:eq(form.parse("which=No limit\n", fields).which, "No limit")
   end,
 
   form_on_windows_runs_the_box_and_reads_its_answer = function(t)
@@ -609,7 +620,7 @@ return {
     t:eq(answers, nil)
     t:eq(why, "PowerShell gave no answer")
     t:eq(partial, nil)
-    t:eq(why2, "the box's answer left out words")
+    t:eq(why2, "its answer left out words")
   end,
 
   form_on_windows_says_why_when_it_cant_write_the_script = function(t)
