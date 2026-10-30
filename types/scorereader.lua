@@ -1,0 +1,142 @@
+---@meta
+-- Definitions for lib/scorereader, the reader library, for editors with lua-language-server. The classes are what
+-- scorereader.score.read returns; docs/file-format.md says where each field comes from in a saved project.
+
+---@class scorereader.Position
+---@field num integer
+---@field den integer
+
+---@class scorereader.Format
+---@field fileVersion string
+---@field lastSavedVersion string
+---@field known boolean
+---@field profile {name: string, fileVersions: string[]}
+
+---@class scorereader.Instrument
+---@field id integer
+---@field playerId integer
+---@field entityID string
+---@field name string
+---@field staves integer
+---@field range {standard: string|nil, advanced: string|nil}
+---@field transposition {diatonic: integer, chromatic: integer, octaves: integer}|nil
+
+---@class scorereader.Player
+---@field id integer
+---@field name string
+---@field shortName string
+---@field baseName string
+---@field instruments scorereader.Instrument[]
+
+---@class scorereader.Layout
+---@field id integer
+---@field name string
+---@field number integer|nil
+---@field type string
+---@field flowIds integer[]
+---@field playerIds integer[]
+
+---@class scorereader.Instance
+---@field id integer
+---@field blockId integer
+---@field position scorereader.Position
+
+---@class scorereader.Stream
+---@field id integer
+---@field type "timebase"|"stave"|"voice"|"player"|"automation"|"other"
+---@field rawType string
+---@field playerId integer|nil
+---@field instrumentId integer|nil
+---@field staff integer|nil
+---@field instances scorereader.Instance[]
+---@field events scorereader.Event[]
+
+---@class scorereader.Flow
+---@field id integer
+---@field title string
+---@field info table<string, string>
+---@field streams scorereader.Stream[]
+---@field streamById table<integer, scorereader.Stream>
+---@field events scorereader.Event[]
+
+---@class scorereader.Dynamic
+---@field kind "immediate"|"gradual"|"force"|"combined"
+---@field name string
+---@field position scorereader.Position
+---@field duration scorereader.Position|nil
+
+---@class scorereader.Event
+---@field id integer
+---@field kind string note, grace, rest, barRest, tuplet, slur, text, lyric, chordSymbol, dynamic, timeSignature, keySignature, tempo, rehearsalMark, playingTechnique, clef or other
+---@field definition string
+---@field flowId integer
+---@field streamId integer
+---@field blockId integer
+---@field instanceId integer
+---@field position scorereader.Position
+---@field duration scorereader.Position
+---@field node integer
+---@field pitch integer|nil note, grace
+---@field spelling string|nil note, grace: "F#5"
+---@field notatedDuration scorereader.Position|nil grace
+---@field slashed boolean|nil grace
+---@field actual integer|nil tuplet
+---@field normal integer|nil tuplet
+---@field words string|nil text
+---@field paragraphs {style: string, fragments: {text: string, style: string|nil, localStyle: boolean}[]}[]|nil text
+---@field above boolean|nil text, lyric
+---@field system boolean|nil text
+---@field formatted boolean|nil text
+---@field text string|nil lyric, tempo, playingTechnique
+---@field syllable "begin"|"middle"|"end"|"single"|nil lyric
+---@field line integer|nil lyric
+---@field lineType "verse"|"chorus"|nil lyric
+---@field root string|nil chordSymbol, keySignature
+---@field quality string|nil chordSymbol
+---@field interval string|nil chordSymbol
+---@field rawQuality string|nil chordSymbol
+---@field rawInterval string|nil chordSymbol
+---@field altered boolean|nil chordSymbol
+---@field name string|nil chordSymbol, playingTechnique
+---@field dynamics scorereader.Dynamic[]|nil dynamic
+---@field numerator integer|string|nil timeSignature
+---@field denominator integer|nil timeSignature
+---@field barlineOnly boolean|nil timeSignature
+---@field barline string|nil timeSignature
+---@field mode "major"|"minor"|"atonal"|"custom"|nil keySignature
+---@field atonal boolean|nil keySignature
+---@field fifths integer|nil keySignature
+---@field bpm integer|nil tempo
+---@field microsecondsPerBeat integer|nil tempo
+---@field appearance string|nil playingTechnique
+---@field technique string|nil playingTechnique
+---@field clef string|nil clef
+
+---@class scorereader.Score
+---@field format scorereader.Format
+---@field info table<string, string>
+---@field library table<string, {name: string, node: integer}>
+---@field players scorereader.Player[]
+---@field instruments table<integer, scorereader.Instrument>
+---@field layouts scorereader.Layout[]
+---@field flows scorereader.Flow[]
+---@field events table<integer, scorereader.Event>
+
+---@class scorereader.score
+---@field read fun(input: string|table): scorereader.Score
+---@field readFile fun(path: string): scorereader.Score
+---@field eventsOf fun(s: scorereader.Score, flow: scorereader.Flow, player: scorereader.Player): scorereader.Event[]
+---@field ownerOf fun(s: scorereader.Score, e: scorereader.Event): scorereader.Player|nil
+---@field partOf fun(s: scorereader.Score, player: scorereader.Player): scorereader.Layout|nil
+---@field entries fun(s: scorereader.Score, e: scorereader.Event): table[]
+---@field value fun(s: scorereader.Score, e: scorereader.Event, property: string, layoutId: integer): any
+---@field above fun(s: scorereader.Score, e: scorereader.Event, layoutId: integer): boolean
+
+---@class scorereader.dorico.savedcopy
+---@field read fun(app: DoApp, opts: {dir: string|nil, log: fun(line: string)|nil, remove: function|nil}|nil): scorereader.Score
+
+---@class scorereader.dorico.edit
+---@field select fun(app: DoApp, e: scorereader.Event)
+---@field setProperty fun(app: DoApp, e: scorereader.Event, property: string, value: string)
+---@field removeProperty fun(app: DoApp, e: scorereader.Event, property: string)
+---@field delete fun(app: DoApp, e: scorereader.Event)

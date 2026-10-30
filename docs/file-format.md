@@ -333,3 +333,17 @@ the file, by id and position, in the reading fixture and in Fauré's *Dolly* (8,
 the rest). *Dolly* was saved by 6.2.20 and opened in 6.2.30, so the ids survived the update Dorico makes when it opens
 an older project, at least for that step. The handbells plug-in found the same for notes in two other projects
 (1,079 and 2,365 of them).
+
+## Adding a Dorico version
+
+When a new Dorico comes out, `python tools/resave_fixtures.py` saves the fixtures in its format and runs the tests
+([fixtures/README.md](../fixtures/README.md)).
+
+- If every test passes, nothing the reader relies on changed. Commit the new fixtures folder and add the new
+  `fileVersion` to the version table above and to the `dorico6` profile's list in
+  [`lib/scorereader/format.lua`](../lib/scorereader/format.lua), so the reader reports the number as known.
+- If a test fails, its message names the node, the value and the format. `spikes/f1_changes.lua`, run over the old
+  and new fixtures, lists the paths that appeared or went, and `spikes/tree_dump.lua` shows any part of a tree.
+- To teach the reader the change, add a profile to `format.PROFILES` with the new `fileVersion` and checks for the
+  new structure, and let the reader that relies on the changed path branch on `s.format.profile.name`. Older
+  profiles stay, so files the older versions saved keep reading.
