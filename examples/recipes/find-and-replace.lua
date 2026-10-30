@@ -457,7 +457,6 @@ if (answers.from ~= "" and not first) or (answers.to ~= "" and not last) then
   return
 end
 
--- Where each flow's bars start, from its time signatures, as 09 does.
 -- helper: barsOf
 -- Where a flow's bars start, through the bars helper, from the time signatures in its timebase stream. A time
 -- signature in any other stream is left out.

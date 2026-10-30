@@ -13,11 +13,14 @@
 --
 -- Dorico itself decides the bar after an accidental and the rest of the bar it's in, on the same staff, by the flow's
 -- notation options, so this script leaves those notes alone. The rules it follows are in the cautionary helper below.
--- It handles the common-practice accidental rule and skips a flow set to another. A note whose accidental you set
--- yourself, in any layout, is left as it is. The script's mark is an accidental visibility of round brackets, square
--- brackets or shown, stored for every layout, which the menu commands and the Properties panel never store; a run
--- takes off those it no longer needs, so the same setting made by a script of your own would go too. Pitches are
--- sounding pitches, so a transposing instrument's notes compare with other instruments' as they sound.
+-- It handles the common-practice accidental rule and skips a flow set to another, or one with a key signature it
+-- can't read, such as a custom key. It also skips an instrument that shows no key signature, such as a horn or
+-- timpani set up that way. A note whose accidental you set yourself, in any layout, is left as it is. The script's
+-- mark is an accidental visibility of round brackets, square brackets or shown, stored for every layout, which the
+-- menu commands and the Properties panel never store; a run takes off those it no longer needs, so the same setting
+-- made by a script of your own would go too. A mark on a note that also has a setting of its own stays, since taking
+-- it off could take that setting too, and the run says how many it left. Pitches are sounding pitches, so a
+-- transposing instrument's notes compare with other instruments' as they sound.
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. The read of app.currentScore goes
@@ -497,18 +500,21 @@ local edit = require("scorereader.dorico.edit")
 local score = require("scorereader.score")
 local values = require("scorereader.values")
 
--- This script's mark: one of its values with no layout and no block instance. Any other accidental setting on a
--- note is the user's.
-local function isMark(x)
-  return x.property == PROPERTY and x.layout == -1 and x.instance == -1 and MARKS[values.typed(x.value).value] == true
+-- The value of this script's mark, if x is one: one of its values with no layout and no block instance. Any other
+-- accidental setting on a note is the user's.
+local function markOf(x)
+  if x.property ~= PROPERTY or x.layout ~= -1 or x.instance ~= -1 then return nil end
+  local v = values.typed(x.value).value
+  return MARKS[v] and v or nil
 end
 local marked, own = {}, {}
 for _, flow in ipairs(s.flows) do
   for _, e in ipairs(flow.events) do
     if e.kind == "note" then
       for _, x in ipairs(score.entries(s, e)) do
-        if isMark(x) then
-          marked[e.id] = values.typed(x.value).value
+        local mark = markOf(x)
+        if mark then
+          marked[e.id] = mark
         elseif x.property == PROPERTY then
           own[e.id] = true
         end
@@ -516,17 +522,35 @@ for _, flow in ipairs(s.flows) do
     end
   end
 end
+
+-- The command takes the property off in every layout, so a mark on a note with a setting of its own stays, and the
+-- run says how many did.
+local left = 0
+local function takeBack(id)
+  if own[id] then
+    left = left + 1
+    return false
+  end
+  edit.removeProperty(app, s.events[id], PROPERTY)
+  return true
+end
+local function sayLeft()
+  if left > 0 then
+    print(string.format("Left %d of its accidentals where the note also has a setting of its own, since taking one "
+      .. "back could take that setting too.", left))
+  end
+end
+
 if answers.remove then
   local n = 0
   for id in pairs(marked) do
-    edit.removeProperty(app, s.events[id], PROPERTY)
-    n = n + 1
+    if takeBack(id) then n = n + 1 end
   end
   print(string.format("Took back %d cautionary accidentals.", n))
+  sayLeft()
   return
 end
 
--- Where each flow's bars start, from its time signatures, as 09 does.
 -- helper: barsOf
 -- Where a flow's bars start, through the bars helper, from the time signatures in its timebase stream. A time
 -- signature in any other stream is left out.
@@ -545,9 +569,27 @@ local function barsOf(flow)
 end
 -- end helper: barsOf
 
-local playerOf = {}
+-- An instrument that shows no key signature (its library id has ".nokey" in it, such as a horn's or timpani's) needs
+-- its notes compared with no key, in written pitch, which this script doesn't do. Its notes still count as the
+-- earlier note for other instruments, since those compare sounding pitches.
+local playerOf, noKey = {}, {}
 for _, player in ipairs(s.players) do
-  for _, instrument in ipairs(player.instruments) do playerOf[instrument.id] = player.name end
+  for _, instrument in ipairs(player.instruments) do
+    playerOf[instrument.id] = player.name
+    if instrument.entityID:find(".nokey", 1, true) then
+      noKey[instrument.id] = true
+      print(string.format("Skipped %s (%s): it shows no key signature, which this script doesn't handle.",
+        player.name, instrument.name))
+    end
+  end
+end
+
+-- True when a flow has a key signature with no fifths that isn't atonal, such as a custom key.
+local function oddKey(flow)
+  for _, e in ipairs(flow.events) do
+    if e.kind == "keySignature" and e.fifths == nil and not e.atonal then return true end
+  end
+  return false
 end
 
 local opts = { lookBack = LOOK_BACK[answers.lookBack], restsCount = answers.restsCount,
@@ -556,17 +598,20 @@ local value = BRACKETS[answers.brackets]
 local wanted, handled, added, kept, takenBack = {}, {}, 0, 0, 0
 for n, flow in ipairs(s.flows) do
   local rule = flow.options.accidentals and flow.options.accidentals.durationBehaviour
-  if rule ~= "kCommonPractice" then
-    print(string.format("Flow %d uses the accidental rule %s, which this script doesn't handle: skipped.", n,
-      tostring(rule)))
+  if rule == nil then
+    print(string.format("Flow %d has no accidental rule the reader could find: skipped.", n))
+  elseif rule ~= "kCommonPractice" then
+    print(string.format("Flow %d uses the accidental rule %s, which this script doesn't handle: skipped.", n, rule))
+  elseif oddKey(flow) then
+    print(string.format("Flow %d has a key signature this script can't read: skipped.", n))
   else
     local starts = barsOf(flow)
     local notes, keys = staffnotes.of(flow, values, bars, starts)
     local byId = {}
     for _, x in ipairs(notes) do
-      x.override = own[x.id] == true
+      x.override = own[x.id] == true or noKey[x.instrument] == true
       byId[x.id] = x
-      handled[x.id] = true
+      handled[x.id] = not noKey[x.instrument]
     end
     for _, f in ipairs(cautionary.find(notes, keys, opts)) do
       local x, from = byId[f.id], byId[f.from]
@@ -592,10 +637,8 @@ for n, flow in ipairs(s.flows) do
   end
 end
 for id in pairs(marked) do
-  if handled[id] and not wanted[id] then
-    edit.removeProperty(app, s.events[id], PROPERTY)
-    takenBack = takenBack + 1
-  end
+  if handled[id] and not wanted[id] and takeBack(id) then takenBack = takenBack + 1 end
 end
 print(string.format("Added %d cautionary accidentals, kept %d from an earlier run, took back %d.", added, kept,
   takenBack))
+sayLeft()

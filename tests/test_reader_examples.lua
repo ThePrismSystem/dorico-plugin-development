@@ -83,17 +83,29 @@ end
 local PARALLELS_ANSWER = "hidden=False\ncontrary=False\ndoublings=False\nouterOnly=False\nrestBreaks=True\n"
   .. "unisons=True\nclear=False\n"
 
--- Stands in for the score module, with this script's mark added to each note that has a colour stored for a layout,
--- as a colour set from the Properties panel is.
-local function markedWithTheirOwn()
+local CAUTIONARY = FIXTURES .. "cautionary.dorico"
+local CAUTIONARY_RECIPE = "examples/recipes/cautionary-accidentals.lua"
+local CAUTIONARY_ANSWER = "lookBack=4 bars\nbrackets=Round brackets\nrestsCount=True\notherStaves=True\n"
+  .. "otherInstruments=False\nremove=False\n"
+
+-- Stands in for the saved copy: the fixture as the reader reads it, after change(s).
+local function changedCopy(fixture, change)
+  local s = require("scorereader.score").readFile(fixture)
+  change(s)
+  return function() return { read = function() return s end } end
+end
+
+-- Stands in for the score module, with a script's mark, value stored with no layout, added to each note that has the
+-- property stored for a layout, as a setting made in the Properties panel is.
+local function markedWithTheirOwn(property, value)
   return function(name)
     local real = assert(loadfile(ROOT .. "lib/scorereader/score.lua"))(name)
     local fake = setmetatable({}, { __index = real })
     function fake.entries(s, e)
       local list = real.entries(s, e)
       for _, x in ipairs(list) do
-        if x.property == "kEventColour" and x.layout ~= -1 then
-          local out = { { property = "kEventColour", value = 'string: "#ffd81b60"', layout = -1, instance = -1 } }
+        if x.property == property and x.layout ~= -1 then
+          local out = { { property = property, value = value, layout = -1, instance = -1 } }
           for i, y in ipairs(list) do out[i + 1] = y end
           return out
         end
@@ -186,7 +198,7 @@ return {
   end,
 
   parallel_fifths_leaves_its_mark_on_a_note_with_a_colour_of_its_own = function(t)
-    package.preload["scorereader.score"] = markedWithTheirOwn()
+    package.preload["scorereader.score"] = markedWithTheirOwn("kEventColour", 'string: "#ffd81b60"')
     local ok, printed, sent = pcall(runAnswering, "examples/recipes/parallel-fifths.lua", PARALLELS,
       (PARALLELS_ANSWER:gsub("clear=False", "clear=True")))
     package.preload["scorereader.score"] = nil
@@ -194,5 +206,58 @@ return {
     t:eq(table.concat(printed, " / "), "Took this script's colour off 0 notes. / Left it on 1 note that also has a "
       .. "colour of its own, since taking it off could take that colour too.")
     t:eq(#sent, 0, "nothing taken off")
+  end,
+
+  cautionary_accidentals_find_and_count_on_the_fixture = function(t)
+    local printed, sent = runAnswering(CAUTIONARY_RECIPE, CAUTIONARY, CAUTIONARY_ANSWER)
+    t:eq(#printed, 6, table.concat(printed, " / "))
+    t:eq(printed[6], "Added 5 cautionary accidentals, kept 0 from an earlier run, took back 0.")
+    t:eq(#sent, 5, "a command per accidental")
+  end,
+
+  cautionary_accidentals_skip_an_instrument_with_no_key_signature = function(t)
+    package.preload["scorereader.dorico.savedcopy"] = changedCopy(CAUTIONARY, function(s)
+      s.players[1].instruments[1].entityID = "instrument.brass.horn.f.nokeysig"
+    end)
+    local ok, printed = pcall(runAnswering, CAUTIONARY_RECIPE, CAUTIONARY, CAUTIONARY_ANSWER)
+    package.preload["scorereader.dorico.savedcopy"] = nil
+    t:ok(ok, tostring(printed))
+    t:eq(printed[1], "Skipped Flute (Flute): it shows no key signature, which this script doesn't handle.")
+    t:eq(#printed, 3, "the piano's one finding and the summary")
+    t:eq(printed[3], "Added 1 cautionary accidentals, kept 0 from an earlier run, took back 0.")
+  end,
+
+  cautionary_accidentals_skip_a_flow_whose_key_or_rule_they_cant_read = function(t)
+    package.preload["scorereader.dorico.savedcopy"] = changedCopy(CAUTIONARY, function(s)
+      for _, e in ipairs(s.flows[1].events) do
+        if e.kind == "keySignature" and e.fifths == -3 then e.fifths = nil end
+      end
+    end)
+    local ok, printed = pcall(runAnswering, CAUTIONARY_RECIPE, CAUTIONARY, CAUTIONARY_ANSWER)
+    package.preload["scorereader.dorico.savedcopy"] = changedCopy(CAUTIONARY, function(s)
+      s.flows[1].options.accidentals = nil
+    end)
+    local ok2, printed2 = pcall(runAnswering, CAUTIONARY_RECIPE, CAUTIONARY, CAUTIONARY_ANSWER)
+    package.preload["scorereader.dorico.savedcopy"] = nil
+    t:ok(ok and ok2, tostring(printed) .. " " .. tostring(printed2))
+    local none = "Added 0 cautionary accidentals, kept 0 from an earlier run, took back 0."
+    t:eq(table.concat(printed, " / "), "Flow 1 has a key signature this script can't read: skipped. / " .. none)
+    t:eq(table.concat(printed2, " / "), "Flow 1 has no accidental rule the reader could find: skipped. / " .. none)
+  end,
+
+  cautionary_accidentals_leave_a_mark_on_a_note_with_a_setting_of_its_own = function(t)
+    package.preload["scorereader.score"] = markedWithTheirOwn("kNoteAccidentalVisibility_v3",
+      'string: "kRoundBrackets"')
+    local ok, printed, sent = pcall(runAnswering, CAUTIONARY_RECIPE, CAUTIONARY,
+      (CAUTIONARY_ANSWER:gsub("remove=False", "remove=True")))
+    local ok2, printed2, sent2 = pcall(runAnswering, CAUTIONARY_RECIPE, CAUTIONARY, CAUTIONARY_ANSWER)
+    package.preload["scorereader.score"] = nil
+    t:ok(ok and ok2, tostring(printed) .. " " .. tostring(printed2))
+    local left = "Left 1 of its accidentals where the note also has a setting of its own, since taking one back could "
+      .. "take that setting too."
+    t:eq(table.concat(printed, " / "), "Took back 0 cautionary accidentals. / " .. left)
+    t:eq(#sent, 0, "nothing taken back")
+    t:eq(printed2[#printed2], left, "an ordinary run leaves it too")
+    t:eq(#sent2, 5, "and adds the others")
   end,
 }
