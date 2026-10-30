@@ -1,7 +1,7 @@
 -- Recipe: a proofreading report of the notes outside their instrument's range, by bar and beat, without changing the
 -- music.
 -- What it does: reads a saved copy and prints one line per note outside its instrument's range, "<flow> bar <n> beat
--- <b>: <finding>", then how many it found.
+-- <b>: <finding>", then how many it found, then any pitched instrument it couldn't check for want of a range.
 -- Changes: nothing (read-only).
 -- Undo: nothing to undo.
 -- Builds on: 04-read-the-saved-copy.lua, 09-bars-keys-and-times.lua and 12-select-by-id.lua (the midi helper). Open
@@ -127,14 +127,23 @@ end
 -- range, such as unpitched percussion, has nothing out of range.
 --   outofrange.check(pitch, range, midi) -> nil, or {side = "below" | "above", which = "advanced" | "standard", from,
 --     to}; midi is the midi helper
+--   outofrange.readable(range) -> whether check can read either range
 local outofrange = {}
 do
+  local function ends(range, which)
+    return tostring((range or {})[which]):match("^([A-G][#bx]*%-?%d+)%-([A-G][#bx]*%-?%d+)$")
+  end
+
   function outofrange.check(pitch, range, midi)
     for _, which in ipairs({ "advanced", "standard" }) do
-      local from, to = tostring((range or {})[which]):match("^([A-G][#bx]*%-?%d+)%-([A-G][#bx]*%-?%d+)$")
+      local from, to = ends(range, which)
       if from and pitch < midi(from) then return { side = "below", which = which, from = from, to = to } end
       if from and pitch > midi(to) then return { side = "above", which = which, from = from, to = to } end
     end
+  end
+
+  function outofrange.readable(range)
+    return ends(range, "advanced") ~= nil or ends(range, "standard") ~= nil
   end
 end
 -- end helper: outofrange
@@ -188,3 +197,13 @@ for n, flow in ipairs(s.flows) do
   total = total + #findings
 end
 print(total .. (total == 1 and " finding" or " findings"))
+-- A pitched instrument with no range the helper can read has nothing out of range, so the report names it rather than
+-- let it pass as checked. An unpitched one has no transposition and no range to check.
+for _, player in ipairs(s.players) do
+  for _, instrument in ipairs(player.instruments) do
+    if instrument.transposition and not outofrange.readable(instrument.range) then
+      print(string.format("Couldn't check %s (%s): it has no range this script can read.", player.name,
+        instrument.name))
+    end
+  end
+end

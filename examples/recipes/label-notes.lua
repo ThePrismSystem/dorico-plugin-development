@@ -58,20 +58,6 @@ local function readCopy(app)
 end
 -- end helper: readCopy
 
--- helper: length
--- A position or duration in quarter notes, as the DoCore.RhythmicLength that createNote, createRest and createText
--- take. RhythmicLength(n) keeps only the whole part of n (0.5 gives 0), so a fraction goes in as
--- RhythmicLength(numerator, denominator): 1.5 quarter notes is RhythmicLength(3, 2).
-local function length(quarters)
-  for d = 1, 3840 do
-    local n = quarters * d
-    local whole = math.floor(n + 0.5)
-    if math.abs(n - whole) < 1e-6 then return DoCore.RhythmicLength(whole, d) end
-  end
-  error("no fraction for " .. tostring(quarters) .. " quarter notes")
-end
--- end helper: length
-
 local app, project = guard()
 if not project then return end
 local s = readCopy(app)
@@ -80,7 +66,10 @@ local values = require("scorereader.values")
 
 local player
 for _, p in ipairs(s.players) do
-  if not player and p.name:sub(1, #PLAYER) == PLAYER then player = p end
+  if p.name:sub(1, #PLAYER) == PLAYER then
+    player = p
+    break
+  end
 end
 if not player then
   print(string.format("No player's name starts with %q. Change PLAYER at the top of the script.", PLAYER))
@@ -107,17 +96,19 @@ for _, flow in ipairs(s.flows) do
       local at, order = {}, {}
       for _, e in ipairs(stream.events) do
         if e.kind == "note" or e.kind == "grace" then
-          local pos = values.toNumber(e.position)
+          local pos = values.positionText(e.position)
           if not at[pos] then
-            at[pos] = {}
-            order[#order + 1] = pos
+            at[pos] = { position = e.position, labels = {} }
+            order[#order + 1] = at[pos]
           end
-          table.insert(at[pos], label(e, transposition))
+          table.insert(at[pos].labels, label(e, transposition))
         end
       end
-      table.sort(order)
-      for _, pos in ipairs(order) do
-        streams[stream.id]:createText(length(pos), length(1), table.concat(at[pos], " "))
+      table.sort(order, function(a, b) return values.toNumber(a.position) < values.toNumber(b.position) end)
+      for _, chord in ipairs(order) do
+        local p = chord.position
+        streams[stream.id]:createText(DoCore.RhythmicLength(p.num, p.den), DoCore.RhythmicLength(1),
+          table.concat(chord.labels, " "))
         written = written + 1
       end
     end

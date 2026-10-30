@@ -336,6 +336,11 @@ return {
     t:eq(brief(10, { standard = "A0-C8" }), "below standard A0 C8", "only a standard range")
     t:eq(brief(10, {}), "in range", "no range, as for unpitched percussion")
     t:eq(brief(10, nil), "in range")
+    t:ok(outofrange.readable(flute))
+    t:ok(outofrange.readable({ standard = "A0-C8" }), "only a standard range")
+    t:ok(not outofrange.readable({}), "no range")
+    t:ok(not outofrange.readable(nil))
+    t:ok(not outofrange.readable({ standard = "C4 to A6" }), "a range it can't parse")
   end,
 
   guard_returns_the_open_project = function(t)

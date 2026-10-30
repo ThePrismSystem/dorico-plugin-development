@@ -112,8 +112,8 @@ local function namesAnswer(changes)
     { "written", "True" }, { "player", "All players" }, { "flow", "All flows" }, { "remove", "False" } }, changes)
 end
 
--- Stands in for Lua's flows, with a voice stream for each of the fixture's. createText adds the words to made and
--- gives the text an id the fixture doesn't have.
+-- Stands in for Lua's flows, with a voice stream for each of the fixture's. createText adds
+-- "<stream id>@<position> <words>" to made and gives the text an id the fixture doesn't have.
 local function writableScore(fixture, made)
   local s = require("scorereader.score").readFile(fixture)
   local flows = {}
@@ -121,8 +121,8 @@ local function writableScore(fixture, made)
     local voices = {}
     for _, stream in ipairs(flow.streams) do
       if stream.type == "voice" then
-        voices[#voices + 1] = { id = stream.id, createText = function(_, _, _, words)
-          made[#made + 1] = words
+        voices[#voices + 1] = { id = stream.id, createText = function(_, pos, _, words)
+          made[#made + 1] = stream.id .. "@" .. pos.num .. "/" .. pos.den .. " " .. words
           return { id = 100000 + #made }
         end }
       end
@@ -365,6 +365,28 @@ return {
     t:eq(table.concat(printed, " / "), "The reader couldn't read this project: no copy / lyric\tflow 1\tbar 2, "
       .. "beat 1\tSoprano\tdolce -> sweet: check it, the project couldn't be read back afterwards / Replaced 0; left 0 "
       .. "as they were; 1 to check by hand.")
+  end,
+
+  proofread_names_an_instrument_it_couldnt_check = function(t)
+    package.preload["scorereader.dorico.savedcopy"] = changedCopy(SAMPLE, function(s)
+      for _, player in ipairs(s.players) do
+        if player.name == "Flute" then player.instruments[1].range = { standard = "C4 to A6" } end
+      end
+    end)
+    local ok, printed = pcall(run, "examples/recipes/proofread.lua", SAMPLE)
+    package.preload["scorereader.dorico.savedcopy"] = nil
+    t:ok(ok, tostring(printed))
+    t:eq(table.concat(printed, " / "), "0 findings / Couldn't check Flute (Flute): it has no range this script can "
+      .. "read.")
+  end,
+
+  label_notes_writes_a_label_at_each_of_the_trumpets_notes = function(t)
+    local made = {}
+    local printed = run("examples/recipes/label-notes.lua", SAMPLE, writableScore(SAMPLE, made))
+    t:eq(table.concat(printed, " / "), #made .. " labels written")
+    t:eq(table.concat(made, " | "), "12@0/1 12 | 12@1/1 12 | 12@2/1 2 | 12@3/1 12 | 12@4/1 1 | 12@6/1 0 | 12@8/1 2 | "
+      .. "12@12/1 0 | 12@13/1 1 | 12@14/1 12 | 12@15/1 1 | 12@16/1 12 | 12@20/1 2 | 12@21/1 0 | 12@22/1 12 | "
+      .. "12@23/1 2 | 12@24/1 12 | 12@28/1 1")
   end,
 
   -- Stream 14 is the flute's, with one note at 0 and none at 7; stream 20 is the piano's, with E5 and G5 at 0.
