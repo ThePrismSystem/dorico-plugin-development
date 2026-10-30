@@ -178,6 +178,9 @@ return {
       "no kNoteSpelling")
     refused(t, errorWith(tree.child(tr, entry, "value"), nil, 'string: "H"'), "has no spelling the reader knows",
       "a letter that isn't one")
+    refused(t, errorWith(tree.path(tr, entry, "context/layoutIDWithFrameChainID"), nil,
+      "steamVariantList:list: {int: 0}, {int: -1}, {bool: false}"), "has no spelling the reader knows",
+      "a spelling for one layout only")
     refused(t, errorWith(tree.child(tr, note, "pitch"), nil, "200"), "but sounds MIDI 200", "a pitch out of reach")
   end,
   values_the_readers_dont_know = function(t)

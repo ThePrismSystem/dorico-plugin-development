@@ -148,12 +148,21 @@ block instances to their blocks. In the reading fixture and in a 6.2.20 project 
 | one per staff | `kInstrumentStaveStream` | clefs, dynamics, and text imported from MusicXML |
 | one per voice | `kVoiceStream` | notes, grace notes, rests, tuplets, slurs, lyrics, playing techniques, and text made with `createText` |
 | one per player | `kPlayerStream` | events that belong to the whole player |
+| one per automation target | `kAutomationStream` | `AutomationEventDefinition` points (a `data` node with `controllerDefinition`, `value` and `type`) |
 
 A flow's `flowPlayers` says who owns what. Each `flowPlayer` names its `playerID` and its player stream
 (`eventStreamID`), and each of its `flowPlayerInstruments` names the `instrumentID` with its stave streams
 (`staveStreamInfos`: `staveStreamID`, `staveID`, `nthStaveInInstrument`) and voice streams (`voiceStreamInfos`:
 `voiceStreamID`, `instrumentID`). That's the same ownership Lua gives through `flow.instruments[i]`, which owns
 `flow.voiceStreams[i]`.
+
+Two kinds of stream are left out of `flowPlayers`, so the reader gives them no owner. The flow's
+`automationStreamTable/entries` names each automation stream with its `automationTarget` (text such as `kIRV:0:-1`).
+In the 53 projects, 998 automation streams held 34,553 points. When a flow condenses staves,
+`condensedStreams/condensedStreams/streams/condensedStreams` lists a stave stream for each condensed staff
+(`staveStreams/staveStreamInfo`, with the players it combines in `condensedStaveID/players`) and sometimes a player
+stream (`playerStreams/playerStreamInfo`). Those streams hold the condensation labels. 13 of the 53 projects condense
+staves.
 
 ### Events
 

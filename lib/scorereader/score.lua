@@ -195,7 +195,8 @@ function score.readFile(path)
   return score.read(project.readFile(path))
 end
 
--- The player that owns an event's stream, or nil for the timebase stream.
+-- The player that owns an event's stream, or nil for a stream no one player owns: the timebase stream, an automation
+-- stream, or a condensed staff's stream (docs/file-format.md, "Streams and what they hold").
 function score.ownerOf(s, e)
   local stream = s.flowById[e.flowId].streamById[e.streamId]
   for _, p in ipairs(s.players) do

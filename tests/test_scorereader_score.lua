@@ -75,6 +75,33 @@ local function rename(t, id, name)
   t.nameOf[id] = #t.names - 1
 end
 
+-- A new node; its id. A name the tree has keeps its index, so tree.child still finds the nodes that had it.
+local function addNode(t, name, value, kids)
+  local id = t.count
+  t.count = id + 1
+  if not t.nameIndex[name] then
+    t.names[#t.names + 1] = name
+    t.nameIndex[name] = #t.names - 1
+  end
+  t.nameOf[id] = t.nameIndex[name]
+  setValue(t, id, value or "")
+  t.kidsOf[id] = kids
+  return id
+end
+
+-- A kNoteSpelling entry for every layout, from offset quarter notes into the note.
+local function spellingEntry(t, letter, offset)
+  return addNode(t, "entry", nil, {
+    addNode(t, "propertyType", "kNoteSpelling"),
+    addNode(t, "value", 'string: "' .. letter .. '"'),
+    addNode(t, "context", nil, {
+      addNode(t, "layoutIDWithFrameChainID", "steamVariantList:list: {int: -1}, {int: -1}, {bool: false}"),
+      addNode(t, "blockInstanceID", "-1"),
+      addNode(t, "propertyOffset", 'string: "0:' .. offset .. ':1:0"'),
+    }),
+  })
+end
+
 -- The reading fixture's first chord symbol, read again after change(tree, its chordSymbolData node).
 local function changedChord(change)
   local s = score.readFile(fixtures .. "6.2.30/reading.dorico")
@@ -116,6 +143,31 @@ local EMPTY_SCORE = "<kScore><fileVersion>1.1452</fileVersion><info><title>Empty
   .. '<blocks><array array="true"/></blocks><blockInstances><array array="true"/></blockInstances>'
   .. '<elementTables><array array="true"/></elementTables></flow></array></flows>'
   .. '<scorePlayers><array array="true"/></scorePlayers><layouts><array array="true"/></layouts></kScore>'
+
+-- The empty score with one voice stream (5) and one block (9) holding a rest at 1, the block played twice: instance 20
+-- at 8 and instance 21 at 0.
+local BLOCK_PLAYED_TWICE = EMPTY_SCORE
+  :gsub('<eventStreams><array array="true"/></eventStreams>', '<eventStreams><array array="true"><stream>'
+    .. "<streamID>5</streamID><eventStreamType>kVoiceStream</eventStreamType></stream></array></eventStreams>")
+  :gsub('<blocks><array array="true"/></blocks>', '<blocks><array array="true"><block><blockID>9</blockID>'
+    .. '<events array="true"><RestEventDefinition><eventID>100</eventID><position>1</position>'
+    .. "<duration>1</duration></RestEventDefinition></events></block></array></blocks>")
+  :gsub('<blockInstances><array array="true"/></blockInstances>', '<blockInstances><array array="true">'
+    .. "<instance><blockInstanceID>20</blockInstanceID><blockID>9</blockID><streamID>5</streamID>"
+    .. "<position>8</position></instance><instance><blockInstanceID>21</blockInstanceID><blockID>9</blockID>"
+    .. "<streamID>5</streamID><position>0</position></instance></array></blockInstances>")
+
+-- The ids of the streams the index-th flow's condensedStreams lists, which belong to no one player.
+local function condensedStreamIds(s, index)
+  local t, out = s.tree, {}
+  local function walk(n)
+    if tree.name(t, n):find("StreamID$") then out[tonumber(tree.value(t, n))] = true end
+    for _, k in ipairs(tree.children(t, n)) do walk(k) end
+  end
+  local condensed = tree.child(t, tree.children(t, tree.path(t, 0, "flows/array"))[index], "condensedStreams")
+  if condensed then walk(condensed) end
+  return out
+end
 
 local CHORD_SUFFIX = { major = "", dominant = "7", minor = "m" }
 local SYLLABLES = { begin = "begin", middle = "middle", ["end"] = "end", single = "single" }
@@ -173,6 +225,26 @@ return {
     local e = load("6.2.20/Faure_Dolly.dorico").events[8297]
     t:eq(e.spelling, "E#4", "the dump's spelling; the tied part from beat 120 is spelled F")
   end,
+  a_later_spelling_is_left_out_whichever_comes_first = function(t)
+    for _, laterFirst in ipairs({ false, true }) do
+      local s = score.readFile(fixtures .. "6.2.30/reading.dorico")
+      local e = find(events(s, "note"), function(x) return x.spelling == "C5" end)
+      local entries = tree.path(s.tree, e.node, "propertyTable/entries")
+      local later = spellingEntry(s.tree, "B", 2)
+      local kids = { table.unpack(tree.children(s.tree, entries)) }
+      table.insert(kids, laterFirst and 1 or #kids + 1, later)
+      s.tree.kidsOf[entries] = kids
+      t:eq(score.read(s.tree).events[e.id].spelling, "C5", laterFirst and "the later one listed first" or "listed last")
+    end
+  end,
+  grace_notes = function(t)
+    local s = score.readFile(fixtures .. "6.2.30/reading.dorico")
+    local g = events(s, "grace")[1]
+    t:eq(pos(g.notatedDuration), "1/2")
+    t:eq(g.slashed, true)
+    setValue(s.tree, tree.child(s.tree, g.node, "slashed"), "false")
+    t:eq(score.read(s.tree).events[g.id].slashed, false)
+  end,
   spellings_as_the_dump_writes_them = function(t)
     t:eq(notes.spelling("D", 64), "Dx4", "a double sharp is x")
     t:eq(notes.spelling("E", 62), "Ebb4")
@@ -187,7 +259,25 @@ return {
       t:eq(e.above, want.above, want.words)
       t:eq(e.system, false)
       t:eq(e.paragraphs[1].style, "paragraph.defaulttext")
+      t:eq(e.formatted, false)
     end
+  end,
+  system_text_paragraphs_and_formatting = function(t)
+    local s = score.readFile(fixtures .. "6.2.30/reading.dorico")
+    local tr, e = s.tree, events(s, "text")[1]
+    setValue(tr, tree.child(tr, e.node, "isSystemText"), "true")
+    local paragraphs = tree.path(tr, e.node, "content/paragraphs")
+    local p = tree.children(tr, paragraphs)[1]
+    tr.kidsOf[paragraphs] = { p, p }
+    local again = score.read(tr).events[e.id]
+    t:eq(again.system, true)
+    t:eq(#again.paragraphs, 2)
+    t:eq(again.words, e.words .. "\n" .. e.words, "paragraphs joined by a newline")
+    t:eq(again.formatted, false, "one plain fragment in each")
+    local fragments = tree.child(tr, p, "fragments")
+    local f = tree.children(tr, fragments)[1]
+    tr.kidsOf[fragments] = { f, f }
+    t:eq(score.read(tr).events[e.id].formatted, true, "two fragments in a paragraph")
   end,
   lyrics_with_syllables_and_lines = function(t)
     local s = load("6.2.30/reading.dorico")
@@ -198,7 +288,19 @@ return {
       t:eq(e.syllable, SYLLABLES[want.syllable], want.text)
       t:eq(e.line, want.line, want.text)
       t:eq(e.duration.num > 0, want.extend, want.text .. " melisma")
+      t:eq(e.lineType, "verse", want.text)
+      t:eq(e.above, false, want.text)
     end
+  end,
+  a_chorus_lyric_above_the_staff = function(t)
+    local s = score.readFile(fixtures .. "6.2.30/reading.dorico")
+    local e = events(s, "lyric")[1]
+    local el = elementOf(s, e, "lyricElementID", "LyricElementTableDefinition")
+    setValue(s.tree, tree.child(s.tree, el, "lineType"), "kChorus")
+    setValue(s.tree, tree.child(s.tree, el, "lineLocation"), "kAbove")
+    local again = score.read(s.tree).events[e.id]
+    t:eq(again.lineType, "chorus")
+    t:eq(again.above, true)
   end,
   chord_symbols = function(t)
     local s = load("6.2.30/reading.dorico")
@@ -243,6 +345,20 @@ return {
       t:ok(find(got, function(x) return x == key end), key .. " in " .. table.concat(got, ", "))
     end
     t:ok(find(got, function(x) return x == "Flute|12|crescendo" end), "the hairpin")
+  end,
+  a_diminuendo_and_messa_di_voce = function(t)
+    local function hairpinWith(field, v)
+      local s = score.readFile(fixtures .. "6.2.30/reading.dorico")
+      local e = find(events(s, "dynamic"), function(x)
+        return find(x.dynamics, function(d) return d.kind == "gradual" end) end)
+      local el = elementOf(s, e, "dynamicGroupID", "DynamicGroupElementTableDefinition")
+      local sub = find(tree.children(s.tree, tree.child(s.tree, el, "subElements")), function(n)
+        return tree.name(s.tree, n) == "GradualChangeDynamicDefinition" end)
+      setValue(s.tree, tree.child(s.tree, sub, field), v)
+      return find(score.read(s.tree).events[e.id].dynamics, function(d) return d.kind == "gradual" end)
+    end
+    t:eq(hairpinWith("direction", "kGradualDynamicDown").name, "diminuendo")
+    t:eq(hairpinWith("type", "kMessaDiVoce").name, "messa di voce")
   end,
   keys_and_time_signatures = function(t)
     local s = load("6.2.30/reading.dorico")
@@ -350,6 +466,44 @@ return {
     local first = find(guitar, function(x) return x.kind == "note" and pos(x.position) == "0" end)
     t:eq(score.value(s, first, "kNoteStringIndex", s.layouts[1].id), 4, "the fifth string, counted from 0")
   end,
+  a_piano_has_a_stream_for_each_staff = function(t)
+    local s = load("6.2.30/reading.dorico")
+    local piano = find(s.players, function(p) return p.name == "Piano" end)
+    local staves = {}
+    for _, stream in ipairs(s.flows[1].streams) do
+      if stream.type == "stave" and stream.playerId == piano.id then staves[#staves + 1] = stream.staff end
+    end
+    table.sort(staves)
+    t:eq(table.concat(staves, ","), "0,1")
+  end,
+  a_players_events_in_time_order = function(t)
+    local s = load("6.2.30/reading.dorico")
+    for _, p in ipairs(s.players) do
+      local list = score.eventsOf(s, s.flows[1], p)
+      t:ok(#list > 1, p.name)
+      for i = 2, #list do
+        local a, b = list[i - 1], list[i]
+        local x, y = values.toNumber(a.position), values.toNumber(b.position)
+        t:ok(x < y or (x == y and a.id < b.id), p.name .. ": " .. a.id .. " before " .. b.id)
+      end
+      for _, e in ipairs(list) do t:eq(score.ownerOf(s, e), p, p.name .. " owns " .. e.id) end
+    end
+  end,
+  a_block_played_twice = function(t)
+    local s = score.read(xml.decode(BLOCK_PLAYED_TWICE))
+    local stream = s.flows[1].streamById[5]
+    t:eq(#stream.instances, 2)
+    t:eq(stream.instances[1].id, 21, "instances in time order")
+    t:eq(#stream.events, 2, "the rest once for each instance")
+    t:eq(stream.events[1].id, 100)
+    t:eq(stream.events[2].id, 100, "with the same id")
+    t:eq(pos(stream.events[1].position), "1")
+    t:eq(stream.events[1].instanceId, 21)
+    t:eq(pos(stream.events[2].position), "9")
+    t:eq(stream.events[2].instanceId, 20)
+    t:eq(s.events[100], stream.events[1], "s.events holds the first")
+    t:eq(#s.flows[1].events, 2)
+  end,
   instruments = function(t)
     local s = load("6.2.30/reading.dorico")
     local clarinet = s.players[2].instruments[1]
@@ -397,18 +551,31 @@ return {
       local s = load(entry.path)
       t:ok(#s.flows > 0, entry.path)
       local notes = 0
-      for _, flow in ipairs(s.flows) do
+      for fi, flow in ipairs(s.flows) do
+        local condensed = condensedStreamIds(s, fi)
         for _, e in ipairs(flow.events) do
-          t:ok(e.kind and e.definition, entry.path .. " event " .. e.id)
-          if e.kind == "note" then
-            notes = notes + 1
-            t:ok(e.spelling:match("^[A-G][#bx]*%-?%d$"), entry.path .. " spelling " .. tostring(e.spelling))
+          local where = entry.path .. " event " .. e.id
+          t:ok(e.kind and e.definition, where)
+          local stream = flow.streamById[e.streamId]
+          t:ok(stream, where .. " is in a stream")
+          if stream.type ~= "timebase" and stream.type ~= "automation" and not condensed[stream.id] then
+            t:ok(score.ownerOf(s, e), where .. " has an owner")
           end
-          if e.kind == "lyric" then t:ok(e.text, entry.path .. " lyric " .. e.id) end
-          if e.kind == "dynamic" then t:ok(#e.dynamics > 0, entry.path .. " dynamic " .. e.id) end
-          if e.kind == "timeSignature" then t:ok(e.numerator or e.barlineOnly, entry.path .. " time " .. e.id) end
-          if e.kind == "keySignature" then t:ok(e.root or e.atonal, entry.path .. " key " .. e.id) end
-          t:ok(score.entries(s, e), entry.path .. " properties of " .. e.id)
+          t:ok(e.position.den > 0 and e.duration.num >= 0, where .. " position and duration")
+          if e.kind == "note" or e.kind == "grace" then
+            notes = notes + 1
+            t:ok(e.pitch >= 0 and e.pitch <= 127, where .. " pitch " .. e.pitch)
+            t:ok(e.spelling:match("^[A-G][#bx]*%-?%d$"), where .. " spelling " .. tostring(e.spelling))
+          end
+          if e.kind == "text" then t:eq(type(e.words), "string", where .. " words") end
+          if e.kind == "lyric" then t:ok(e.text and e.syllable and e.lineType, where .. " lyric") end
+          if e.kind == "chordSymbol" then t:ok(e.root:match("^[A-G]"), where .. " chord root " .. e.root) end
+          if e.kind == "dynamic" then t:ok(#e.dynamics > 0, where .. " dynamics") end
+          if e.kind == "timeSignature" then t:ok(e.numerator or e.barlineOnly, where .. " time") end
+          if e.kind == "keySignature" then t:ok(e.root or e.atonal, where .. " key") end
+          if e.kind == "tempo" then t:ok(e.type, where .. " tempo type") end
+          if e.kind == "tuplet" then t:ok(e.actual > 0 and e.normal > 0, where .. " tuplet") end
+          t:ok(score.entries(s, e), where .. " properties")
         end
       end
       t:ok(notes > 0, entry.path .. " has notes")

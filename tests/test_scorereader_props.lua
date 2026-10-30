@@ -83,6 +83,7 @@ return {
     refused(t, { layoutChild(3), { "blockInstanceID", "x" } }, "instance")
     refused(t, { layoutChild(3), { "blockInstanceID", "-1" }, { "assignedStaveType", "kSmall" } }, "stave type")
     refused(t, { layoutChild(3), { "blockInstanceID", "-1" }, { "voiceIndex", "1" } }, "unknown child")
+    refused(t, { layoutChild(3), { "blockInstanceID", "-1" }, { "propertyOffset", "int: 3" } }, "int offset")
     refused(t, { { "blockInstanceID", "1010" } }, "no layout")
     refused(t, { layoutChild(3) }, "no instance")
   end,
