@@ -25,12 +25,12 @@ local function u32(n) return u16(n % 65536) .. u16(math.floor(n / 65536)) end
 
 local HELLO_CRC = 0x3610a686
 
--- An archive of one entry, "a.txt" holding "hello" stored as it is. o changes a field: {method, size, localOffset,
--- count, centralOffset, comment}.
+-- An archive of one entry, "a.txt" holding "hello" stored as it is. o changes a field: {data, crc, method, size,
+-- localOffset, count, centralOffset, comment}.
 local function archive(o)
   o = o or {}
-  local name, data, method = "a.txt", "hello", o.method or 0
-  local sizes = u32(HELLO_CRC) .. u32(#data) .. u32(o.size or #data)
+  local name, data, method = "a.txt", o.data or "hello", o.method or 0
+  local sizes = u32(o.crc or HELLO_CRC) .. u32(#data) .. u32(o.size or #data)
   local header = "PK\3\4" .. u16(20) .. u16(0) .. u16(method) .. u16(0) .. u16(0) .. sizes .. u16(#name) .. u16(0)
     .. name
   local central = "PK\1\2" .. u16(20) .. u16(20) .. u16(0) .. u16(method) .. u16(0) .. u16(0) .. sizes
@@ -88,6 +88,19 @@ return {
   end,
   a_stored_entry = function(t)
     t:eq(zip.entry(archive(), "a.txt"), "hello")
+  end,
+  crcs_of_lengths_on_and_off_a_multiple_of_8 = function(t)
+    -- the values zlib.crc32 gives
+    local known = { { "", 0 }, { "a", 0xE8B7BE43 }, { "12345678", 0x9AE0DAAF }, { "123456789", 0xCBF43926 },
+      { "The quick brown fox jumps over the lazy dog", 0x414FA339 } }
+    for _, k in ipairs(known) do
+      t:eq(zip.entry(archive({ data = k[1], crc = k[2] }), "a.txt"), k[1], #k[1] .. " bytes")
+      fails(t, archive({ data = k[1], crc = (k[2] + 1) % 0x100000000 }), "CRC mismatch for a.txt")
+    end
+  end,
+  names_refuses_a_bad_central_directory = function(t)
+    local err = errorOf(function() return zip.names(archive({ centralOffset = 0 })) end)
+    t:eq(err, "zip: bad central directory")
   end,
   a_comment_after_the_end_record = function(t)
     t:eq(zip.entry(archive({ comment = "made by hand" }), "a.txt"), "hello")
