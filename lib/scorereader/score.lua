@@ -60,6 +60,14 @@ local function newContext(s)
     local n = tree.path(t, id, path)
     return n and tree.value(t, n)
   end
+  -- A list the reader walks must be there, even when empty: a missing one would read as a score with nothing in it.
+  function ctx.list(id, path)
+    return tree.children(t, ctx.node(id, path))
+  end
+  function ctx.optList(id, path)
+    local n = tree.path(t, id, path)
+    return n and tree.children(t, n) or {}
+  end
   function ctx.int(id, path)
     local v = ctx.text(id, path)
     return tonumber(v:match("^%-?%d+$")) or ctx.fail("not a whole number: " .. path .. " = " .. v)
@@ -72,17 +80,12 @@ local function newContext(s)
   return ctx
 end
 
-local function children(ctx, id, path)
-  local n = tree.path(ctx.t, id, path)
-  return n and tree.children(ctx.t, n) or {}
-end
-
 -- Each element table's elements by elementID, keyed by table name.
 local function elementsOf(ctx, flowNode)
   local out = {}
-  for _, tableNode in ipairs(children(ctx, flowNode, "elementTables/array")) do
+  for _, tableNode in ipairs(ctx.list(flowNode, "elementTables/array")) do
     local byId = {}
-    for _, el in ipairs(children(ctx, tableNode, "array")) do byId[ctx.int(el, "elementID")] = el end
+    for _, el in ipairs(ctx.list(tableNode, "array")) do byId[ctx.int(el, "elementID")] = el end
     out[tree.name(ctx.t, tableNode)] = byId
   end
   return out
@@ -92,10 +95,10 @@ local function readFlow(ctx, flowNode)
   local t = ctx.t
   local flow = { id = ctx.int(flowNode, "flowID"), title = ctx.text(flowNode, "flowName"), streams = {},
     streamById = {}, events = {}, info = {} }
-  for _, c in ipairs(children(ctx, flowNode, "flowInfo")) do flow.info[tree.name(t, c)] = tree.value(t, c) end
+  for _, c in ipairs(ctx.list(flowNode, "flowInfo")) do flow.info[tree.name(t, c)] = tree.value(t, c) end
   flow.elements = elementsOf(ctx, flowNode)
 
-  for _, sNode in ipairs(children(ctx, flowNode, "eventStreams/array")) do
+  for _, sNode in ipairs(ctx.list(flowNode, "eventStreams/array")) do
     local raw = ctx.text(sNode, "eventStreamType")
     local stream = { id = ctx.int(sNode, "streamID"), type = STREAMS[raw] or "other", rawType = raw, instances = {},
       events = {} }
@@ -103,17 +106,17 @@ local function readFlow(ctx, flowNode)
     flow.streamById[stream.id] = stream
   end
   -- who owns each stream (docs/file-format.md, "Streams and what they hold")
-  for _, fp in ipairs(children(ctx, flowNode, "flowPlayers/array")) do
+  for _, fp in ipairs(ctx.list(flowNode, "flowPlayers/array")) do
     local playerId = ctx.int(fp, "playerID")
     local ps = flow.streamById[ctx.int(fp, "eventStreamID")]
     if ps then ps.playerId = playerId end
-    for _, inst in ipairs(children(ctx, fp, "flowPlayerInstruments")) do
+    for _, inst in ipairs(ctx.list(fp, "flowPlayerInstruments")) do
       local instrumentId = ctx.int(inst, "instrumentID")
-      for _, info in ipairs(children(ctx, inst, "staveStreamInfos")) do
+      for _, info in ipairs(ctx.list(inst, "staveStreamInfos")) do
         local s = flow.streamById[ctx.int(info, "staveStreamID")]
         if s then s.playerId, s.instrumentId, s.staff = playerId, instrumentId, ctx.int(info, "nthStaveInInstrument") end
       end
-      for _, info in ipairs(children(ctx, inst, "voiceStreamInfos")) do
+      for _, info in ipairs(ctx.list(inst, "voiceStreamInfos")) do
         local s = flow.streamById[ctx.int(info, "voiceStreamID")]
         if s then s.playerId, s.instrumentId = playerId, ctx.int(info, "instrumentID") end
       end
@@ -121,10 +124,10 @@ local function readFlow(ctx, flowNode)
   end
 
   local blocks = {}
-  for _, b in ipairs(children(ctx, flowNode, "blocks/array")) do
+  for _, b in ipairs(ctx.list(flowNode, "blocks/array")) do
     blocks[ctx.int(b, "blockID")] = b
   end
-  for _, bi in ipairs(children(ctx, flowNode, "blockInstances/array")) do
+  for _, bi in ipairs(ctx.list(flowNode, "blockInstances/array")) do
     local stream = flow.streamById[ctx.int(bi, "streamID")]
     local inst = { id = ctx.int(bi, "blockInstanceID"), blockId = ctx.int(bi, "blockID"),
       position = ctx.read(values.position, ctx.text(bi, "position"), "a block instance's position") }
@@ -137,7 +140,7 @@ local function readFlow(ctx, flowNode)
     table.sort(stream.instances, function(a, b) return values.toNumber(a.position) < values.toNumber(b.position) end)
     for _, inst in ipairs(stream.instances) do
       local block = blocks[inst.blockId] or ctx.fail("block " .. inst.blockId .. " isn't in the flow")
-      for _, node in ipairs(children(ctx, block, "events")) do
+      for _, node in ipairs(ctx.list(block, "events")) do
         local definition = tree.name(t, node)
         local kind = KINDS[definition] or { "other" }
         local e = { id = ctx.int(node, "eventID"), definition = definition, kind = kind[1], flowId = flow.id,
@@ -163,7 +166,7 @@ function score.read(input)
   s.info = players.info(ctx)
   s.players, s.instruments = players.players(ctx)
   s.layouts = players.layouts(ctx)
-  for _, f in ipairs(children(ctx, 0, "flows/array")) do s.flows[#s.flows + 1] = readFlow(ctx, f) end
+  for _, f in ipairs(ctx.list(0, "flows/array")) do s.flows[#s.flows + 1] = readFlow(ctx, f) end
   return s
 end
 

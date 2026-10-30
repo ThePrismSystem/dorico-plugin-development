@@ -18,11 +18,10 @@ end
 function marks.technique(ctx, e, node)
   e.appearance = ctx.text(node, "appearanceEntityID")
   local def = ctx.score.library[e.appearance]
-  if def then
-    e.name = def.name
-    e.text = ctx.opt(def.node, "text")
-    e.technique = ctx.opt(def.node, "playingTechniqueEntityID")
-  end
+    or ctx.fail("playing technique " .. e.id .. ": " .. e.appearance .. " has no definition in the library")
+  e.name = def.name
+  e.text = ctx.opt(def.node, "text")
+  e.technique = ctx.opt(def.node, "playingTechniqueEntityID")
 end
 
 -- clef: the clef's entity ("clef.treble").

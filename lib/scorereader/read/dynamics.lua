@@ -44,8 +44,7 @@ function dynamics.group(ctx, e, node)
   local el = (ctx.flow.elements.DynamicGroupElementTableDefinition or {})[id]
     or ctx.fail("dynamic " .. e.id .. " points to no element " .. id)
   e.dynamics = {}
-  local subs = tree.child(ctx.t, el, "subElements")
-  for _, sub in ipairs(subs and tree.children(ctx.t, subs) or {}) do
+  for _, sub in ipairs(ctx.list(el, "subElements")) do
     local definition = tree.name(ctx.t, sub)
     local d = { position = values.add(e.position, ctx.read(values.position, ctx.text(sub, "position"),
       "a dynamic's position")) }

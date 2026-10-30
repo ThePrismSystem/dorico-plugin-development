@@ -1,16 +1,14 @@
 -- Time and key signatures, from the flow's bar division and tonality division elements.
-local tree = require("scorereader.tree")
-
 local signatures = {}
 
--- numerator and denominator of the first time signature, or barlineOnly when the bar division changes only a
--- barline or a bar number; barline is the barline change's type when there is one.
+-- numerator and denominator of the first time signature, or barlineOnly when the bar division's list of time
+-- signatures is empty, as when it changes only a barline or a bar number; barline is the barline change's type when
+-- there is one.
 function signatures.time(ctx, e, node)
   local id = ctx.int(node, "barDivisionElementID")
   local el = (ctx.flow.elements.BarDivisionElementTableDefinition or {})[id]
     or ctx.fail("bar division " .. e.id .. " points to no element " .. id)
-  local list = tree.path(ctx.t, el, "barDivisionData/timeSignature/timeSignaturesAndDivisions")
-  local first = list and tree.children(ctx.t, list)[1]
+  local first = ctx.list(el, "barDivisionData/timeSignature/timeSignaturesAndDivisions")[1]
   if first then
     local numerator = ctx.text(first, "timeSignature/numerator")
     e.numerator = tonumber(numerator) or numerator

@@ -4,6 +4,7 @@ local score = require("scorereader.score")
 local values = require("scorereader.values")
 local tree = require("scorereader.tree")
 local notes = require("scorereader.read.notes")
+local xml = require("scorereader.xml")
 local json = require("json")
 
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])") or "./"
@@ -80,6 +81,16 @@ local function changedChord(change)
   change(s.tree, tree.path(s.tree, events(s, "chordSymbol")[1].node, "chordSymbolData"))
   return events(score.read(s.tree), "chordSymbol")[1]
 end
+
+-- A score with one empty flow, no players and no layouts: every list the reader walks is there, and empty.
+local EMPTY_SCORE = "<kScore><fileVersion>1.1452</fileVersion><info><title>Empty</title>"
+  .. "<lastSavedVersion>6.2.30</lastSavedVersion></info>"
+  .. '<library><instruments><entities array="true"/></instruments></library><flows><array array="true"><flow>'
+  .. "<flowID>0</flowID><flowName>Flow 1</flowName><flowInfo/>"
+  .. '<flowPlayers><array array="true"/></flowPlayers><eventStreams><array array="true"/></eventStreams>'
+  .. '<blocks><array array="true"/></blocks><blockInstances><array array="true"/></blockInstances>'
+  .. '<elementTables><array array="true"/></elementTables></flow></array></flows>'
+  .. '<scorePlayers><array array="true"/></scorePlayers><layouts><array array="true"/></layouts></kScore>'
 
 local CHORD_SUFFIX = { major = "", dominant = "7", minor = "m" }
 local SYLLABLES = { begin = "begin", middle = "middle", ["end"] = "end", single = "single" }
@@ -281,6 +292,16 @@ return {
     t:eq(s.layouts[1].type, "kFullScoreLayout")
     t:eq(#s.layouts[1].playerIds, 6)
     t:eq(score.partOf(s, s.players[1]).playerIds[1], s.players[1].id)
+  end,
+  an_empty_score_reads_cleanly = function(t)
+    local s = score.read(xml.decode(EMPTY_SCORE))
+    t:eq(s.info.title, "Empty")
+    t:eq(#s.flows, 1)
+    t:eq(s.flows[1].title, "Flow 1")
+    t:eq(#s.flows[1].streams, 0)
+    t:eq(#s.flows[1].events, 0)
+    t:eq(#s.players, 0)
+    t:eq(#s.layouts, 0)
   end,
   events_by_id = function(t)
     local s = load("6.2.30/reading.dorico")
