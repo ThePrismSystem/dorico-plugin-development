@@ -158,6 +158,19 @@ project is that copy before changing anything, and refuses if it isn't. Your own
 back to them when the tests close their copy. The test for 17 answers the example's box itself, and Dorico runs nothing
 else while the box is open.
 
+### Linting and security scans
+
+```bash
+pip install -r requirements-dev.txt
+npm ci
+python tools/lint.py
+```
+
+That runs the linters and security scanners CI runs over every file git tracks, and says how to install any tool it
+can't find. The first two lines install ruff, zizmor, typos and markdownlint; luacheck, lua-language-server,
+PSScriptAnalyzer, actionlint and gitleaks come from their own releases. [SECURITY.md](SECURITY.md) lists every check,
+and what each example runs and writes.
+
 ## Credits
 
 - [ConsoleTools](https://forums.steinberg.net/t/introducing-consoletools-a-lua-framework-to-make-dorico-scripts-more-accessible/848477)

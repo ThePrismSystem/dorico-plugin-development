@@ -10,6 +10,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
+# The programs the form helper starts, as its code spells them. SECURITY.md describes each one.
+PROCESSES = [
+    "powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File",
+    "osascript",
+]
+
 # The form helper, a "-- helper: form" block that five examples carry.
 FORM = {
     "os.execute": 1,  # on Windows, powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File on the box
@@ -207,6 +213,17 @@ class CallTests(unittest.TestCase):
     def test_no_network_calls(self):
         for path, found in found_calls():
             self.assertFalse({name: n for name, n in found.items() if name in NETWORK}, path)
+
+    def test_security_md_names_every_process(self):
+        security = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
+        for command in PROCESSES:
+            self.assertIn(command, security)
+
+    def test_every_process_is_in_the_code(self):
+        code = "\n".join(strip_comments((ROOT / path).read_text(encoding="utf-8").replace("\r\n", "\n"))
+                         for path in checked_files())
+        for command in PROCESSES:
+            self.assertIn(command, code)
 
 
 if __name__ == "__main__":
