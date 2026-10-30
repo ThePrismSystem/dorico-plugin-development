@@ -1,16 +1,18 @@
 # Dorico plug-in development
 
-Example scripts and a guide for writing Lua scripts that read and change a Dorico 6 score.
+Example scripts, a guide and a reader library for Lua scripts that read a whole Dorico 6 score and change it.
 
 Dorico 6 can run Lua scripts, but Steinberg documents almost none of it: how to read the notes, which player a voice
-belongs to, how to select something, what undo does. Everything here was found out by trying it on a scratch copy of
-a project, and every example is run in Dorico by an automated test. It's for anyone who wants to automate Dorico: a
-composer or arranger who has written plug-ins for Sibelius or MuseScore, or just a few scripts, and a developer
-building a full plug-in.
+belongs to, how to select something, what undo does. Everything here was found out by trying it on a scratch copy of a
+project, and every example is run in Dorico by an automated test. Lua on its own reads little of a score, so the library
+here reads a saved copy of the open project instead: every note with its notehead, colour and other properties, texts,
+lyrics, chord symbols, dynamics, and key and time signatures, matched to Lua by event id. It's for anyone who wants to
+automate Dorico: a composer or arranger who has written plug-ins for Sibelius or MuseScore, or just a few scripts, and a
+developer building a full plug-in.
 
 ## What's here
 
-- [examples/fundamentals](examples/fundamentals): fourteen short scripts, one technique each, numbered in the order
+- [examples/fundamentals](examples/fundamentals): nineteen short scripts, one technique each, numbered in the order
   to read them.
 - [examples/recipes](examples/recipes): six scripts that do a real job by combining the fundamentals.
 - [docs/guide.md](docs/guide.md): how Dorico's Lua scripting works, what doesn't, and the workarounds.
@@ -67,9 +69,9 @@ Planets* (122,366 events) takes 7.5 s in stock Lua.
 3. Open Script > Show Script Console to read what it printed. Lines printed while the console was closed are kept.
 
 To have a script in the Script menu, copy it into Dorico's Script Plug-ins folder (on Windows,
-`%APPDATA%\Steinberg\Dorico 6\Script Plug-ins\`) and restart Dorico. Each example is one file, with nothing beside
-it, and starts with comment lines saying what it does, what it changes, how to undo it, and which examples it builds
-on.
+`%APPDATA%\Steinberg\Dorico 6\Script Plug-ins\`) and restart Dorico. Each example is one file, and starts with comment
+lines saying what it does, what it changes, how to undo it, and which examples it builds on. Examples 04 to 09 and 13
+load the reader from `lib/`, so copy the `lib` folder into Script Plug-ins beside them.
 
 ## The examples
 
@@ -80,9 +82,14 @@ on.
 | [03-read-notes](examples/fundamentals/03-read-notes.lua) | Prints every note: flow, player, voice, position, duration, pitch. | No |
 | [04-read-the-saved-copy](examples/fundamentals/04-read-the-saved-copy.lua) | Prints each note's notehead and colour, read from a saved copy. | No |
 | [05-names-and-titles](examples/fundamentals/05-names-and-titles.lua) | Reads the title, flow titles, players, instruments and layouts from a saved copy. | No |
+| [06-match-by-event-id](examples/fundamentals/06-match-by-event-id.lua) | Matches every stream's dump to the saved copy by event id. | No |
+| [07-values-per-layout](examples/fundamentals/07-values-per-layout.lua) | Prints each note's properties with the layouts they apply to. | No |
+| [08-text-lyrics-chords-dynamics](examples/fundamentals/08-text-lyrics-chords-dynamics.lua) | Prints every text, lyric, chord symbol and dynamic. | No |
+| [09-bars-keys-and-times](examples/fundamentals/09-bars-keys-and-times.lua) | Prints key and time signatures and each note's bar and beat. | No |
 | [10-commands](examples/fundamentals/10-commands.lua) | Renames the first flow by command, showing how to escape values. | Yes; one Edit > Undo |
 | [11-act-on-the-selection](examples/fundamentals/11-act-on-the-selection.lua) | Finds the selected notes and writes each one's name above it. | Yes; one Edit > Undo |
 | [12-select-by-id](examples/fundamentals/12-select-by-id.lua) | Selects each note above F5 by id and colours it red. | Yes; one Edit > Undo |
+| [13-set-a-property-by-id](examples/fundamentals/13-set-a-property-by-id.lua) | Colours each note above F5 by event id, in every layout. | Yes; one Edit > Undo |
 | [14-add-notes-rests-text](examples/fundamentals/14-add-notes-rests-text.lua) | Adds a flow and writes notes, a chord, a rest and a text in it. | Yes; one Edit > Undo |
 | [15-layout-and-notation-options](examples/fundamentals/15-layout-and-notation-options.lua) | Hides the flow headings and sets a final barline. | Yes; one Edit > Undo |
 | [16-flows-and-players](examples/fundamentals/16-flows-and-players.lua) | Adds a flow and a player, names them, keeps the player to the new flow. | Yes; one Edit > Undo |
@@ -106,10 +113,11 @@ Some examples are smaller than planned, or work differently, because a probe sho
 
 - The proofreading recipe has no check for incomplete bars. Rests removed with Edit > Remove Rests leave no trace a
   script can see.
-- Lua can't read time signatures, so the chord-symbols recipe names a chord wherever three or more pitch classes
-  sound, not bar by bar, and the proofreading recipe finds bar numbers through the text export.
-- A colour set by command, or in the Properties panel, can't be read back: a script can tell that a note has a
-  colour, but not which. The colour recipes are checked for the colour being there.
+- Lua can't read time signatures, so the chord-symbols recipe names a chord wherever three or more pitch classes sound,
+  not bar by bar, and the proofreading recipe finds bar numbers through the text export. A saved copy has time
+  signatures ([09](examples/fundamentals/09-bars-keys-and-times.lua)); those two recipes still use the older routes.
+- A colour set by command, or in the Properties panel, can't be read back from Lua, because Dorico stores it for the
+  layout on screen. A saved copy reads it, and the colour recipes' tests check the exact colour through fundamental 04.
 - Edits made through the object model are undoable, against what the handbells plug-in's guide says. So 11 finds
   the selection by moving it an octave and back instead of undoing, which keeps its labels in one undo step.
 - Binding a script to a key of its own means editing Dorico's key-command file and restarting Dorico. 19 and the
@@ -135,11 +143,11 @@ running with Remote Control turned on in its preferences. The first time, Dorico
 and the session token is kept in `.dorico-token`. To use a client name Dorico already allows, set
 `DORICO_CLIENT_NAME` or put the name in `.dorico-client-name`.
 
-The tests never touch your own projects. Each copies the sample (`fixtures/6.2.30/sample.dorico`) into a scratch
-folder, `%TEMP%\dorico-examples-run`, opens the copy, and closes it unsaved. The script inside Dorico checks that the
-active project is that copy before changing anything, and refuses if it isn't. Your own projects can stay open;
-Dorico goes back to them when the tests close their copy. The test for 12 answers the example's box itself, and Dorico runs
-nothing else while the box is open.
+The tests never touch your own projects. Each copies the sample (`fixtures/6.2.30/sample.dorico`) into a scratch folder,
+`%TEMP%\dorico-examples-run`, opens the copy, and closes it unsaved. The script inside Dorico checks that the active
+project is that copy before changing anything, and refuses if it isn't. Your own projects can stay open; Dorico goes
+back to them when the tests close their copy. The test for 17 answers the example's box itself, and Dorico runs nothing
+else while the box is open.
 
 ## Credits
 

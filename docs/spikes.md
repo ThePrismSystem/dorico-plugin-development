@@ -121,9 +121,9 @@ Probes: `s8_properties.lua`, `s8_colour_read.lua`.
   `propertyTable:set("kEventColour", DoCore.Variant.createString("#ff8000ff"), ctx)`. Edit > Undo takes it back
   like any other edit (see Undo, below). It needs the event object, which a stream holding lyrics or slurs can't
   give.
-- A colour set by command can't be read back. The property is listed, but its Variant has `type` -1 and `valid`
-  false, and `tostring` gives "". A colour set from Lua reads back as the string it was set to, and still does after
-  the project is saved and reopened and in a pasted copy (fundamental 04 reads the sample's). So a script can tell
+- A colour set by command can't be read back. The property is listed, but its Variant has `type` -1 and `valid` false,
+  and `tostring` gives "". A colour set from Lua reads back as the string it was set to, and still does after the
+  project is saved and reopened and in a pasted copy (the old fundamental 04 read the sample's). So a script can tell
   that a note has a colour, but not which one, unless a script set it.
 - A property-table read can lag the page. The sample's first trumpet note has a colour set through its property
   table. After the colour-by-pitch recipe coloured it by command, the page showed the new colour, but Lua still
@@ -131,6 +131,14 @@ Probes: `s8_properties.lua`, `s8_colour_read.lua`.
 - `UI.InvokePropertyChangeValue?Type=kNoteheadSetOverride&Value=string: "noteheadset.diamondNoteheads"` changed
   nothing.
 
+
+The route fundamental 04 took before the reader: add a flow with `Project.Flow.New` and remove the players the music
+flow lacks; select the music flow's whole range (`EventEdit.Select` its first note, `Edit.SelectToStartOfFlow`,
+`Edit.SelectAtEndOfFlow`, and `EventEdit.NavigateDownExtend` once per further staff); `Filter.NotesAndChords` and
+`Edit.Copy`; paste onto a temporary note in the new flow's first voice; delete the slurs and other lines the filter
+keeps; read `stream.events` and `propertyTable:get`; and take the flow away with one `Edit.Undo`. It merged unisons in
+two voices, listed chord notes in a different order each time, replaced the clipboard and the selection, and still
+couldn't read a colour set by command.
 ## S1: reading the selection
 
 Probes: `s1_read_selection.lua`, driven by `s1_selection.py`; `select_note.lua` makes the selections.
@@ -323,19 +331,19 @@ its events with the reader, acts on them by the ids the file gives, and reads th
 - W4, many texts. 300 `createText` calls took 18.7 s, about 62 ms each, and all 300 read back. Reading the copy took
   1.3 s.
 - W5, accidentals. `EventEdit.ChangeProperty` with `kNoteAccidentalVisibility_v3` takes `kRoundBrackets`,
-  `kSquareBrackets`, `kShow` and `kHide`, writing the older `kNoteAccidentalVisibility` beside each (`kParenthesise`
-  for both bracket kinds); it stores `kDefault`, or any other value, as `kHide`. The command with no `Value`, and the
+  `kSquareBrackets`, `kShow` and `kHide`, writing the older `kNoteAccidentalVisibility` beside each (`kParenthesise` for
+  both bracket kinds); it stores `kDefault`, or any other value, as `kHide`. The command with no `Value`, and the
   Properties panel's enable switch on a selection, both take the property off. The panel's route on a selection stores
   the layout on screen, layout 0 for the full score, and so do the menu commands: with the flute part on screen,
-  `Edit.ShowAccidentalInBrackets` stored the part's layout (`w5_menu_in_part.py`). A value set by id has no context,
-  so it can be told apart from one set by hand. One `Edit.Undo` from outside took back a run's `ChangeProperty` and its `createText`
-  together: the property joins the run's one undo step.
+  `Edit.ShowAccidentalInBrackets` stored the part's layout (`w5_menu_in_part.py`). A value set by id has no context, so
+  it can be told apart from one set by hand. One `Edit.Undo` from outside took back a run's `ChangeProperty` and its
+  `createText` together: the property joins the run's one undo step.
 - W6, showing a problem. A colour set by `ChangeProperty` holds in every layout and reads back
   (`tests/dorico/case_reader.lua`). The only command found that creates a comment, `NoteInput.ShowCommentDialog`, opens
   a dialog.
 - W7, the selection. Marking the selection with `UI.InvokePropertyChangeValue?Type=kEventColour` and reading a saved
-  copy finds every selected event, texts included: their colour is stored for the layout on screen. The enable switch takes the
-  marks off again, leaving nothing behind. It would also take off a colour a selected item already had, so a plug-in
-  notes those from a saved copy first and puts them back by the same route. The panel ignores a property Dorico
+  copy finds every selected event, texts included: their colour is stored for the layout on screen. The enable switch
+  takes the marks off again, leaving nothing behind. It would also take off a colour a selected item already had, so a
+  plug-in notes those from a saved copy first and puts them back by the same route. The panel ignores a property Dorico
   doesn't know, so a private marker isn't possible. `EventEdit.Select` replaces the selection; the probe's attempt to
   add to it with an `Add` parameter did nothing.
