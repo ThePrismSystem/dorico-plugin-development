@@ -1,4 +1,4 @@
-"""Build fixtures/<version>/pickup.dorico from fixtures/pickup.musicxml, a one-beat pickup in 4/4, in the running Dorico.
+"""Build fixtures/<version>/pickup.dorico, a one-beat pickup in 4/4, from fixtures/pickup.musicxml in Dorico.
 
     python fixtures/build_pickup.py
 """

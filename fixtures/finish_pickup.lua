@@ -1,5 +1,5 @@
--- Checks the imported pickup fixture on its scratch copy before fixtures/build_pickup.py saves it: one flow whose six
--- notes start with the one-beat pickup at 0.
+-- Checks the imported pickup fixture on its scratch copy before fixtures/build_pickup.py saves it: one flow, whose
+-- first note is the one-beat pickup, a G4 at 0.
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
 local mine = here .. "?.lua;" .. here .. "../spikes/lib/?.lua"
 for name in pairs(package.loaded) do

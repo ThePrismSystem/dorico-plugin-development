@@ -1,8 +1,8 @@
 -- Finishes the imported texts fixture on its scratch copy, as a user or a script might: puts one text below the staff
--- by event id, for every layout, flips another with Edit.FlipItem, which stores it for the full score only, colours a
--- third by event id, and adds a staff text with createText and makes it a system text. It
--- then checks the fixture holds what texts.expected.json says, and that createText makes a text in the default
--- paragraph style, which the find and replace recipe relies on. fixtures/build_texts.py runs it.
+-- by event id, for every layout, and colours another by event id. It adds two staff texts with createText, flips one
+-- with Edit.FlipItem, which stores it for the full score only, and makes the other a system text. It then checks the
+-- fixture holds what texts.expected.json says, and that createText makes a text in the default paragraph style, which
+-- the find and replace recipe relies on. fixtures/build_texts.py runs it.
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
 local repo = here .. "../"
 local mine = here .. "?.lua;" .. repo .. "spikes/lib/?.lua;" .. repo .. "lib/?.lua"

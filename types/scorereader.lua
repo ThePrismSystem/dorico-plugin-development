@@ -57,13 +57,18 @@
 ---@field instances scorereader.Instance[]
 ---@field events scorereader.Event[]
 
+---@class scorereader.AccidentalOptions
+---@field durationBehaviour string|nil
+---@field cautionary table<string, string|boolean>
+---@field common table<string, string|boolean>
+
 ---@class scorereader.Flow
 ---@field id integer
 ---@field title string
 ---@field info table<string, string>
 ---@field streams scorereader.Stream[]
 ---@field streamById table<integer, scorereader.Stream>
----@field options {accidentals: {durationBehaviour: string|nil, cautionary: table<string, string|boolean>, common: table<string, string|boolean>}|nil}
+---@field options {accidentals: scorereader.AccidentalOptions|nil}
 ---@field events scorereader.Event[]
 ---@field elements table<string, table<integer, integer>> table name: {[elementID] = node}
 

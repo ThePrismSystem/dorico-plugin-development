@@ -29,7 +29,7 @@ EXAMPLES = []
 def row(name, example, twice=False, args=None, check=None, before=None, after=(), dialog=None, project=None):
     """dialog: {"window", "button", "text"?} for an example that waits on a box, or {"window", "button", "fields"}
     with fields as harness.answer_form takes them; the example then runs in the background while the test answers
-    the box. project: None for the sample, "reading" for the reading fixture."""
+    the box. project: a key of harness.PROJECTS, None for the sample."""
     EXAMPLES.append({"name": name, "example": example, "check": check or CHECKS + Path(example).name,
                      "twice": twice, "args": args or {}, "before": before, "after": list(after), "dialog": dialog,
                      "project": harness.PROJECTS[project]})

@@ -16,8 +16,8 @@ import fixture_versions  # noqa: E402
 import run_lua  # noqa: E402
 
 SAMPLE = fixture_versions.newest("sample.dorico")
-# The projects an example can run on: the sample, the reading fixture, which has one of each kind of item, and
-# the fixtures built for single recipes.
+# The projects an example can run on: the sample, the reading fixture, which has one of each kind of item, the
+# fixtures built for single recipes, and Somervell's A Shropshire Lad, a score someone typeset.
 PROJECTS = {None: SAMPLE, "reading": fixture_versions.newest("reading.dorico"),
             "parallels": fixture_versions.newest("parallels.dorico"),
             "cautionary": fixture_versions.newest("cautionary.dorico"),
@@ -120,9 +120,10 @@ def answer_form(window, button, fields=(), timeout=60):
     if not run_lua.wait_for(lambda: window in run_lua.open_windows(), timeout):
         return False
     for kind, index, value in fields:
+        value = str(value).lower() if isinstance(value, bool) else str(value)
         proc = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(SETFIELD),
-                               "-Window", window, "-Kind", kind, "-Index", str(index), "-Value", str(value).lower()
-                               if isinstance(value, bool) else str(value)], capture_output=True, text=True)
+                               "-Window", window, "-Kind", kind, "-Index", str(index), "-Value", value],
+                              capture_output=True, text=True)
         if proc.returncode != 0:
             return False
     return click(window, button)
