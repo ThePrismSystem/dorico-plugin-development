@@ -3,6 +3,7 @@ import contextlib
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -315,6 +316,41 @@ class CodeqlTests(unittest.TestCase):
         clean, printed, _ = self.run_codeql([result])
         self.assertFalse(clean)
         self.assertIn("tools/a.py:3 py/x bad", printed)
+
+
+class LintWorkflowTests(unittest.TestCase):
+    WORKFLOWS = lint.ROOT / ".github" / "workflows"
+
+    def workflows(self):
+        paths = sorted(self.WORKFLOWS.glob("*.yml"))
+        self.assertTrue(paths)
+        return paths
+
+    def test_npm_install_scripts_never_run_in_ci(self):
+        # the job can write to code scanning, so a dependency's install script must not run in it
+        workflow = (self.WORKFLOWS / "lint.yml").read_text(encoding="utf-8")
+        self.assertIn("run: npm ci --ignore-scripts\n", workflow)
+        self.assertNotIn("run: npm ci\n", workflow)
+
+    def test_sarif_uploads_skip_fork_pull_requests(self):
+        # a fork's pull request gets a token that can't write to code scanning
+        workflow = (self.WORKFLOWS / "lint.yml").read_text(encoding="utf-8")
+        conditions = re.findall(r"- name: Upload .*\n +if: (.*)\n", workflow)
+        self.assertEqual(len(conditions), 3)
+        for condition in conditions:
+            self.assertIn("(github.event_name != 'pull_request' || "
+                          "github.event.pull_request.head.repo.full_name == github.repository)", condition)
+
+    def test_every_action_is_pinned_to_a_sha(self):
+        for path in self.workflows():
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if "uses:" in line:
+                    self.assertRegex(line, r"uses: [\w.-]+/[\w.-]+(/[\w./-]+)?@[0-9a-f]{40} # v\d",
+                                     f"{path.name}: {line.strip()}")
+
+    def test_workflows_start_with_no_permissions(self):
+        for path in self.workflows():
+            self.assertIn("\npermissions: {}\n", path.read_text(encoding="utf-8"), path.name)
 
 
 class PssaTests(unittest.TestCase):
