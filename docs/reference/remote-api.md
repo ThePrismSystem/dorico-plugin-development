@@ -23,6 +23,8 @@ The tests send `connect`, `command`, `getstatus` and `getoptions`. The rest come
 
 - Status messages are partial: each is a change to merge into what you have, and Dorico sends them unasked. Read any
   already waiting before trusting the state.
+- Dorico sends other messages unasked too. After a script changed the selection, the next command's `response` came
+  after a `{"message": "selectionchanged", "openScoreID": 0}`, so wait for the `response` itself.
 - Lua's ids for flows and layouts are the ids `getoptions` takes.
 - Straight after an `Edit.Undo`, `getoptions` can answer `kCommandNotAllowed`, leave an option out, or show a value
   from before the undo, while Dorico finishes. Ask again a moment later.
