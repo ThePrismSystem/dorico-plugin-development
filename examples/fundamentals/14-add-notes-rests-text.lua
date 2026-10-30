@@ -80,8 +80,11 @@ end
 
 local app, score = guard()
 if not score then return end
-if #score.players == 0 then
-  print("Add a player first, then run this script again.")
+-- The new flow has a voice for each instrument, and a player can have none, so check before adding it.
+local voiced = false
+for _, p in ipairs(score.players) do voiced = voiced or p.instruments[1] ~= nil end
+if not voiced then
+  print("Add a player with an instrument first, then run this script again.")
   return
 end
 
