@@ -20,7 +20,7 @@ building a full plug-in.
 - [lib/scorereader](lib/scorereader): a pure-Lua library that reads the whole score from a saved copy of the open
   project, with every note's spelling and properties, text, lyrics, chord symbols, dynamics, key and time signatures,
   players and layouts. [docs/file-format.md](docs/file-format.md) describes the `.dorico` format it reads, as worked
-  out from projects saved by Dorico 6.0.22 to 6.2.30.
+  out from projects saved by Dorico 6.0.22 to 6.2.30. `types/scorereader.lua` has its editor definitions.
 - [fixtures](fixtures/README.md): the projects the tests read, one folder per Dorico version, including projects from
   [ancientgroove.co.uk](https://ancientgroove.co.uk/dorico/index.html).
 
@@ -34,6 +34,10 @@ noteheads, colours and accidental brackets, can't be read back. The reader gets 
 open project to the temp folder (`app:save` leaves the project, its file and its undo history as they were), decodes
 it and deletes it. Event ids in the copy are the ids Lua uses, so anything the reader finds can be selected or changed
 by id.
+
+This script sits two folders below the repository's root, as the examples do, so `../../lib` is the library. The
+saved copy goes in the temp folder, whose path must be all ASCII: `app:save` and Lua's `io.open` spell other
+characters differently. If it isn't, pass another folder as `savedcopy.read(app, { dir = ... })`.
 
 ```lua
 local lib = debug.getinfo(1, "S").source:match("^@(.*[/\\])") .. "../../lib/?.lua"
@@ -135,11 +139,11 @@ running with Remote Control turned on in its preferences. The first time, Dorico
 and the session token is kept in `.dorico-token`. To use a client name Dorico already allows, set
 `DORICO_CLIENT_NAME` or put the name in `.dorico-client-name`.
 
-The tests never touch your own projects. Each copies the sample (`fixtures/6.2.30/sample.dorico`) into a scratch
-folder, `%TEMP%\dorico-examples-run`, opens the copy, and closes it unsaved. The script inside Dorico checks that the
-active project is that copy before changing anything, and refuses if it isn't. Your own projects can stay open;
-Dorico goes back to them when the tests close their copy. The test for 12 answers the example's box itself, and Dorico runs
-nothing else while the box is open.
+The tests never touch your own projects. Each copies the sample from the newest version's folder (now
+`fixtures/6.2.30/sample.dorico`) into a scratch folder, `%TEMP%\dorico-examples-run`, opens the copy, and closes it
+unsaved. The script inside Dorico checks that the active project is that copy before changing anything, and refuses if
+it isn't. Your own projects can stay open; Dorico goes back to them when the tests close their copy. The test for 12
+answers the example's box itself, and Dorico runs nothing else while the box is open.
 
 ## Credits
 

@@ -250,7 +250,8 @@ fixtures, copies of the 7 example projects Dorico installs, and the 39 projects 
   installed example with 695,427 nodes, took 4.4 s in stock Lua, most of it unzipping.
 - The catalogue lists every node path with its values. It found 46 kinds of event definition, from
   `NoteEventDefinition` (533,846 of them) to a single `MultiRestEventDefinition`. None of the projects has a chord
-  symbol or a tab staff. [file-format.md](file-format.md) describes the tree it found.
+  symbol or a tab staff. [file-format.md](file-format.md) describes the tree it found. The reading fixture came
+  later, with five chord symbols, and makes 53 projects and 47 kinds.
 - `fileVersion` changed with every release, patch releases included: 1.1392 from 6.0.22, 1.1416 from 6.1.0, 1.1417
   from 6.1.10, 1.1444 from 6.2.0, 1.1450 from 6.2.20 and 1.1452 from 6.2.30. The installed examples say 6.1.5 and
   1.1412.

@@ -3,6 +3,7 @@
 -- read with scorereader.score and deleted.
 local score = require("scorereader.score")
 
+---@class scorereader.dorico.savedcopy
 local savedcopy = {}
 
 local function readFile(path)

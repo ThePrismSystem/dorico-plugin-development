@@ -16,6 +16,7 @@ local dynamics = require("scorereader.read.dynamics")
 local signatures = require("scorereader.read.signatures")
 local marks = require("scorereader.read.marks")
 
+---@class scorereader.score
 local score = {}
 
 -- definition name: {kind, reader}; any other definition is read as kind "other" with only the common fields.

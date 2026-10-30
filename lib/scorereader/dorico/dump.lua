@@ -2,6 +2,7 @@
 -- tostring(event) gives, such as "kNoteEvent (id:7932) at 0, duration 1  E5 (ends 1)". A "Start block id:" line
 -- starts each block instance (the id is an instance id, despite its name); the events after it belong to that
 -- instance. Kinds are "note", "grace", "rest", "text" and "other"; positions and durations are quarter notes.
+---@class scorereader.dorico.dump
 local dump = {}
 
 local KINDS = {

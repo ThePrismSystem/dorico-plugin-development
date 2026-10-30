@@ -2,12 +2,9 @@
 -- match is by id, with the position, a note's spelling and a text's words checked too.
 local values = require("scorereader.values")
 
+---@class scorereader.dorico.match
 local match = {}
 
--- For the stream streamId in flow flowId: {byId = {[id] = {file = Event, lua = dump event}}, count, unmatched =
--- {reason}}. parsed is scorereader.dorico.dump.parse(stream:dump()). Each of these gives a reason: an event Lua lists
--- that the file lacks, one at another position, a note spelled differently, a text with other words, and an event the
--- file has that Lua didn't list.
 -- Why the dump event ev and the file's event e (nil when the file lacks it) don't match, or nil when they do.
 local function mismatch(ev, e)
   if not e then return "Lua lists event " .. ev.id .. ", the file doesn't" end
@@ -26,6 +23,10 @@ local function mismatch(ev, e)
   end
 end
 
+-- For the stream streamId in flow flowId: {byId = {[id] = {file = Event, lua = dump event}}, count, unmatched =
+-- {reason}}. parsed is scorereader.dorico.dump.parse(stream:dump()). Each of these gives a reason: an event Lua lists
+-- that the file lacks, one at another position, a note spelled differently, a text with other words, and an event the
+-- file has that Lua didn't list.
 function match.stream(s, flowId, streamId, parsed)
   local flow = s.flowById[flowId]
   local stream = flow and flow.streamById[streamId]

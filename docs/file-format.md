@@ -4,7 +4,7 @@ A Dorico project file holds the whole score as a tree, and a Lua script can read
 format. Everything below was worked out by decoding saved projects, and each fact says how it is known. The reader
 library in [`lib/scorereader`](../lib/scorereader) implements it.
 
-The evidence is 52 projects: the fixtures in [`fixtures/`](../fixtures), copies of the 7 example projects Dorico 6
+The evidence is 53 projects: the fixtures in [`fixtures/`](../fixtures), copies of the 7 example projects Dorico 6
 installs, and the 39 projects published at <https://ancientgroove.co.uk/dorico/index.html>. Together they were saved
 by Dorico 6.0.22, 6.1.0, 6.1.5, 6.1.10, 6.2.0, 6.2.20 and 6.2.30. The probes are in [`spikes/`](../spikes), and
 [`spikes.md`](spikes.md) records what each one found.
@@ -169,7 +169,7 @@ staves.
 Every event definition has `eventID`, `position`, `secondaryPosition`, `duration`, `secondaryEndOffset` and a
 `propertyTable`. Positions and durations are in quarter notes, written as integers or exact fractions (`13/2`).
 
-The probes found 46 kinds. These are the ones a plug-in is most likely to read, with the fields they add:
+The 53 projects hold 47 kinds. These are the ones a plug-in is most likely to read, with the fields they add:
 
 | Definition | Extra fields |
 | ---------- | ------------ |
@@ -202,7 +202,7 @@ The rest are `AutomationEventDefinition`, `FiguredBassEventDefinition`, `TrillEv
 `GlissandoLineEventDefinition`, `StaveCountChangeEventDefinition`, `RepeatEndingLineEventDefinition`,
 `PercussionLegendEventDefinition`, `MIDITriggerEventDefinition`, `InstrumentChangeEventDefinition`,
 `VerticalLineEventDefinition`, `GenerativeSlashEventDefinition`, `CutawayEventDefinition` and
-`MultiRestEventDefinition`. None of the 52 projects has a chord symbol; the reading fixture has five.
+`MultiRestEventDefinition`. The reading fixture's five chord symbols are the only ones in the 53 projects.
 
 ### Reading common items
 
