@@ -295,6 +295,11 @@ return {
     local tied = { n(0, 8, "C4"), n(0, 8, "E4"), n(0, 8, "G4"), n(8, 4, "F4"), n(8, 4, "A4"), n(8, 4, "C5") }
     t:eq(brief(barchords.of(tied, starts, chords.name)), "1:C@0 3:F@8", "a chord tied into bar 2 isn't new there")
     t:eq(brief(barchords.of({ n(0, 4, "C4"), n(0, 4, "G4") }, starts, chords.name)), "", "two pitch classes")
+    -- C, then F struck on beat 3 and held through bar 2, where no note starts, then F struck again in bar 3
+    local held = { n(0, 2, "C4"), n(0, 2, "E4"), n(0, 2, "G4"), n(2, 6, "F4"), n(2, 6, "A4"), n(2, 6, "C5"),
+      n(8, 4, "F4"), n(8, 4, "A4"), n(8, 4, "C5"), n(12, 4, "G3"), n(12, 4, "B3"), n(12, 4, "D4"), n(12, 4, "F4") }
+    t:eq(brief(barchords.of(held, starts, chords.name)), "1:C@0 3:F@8 4:G7@12",
+      "a chord reached by held notes goes in at the next bar where a note starts")
   end,
 
   names_inversions_by_their_root = function(t)

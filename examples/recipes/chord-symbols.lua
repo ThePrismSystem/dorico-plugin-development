@@ -1,10 +1,11 @@
 -- Recipe: name the chords one player plays, bar by bar, and write them in as chord symbols.
 -- What it does: reads a saved copy, finds the first player whose name starts with PLAYER and, for each bar, names the
--- chord its notes make (both hands of a piano, any voice). Where the chord changes from the bar before, it adds a
--- chord symbol at the first note that starts in the bar, through the chord symbol popover's own commands, and prints
--- "flow <n>, bar <b>: <chord>".
--- Changes: adds chord symbols where the flow has none, and changes the selection. A chord symbol already in place is
--- left as it is, since entering another there would replace it.
+-- chord its notes make (both hands of a piano, any voice). Where the chord changes from the last one it put in, it
+-- adds a chord symbol at the first note that starts in the bar, through the chord symbol popover's own commands, and
+-- prints "flow <n>, bar <b>: <chord>". Then it reads a second copy and prints any chord Dorico didn't put in as
+-- written.
+-- Changes: adds a chord symbol at each chord change with no chord symbol there yet, and changes the selection. A chord
+-- symbol already in place is left as it is, since entering another there would replace it.
 -- Undo: Edit > Undo takes the chord symbols back one at a time, three presses each: the chord symbol popover's
 -- commands make undo steps of their own, unlike the rest of a run (the sample's four took eleven presses). To
 -- remove them all at once, select the passage, filter the selection to chord symbols, and press Delete.
@@ -116,9 +117,9 @@ end
 
 -- helper: chords
 -- Names the chord a set of notes makes, as the chord symbol popover takes it ("C", "Am", "G7", "Bbmaj7"), or nil when
--- fewer than three pitch classes sound or no chord type fits them exactly. Notes are spellings from the dump. Their
--- octaves don't matter, except that the lowest note is tried as the root first, so an inversion is named by its root
--- and a chord that fits several roots (an augmented or diminished seventh chord) takes the bass note's.
+-- fewer than three pitch classes sound or no chord type fits them exactly. Notes are spellings as the reader gives
+-- them. Their octaves don't matter, except that the lowest note is tried as the root first, so an inversion is named
+-- by its root and a chord that fits several roots (an augmented or diminished seventh chord) takes the bass note's.
 --   chords.name(spellings) -> name or nil
 local chords = {}
 do
@@ -172,8 +173,9 @@ end
 
 -- helper: barchords
 -- One chord a bar for a player's notes: the chord all the notes sounding in the bar make or, when they make none, the
--- chord of the notes sounding on its first beat. A chord is kept only where it changes from the bar before, and only
--- in a bar where a note starts, since a chord symbol goes in at a selected note.
+-- chord of the notes sounding on its first beat. A chord goes in only in a bar where a note starts, since a chord
+-- symbol goes in at a selected note, and only where it differs from the last chord put in. A chord reached by held
+-- notes in a bar where nothing starts goes in at the next bar where a note does, if it still sounds there.
 --   barchords.of(notes, starts, name) -> {{bar, pos, name, note}}; notes: {{pos, duration, spelling}} in quarter
 --     notes, starts as the bars helper gives them, name as chords.name; note is the first note to start in the bar
 local barchords = {}
@@ -191,10 +193,8 @@ do
         if n.pos >= from and n.pos < to and (not starter or n.pos < starter.pos) then starter = n end
       end
       local chord = name(all) or name(first)
-      if chord then
-        if chord ~= last and starter then
-          out[#out + 1] = { bar = b.bar, pos = starter.pos, name = chord, note = starter }
-        end
+      if chord and chord ~= last and starter then
+        out[#out + 1] = { bar = b.bar, pos = starter.pos, name = chord, note = starter }
         last = chord
       end
     end
@@ -214,14 +214,16 @@ local values = require("scorereader.values")
 
 local player
 for _, p in ipairs(s.players) do
-  if not player and p.name:sub(1, #PLAYER) == PLAYER then player = p end
+  if p.name:sub(1, #PLAYER) == PLAYER then
+    player = p
+    break
+  end
 end
 if not player then
   print(string.format("No player's name starts with %q. Change PLAYER at the top of the script.", PLAYER))
   return
 end
 
--- Where each flow's bars start, from its time signatures, as 09 does.
 -- helper: barsOf
 -- Where a flow's bars start, through the bars helper, from the time signatures in its timebase stream. A time
 -- signature in any other stream is left out.
@@ -244,7 +246,7 @@ end
 app:doCommand("NoteInput.Exit")
 app:doCommand(commands.build("Window.SwitchMode", { { "WindowMode", "kWriteMode" } }))
 
-local count = 0
+local count, entered = 0, {}
 for n, flow in ipairs(s.flows) do
   local notes, existing = {}, {}
   for _, e in ipairs(score.eventsOf(s, flow, player)) do
@@ -266,9 +268,27 @@ for n, flow in ipairs(s.flows) do
       app:doCommand(commands.build("NoteInput.AcceptCurrentChordSymbolTextInput", { { "Definition", c.name },
         { "ChordSymbolEntryAdvanceType", "kEndInput" } }))
       print(string.format("flow %d, bar %d: %s", n, c.bar, c.name))
+      entered[#entered + 1] = { flow = n, bar = c.bar, pos = c.pos, name = c.name }
     end
     count = count + 1
   end
 end
 app:doCommand("Edit.SelectNone")
 if count == 0 then print("No chords found.") end
+
+-- The popover's commands report nothing back, so a second copy shows which chord symbols went in. The reader names
+-- only major and minor chords and dominant sevenths, so another chord counts as put in when one is there at all.
+if #entered == 0 then return end
+local after = readCopy(app)
+if not after then return end
+for _, c in ipairs(entered) do
+  local found
+  for _, e in ipairs(after.flows[c.flow].events) do
+    if e.kind == "chordSymbol" and values.toNumber(e.position) == c.pos then found = e end
+  end
+  if not found then
+    print(string.format("flow %d, bar %d: Dorico put in no chord symbol for %s", c.flow, c.bar, c.name))
+  elseif found.name and found.name ~= c.name then
+    print(string.format("flow %d, bar %d: Dorico put in %s for %s", c.flow, c.bar, found.name, c.name))
+  end
+end

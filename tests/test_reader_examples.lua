@@ -116,4 +116,17 @@ return {
     t:eq(#printed, 6)
     t:eq(printed[6], "total\t0\t5")
   end,
+
+  chord_symbols_say_which_chords_dorico_didnt_put_in = function(t)
+    local printed, sent = run("examples/recipes/chord-symbols.lua", SAMPLE)
+    local definitions = {}
+    for _, command in ipairs(sent) do
+      definitions[#definitions + 1] = command:match("^NoteInput%.AcceptCurrentChordSymbolTextInput%?Definition=(%w+)")
+    end
+    t:eq(table.concat(definitions, " "), "C Am F G7")
+    -- The stand-in's second copy is the fixture again, so none of them went in.
+    t:eq(table.concat(printed, " / "), "flow 1, bar 1: C / flow 1, bar 2: Am / flow 1, bar 3: F / flow 1, bar 4: G7"
+      .. " / flow 1, bar 1: Dorico put in no chord symbol for C / flow 1, bar 2: Dorico put in no chord symbol for Am"
+      .. " / flow 1, bar 3: Dorico put in no chord symbol for F / flow 1, bar 4: Dorico put in no chord symbol for G7")
+  end,
 }
