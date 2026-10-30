@@ -44,19 +44,22 @@ local function contextOf(t, context, x)
 end
 
 -- {{property, value (the raw typed text), layout, frameChain, instance, offset, staveType}} for every entry of the
--- event (or element) at node. layout, frameChain and instance are -1 for "every" and "any".
+-- event (or element) at node. layout, frameChain and instance are -1 for "every" and "any". An entry with no
+-- propertyType or no value stops the read, since skipping it would read a value that is set as one that isn't.
 function props.entries(t, node)
   local out = {}
   local entries = tree.path(t, node, "propertyTable/entries")
   for _, e in ipairs(entries and tree.children(t, entries) or {}) do
     local typeNode, valueNode = tree.child(t, e, "propertyType"), tree.child(t, e, "value")
-    if typeNode and valueNode then
-      local x = { property = tree.value(t, typeNode), value = tree.value(t, valueNode), layout = -1, frameChain = -1,
-        instance = -1 }
-      local context = tree.child(t, e, "context")
-      if context then contextOf(t, context, x) end
-      out[#out + 1] = x
+    if not typeNode then error("scorereader: a property entry the reader can't read: it has no propertyType", 0) end
+    if not valueNode then
+      error("scorereader: a property entry the reader can't read: " .. tree.value(t, typeNode) .. " has no value", 0)
     end
+    local x = { property = tree.value(t, typeNode), value = tree.value(t, valueNode), layout = -1, frameChain = -1,
+      instance = -1 }
+    local context = tree.child(t, e, "context")
+    if context then contextOf(t, context, x) end
+    out[#out + 1] = x
   end
   return out
 end

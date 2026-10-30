@@ -212,6 +212,29 @@ return {
     }
     for _, c in ipairs(cases) do refused(t, errorWith(c[1], nil, c[2]), c[3], c[3]) end
   end,
+  a_property_entry_missing_its_type_or_value = function(t)
+    local tr = reading()
+    local entry = first(tr, firstEvent(tr, "NoteEventDefinition"), "propertyTable/entries")
+    refused(t, errorWith(tree.child(tr, entry, "propertyType"), "kRenamed"),
+      "a property entry the reader can't read: it has no propertyType", "no propertyType")
+    refused(t, errorWith(tree.child(tr, entry, "value"), "kRenamed"),
+      "a property entry the reader can't read: kNoteSpelling has no value", "no value")
+  end,
+  streams_the_flow_doesnt_list = function(t)
+    local tr = reading()
+    local fp = first(tr, firstFlow(tr), "flowPlayers/array")
+    local inst = first(tr, fp, "flowPlayerInstruments")
+    local cases = {
+      { tree.child(tr, fp, "eventStreamID"), "a flow player names stream 99999, which the flow doesn't list" },
+      { tree.child(tr, first(tr, inst, "staveStreamInfos"), "staveStreamID"),
+        "a stave names stream 99999, which the flow doesn't list" },
+      { tree.child(tr, first(tr, inst, "voiceStreamInfos"), "voiceStreamID"),
+        "a voice names stream 99999, which the flow doesn't list" },
+      { tree.child(tr, first(tr, inst, "voiceStreamInfos"), "defaultLogicalStaveID"),
+        "is on stave 99999, which its instrument doesn't have" },
+    }
+    for _, c in ipairs(cases) do refused(t, errorWith(c[1], nil, "99999"), c[2], c[2]) end
+  end,
   a_dynamic_of_a_kind_the_reader_doesnt_know = function(t)
     local tr = reading()
     refused(t, errorWith(firstDynamic(tr, "ForceDynamicDefinition"), "FooDynamicDefinition"),
