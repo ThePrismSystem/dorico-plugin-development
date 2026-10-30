@@ -107,7 +107,7 @@ def input_checks(lua):
         return step("inputs: skipped, no stock Lua 5.2 to read them", True)  # its own step has failed already
     projects = sorted(str(p) for p in (run_lua.RUN_DIR / "inputs").glob("*/*.dorico"))
     if not projects:
-        return step("inputs: none in " + str(run_lua.RUN_DIR / "inputs"), True)
+        return step("inputs: none in " + str(run_lua.RUN_DIR / "inputs"), False)  # --inputs asked for them
     proc = subprocess.run([lua, "tests/inputs.lua", *projects], cwd=ROOT, capture_output=True, text=True)
     print(proc.stdout.rstrip())
     return step(f"inputs: {len(projects)} projects read", proc.returncode == 0)

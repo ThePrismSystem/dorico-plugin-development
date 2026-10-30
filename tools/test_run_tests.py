@@ -67,6 +67,15 @@ class InputStepTests(unittest.TestCase):
         ran.assert_not_called()
         self.assertIn("inputs: skipped", out.getvalue())
 
+    def test_asked_for_inputs_with_none_to_read_fails(self):
+        # --inputs asks for them to be read, so reading nothing must not pass
+        folder = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, folder, True)
+        with mock.patch.object(run_tests.run_lua, "RUN_DIR", folder), \
+                mock.patch.object(sys, "stdout", io.StringIO()) as out:
+            self.assertFalse(run_tests.input_checks("lua52"))
+        self.assertIn("FAIL  inputs: none in", out.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()
