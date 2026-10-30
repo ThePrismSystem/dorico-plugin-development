@@ -264,23 +264,24 @@ local function midi(spelling)
 end
 -- end helper: midi
 
--- helper: bars
+-- helper: markedBars
 -- Where a bar starts, from marker texts: the text export gives each marker's bar, and the bar starts at the earliest
 -- marked position in the same bar. Mark in two rounds:
---   bars.coarse(pos) -> whole quarter notes to mark first: pos rounded down, and up to 16 before it
---   bars.fine(start) -> points to mark next, every 1/24 of a quarter note between the whole quarter before start and
---                       start, since a bar can begin between whole quarters (after a pickup, or in 3/8)
---   bars.start(pos, barAt) -> the earliest marked position in pos's bar; barAt is {[position] = bar} for every
---                             marker placed, pos's own included
-local bars = {}
+--   markedBars.coarse(pos) -> whole quarter notes to mark first: pos rounded down, and up to 16 before it
+--   markedBars.fine(start) -> points to mark next, every 1/24 of a quarter note between the whole quarter before
+--                             start and start, since a bar can begin between whole quarters (after a pickup, or in
+--                             3/8)
+--   markedBars.start(pos, barAt) -> the earliest marked position in pos's bar; barAt is {[position] = bar} for
+--                                   every marker placed, pos's own included
+local markedBars = {}
 do
-  function bars.coarse(pos)
+  function markedBars.coarse(pos)
     local out = {}
     for q = math.floor(pos), math.max(0, math.floor(pos) - 16), -1 do out[#out + 1] = q end
     return out
   end
 
-  function bars.fine(start)
+  function markedBars.fine(start)
     local out = {}
     for k = 1, 23 do
       local q = start - 1 + k / 24
@@ -289,7 +290,7 @@ do
     return out
   end
 
-  function bars.start(pos, barAt)
+  function markedBars.start(pos, barAt)
     local bar, start = barAt[pos], pos
     for q, b in pairs(barAt) do
       if b == bar and q < start then start = q end
@@ -297,7 +298,7 @@ do
     return start
   end
 end
--- end helper: bars
+-- end helper: markedBars
 
 local app, score = guard()
 if not score then return end
@@ -420,7 +421,7 @@ table.sort(findings, function(x, y)
   return x.text < y.text
 end)
 
--- Bars and beats, in two rounds of markers (see the bars helper). barAt[f] is {[position] = bar} for finding f.
+-- Bars and beats, in two rounds of markers (see the markedBars helper). barAt[f] is {[position] = bar} for finding f.
 local barAt = {}
 local function markRound(round) -- round: a list of {finding number, position}
   local pts = {}
@@ -435,13 +436,13 @@ end
 local round = {}
 for f, finding in ipairs(findings) do
   round[#round + 1] = { f, finding.pos }
-  for _, q in ipairs(bars.coarse(finding.pos)) do round[#round + 1] = { f, q } end
+  for _, q in ipairs(markedBars.coarse(finding.pos)) do round[#round + 1] = { f, q } end
 end
 markRound(round)
 round = {}
 for f, finding in ipairs(findings) do
   if barAt[f] and barAt[f][finding.pos] then
-    for _, q in ipairs(bars.fine(bars.start(finding.pos, barAt[f]))) do round[#round + 1] = { f, q } end
+    for _, q in ipairs(markedBars.fine(markedBars.start(finding.pos, barAt[f]))) do round[#round + 1] = { f, q } end
   end
 end
 markRound(round)
@@ -449,7 +450,7 @@ markRound(round)
 for f, finding in ipairs(findings) do
   local at = barAt[f] or {}
   local bar = at[finding.pos] or "?"
-  local start = at[finding.pos] and bars.start(finding.pos, at) or finding.pos
+  local start = at[finding.pos] and markedBars.start(finding.pos, at) or finding.pos
   print(string.format("%d bar %s beat %s: %s", finding.flow, bar, tostring(finding.pos - start + 1), finding.text))
 end
 print(#findings .. (#findings == 1 and " finding" or " findings"))

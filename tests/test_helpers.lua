@@ -9,6 +9,7 @@ local ROOT = (arg and arg[0] or ""):match("^(.*[/\\])tests[/\\]") or "./"
 local COMMANDS = "examples/fundamentals/10-commands.lua"
 local SELECTION = "examples/fundamentals/11-act-on-the-selection.lua"
 local BY_ID = "examples/fundamentals/12-select-by-id.lua"
+local BARS = "examples/fundamentals/09-bars-keys-and-times.lua"
 local CHORDS = "examples/recipes/chord-symbols.lua"
 local PROOFREAD = "examples/recipes/proofread.lua"
 
@@ -230,7 +231,7 @@ return {
   end,
 
   bars_find_a_bar_that_starts_between_quarter_notes = function(t)
-    local bars = helpers.load(PROOFREAD, "bars")
+    local bars = helpers.load(PROOFREAD, "markedBars")
     -- What the text export would say: the bar at each position, given where bars start.
     local function barOf(starts)
       return function(q)
@@ -272,6 +273,53 @@ return {
     package.path = before
     t:eq(after:find(dir .. "../../lib/?.lua;" .. dir .. "lib/?.lua;", 1, true), 1, after)
     t:eq(package.loaded["scorereader.fake"], nil, "an earlier run's module is cleared")
+  end,
+
+  bars_from_time_signatures = function(t)
+    local starts = helpers.load(BARS, "bars").starts({ { pos = 0, numerator = 4, denominator = 4 },
+      { pos = 8, numerator = 3, denominator = 4 } }, 14)
+    local got = {}
+    for _, b in ipairs(starts) do got[#got + 1] = b.bar .. "@" .. b.pos .. "+" .. b.length end
+    t:eq(table.concat(got, " "), "1@0+4 2@4+4 3@8+3 4@11+3")
+  end,
+
+  a_time_signature_partway_through_a_bar_cuts_it_short = function(t)
+    local starts = helpers.load(BARS, "bars").starts({ { pos = 0, numerator = 4, denominator = 4 },
+      { pos = 6, numerator = 2, denominator = 4 } }, 10)
+    local got = {}
+    for _, b in ipairs(starts) do got[#got + 1] = b.pos .. "+" .. b.length end
+    t:eq(table.concat(got, " "), "0+4 4+2 6+2 8+2")
+  end,
+
+  an_additive_time_signature_and_a_barline_only_division = function(t)
+    local bars = helpers.load(BARS, "bars")
+    t:eq(bars.starts({ { pos = 0, numerator = "3+2", denominator = 8 } }, 5)[1].length, 2.5, "3+2/8")
+    local starts = bars.starts({ { pos = 0, numerator = 4, denominator = 4 }, { pos = 6 } }, 14)
+    local got = {}
+    for _, b in ipairs(starts) do got[#got + 1] = b.pos end
+    t:eq(table.concat(got, " "), "0 4 6 10", "a barline starts a bar and keeps the signature")
+  end,
+
+  a_flow_with_no_time_signature_is_one_bar = function(t)
+    local bars = helpers.load(BARS, "bars")
+    local starts = bars.starts({}, 10)
+    t:eq(#starts, 1)
+    t:eq(starts[1].length, 10)
+    local bar, beat = bars.at(starts, 7)
+    t:eq(bar, 1)
+    t:eq(beat, 8)
+    t:eq(bars.starts({ { pos = 2, numerator = 4, denominator = 4 } }, 10)[1].length, 2, "music before the first one")
+  end,
+
+  bar_and_beat_of_a_position = function(t)
+    local bars = helpers.load(BARS, "bars")
+    local starts = bars.starts({ { pos = 0, numerator = 4, denominator = 4 },
+      { pos = 8, numerator = 3, denominator = 4 } }, 14)
+    local bar, beat = bars.at(starts, 9.5)
+    t:eq(bar, 3)
+    t:eq(beat, 2.5)
+    bar, beat = bars.at(starts, 0)
+    t:eq(bar .. "/" .. beat, "1/1")
   end,
 
   read_the_saved_copy_reports_a_save_that_fails = function(t)

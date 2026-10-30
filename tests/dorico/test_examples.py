@@ -90,6 +90,7 @@ row("match_by_event_id", FUNDAMENTALS + "06-match-by-event-id.lua", twice=True)
 row("values_per_layout", FUNDAMENTALS + "07-values-per-layout.lua", twice=True, project="reading")
 row("text_lyrics_chords_dynamics", FUNDAMENTALS + "08-text-lyrics-chords-dynamics.lua", twice=True,
     project="reading")
+row("bars_keys_and_times", FUNDAMENTALS + "09-bars-keys-and-times.lua", twice=True, project="reading")
 row("commands", FUNDAMENTALS + "10-commands.lua",
     after=[then_command("Edit.Undo"), then_check("10-commands.undone.lua")])
 row("act_on_the_selection", FUNDAMENTALS + "11-act-on-the-selection.lua",
