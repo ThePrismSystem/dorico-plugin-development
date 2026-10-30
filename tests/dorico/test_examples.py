@@ -26,8 +26,9 @@ EXAMPLES = []
 
 
 def row(name, example, twice=False, args=None, check=None, before=None, after=(), dialog=None, project=None):
-    """dialog: {"window", "button", "text"?} for an example that waits on a box; the example then runs in the
-    background while the test answers the box. project: None for the sample, "reading" for the reading fixture."""
+    """dialog: {"window", "button", "text"?} for an example that waits on a box, or {"window", "button", "fields"}
+    with fields as harness.answer_form takes them; the example then runs in the background while the test answers
+    the box. project: None for the sample, "reading" for the reading fixture."""
     EXAMPLES.append({"name": name, "example": example, "check": check or CHECKS + Path(example).name,
                      "twice": twice, "args": args or {}, "before": before, "after": list(after), "dialog": dialog,
                      "project": harness.PROJECTS[project]})
@@ -158,7 +159,10 @@ def make_test(spec):
                 run = harness.Background(lambda: harness.run_more(self, client, "case_example.lua",
                                                                   harness.example_args(spec), timeout=180,
                                                                   expect_ok=False))
-                answered = harness.answer(box["window"], box["button"], box.get("text"))
+                if "fields" in box:
+                    answered = harness.answer_form(box["window"], box["button"], box["fields"])
+                else:
+                    answered = harness.answer(box["window"], box["button"], box.get("text"))
                 if not answered:
                     # Dorico runs nothing else while the box is open, so close it before failing.
                     harness.click(box["window"], "Cancel")

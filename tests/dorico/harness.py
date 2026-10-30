@@ -22,6 +22,7 @@ SCRATCH = run_lua.RUN_DIR / "scratch.dorico"
 CLICK = ROOT / "tools" / "click.ps1"
 PRESS = ROOT / "tools" / "press.ps1"
 FILL = ROOT / "tools" / "fill.ps1"
+SETFIELD = ROOT / "tools" / "setfield.ps1"
 
 
 def check(test, result, name):
@@ -102,6 +103,20 @@ def answer(window, button, text=None, timeout=60):
     if text is not None:
         proc = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(FILL),
                                "-Window", window, "-Text", text], capture_output=True, text=True)
+        if proc.returncode != 0:
+            return False
+    return click(window, button)
+
+
+def answer_form(window, button, fields=(), timeout=60):
+    """Wait for a form helper's box, set fields given as (kind, index, value) with kind "text", "check" or "choice",
+    and press a button. True when every field was set and the button was pressed."""
+    if not run_lua.wait_for(lambda: window in run_lua.open_windows(), timeout):
+        return False
+    for kind, index, value in fields:
+        proc = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(SETFIELD),
+                               "-Window", window, "-Kind", kind, "-Index", str(index), "-Value", str(value).lower()
+                               if isinstance(value, bool) else str(value)], capture_output=True, text=True)
         if proc.returncode != 0:
             return False
     return click(window, button)

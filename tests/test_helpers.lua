@@ -10,6 +10,8 @@ local COMMANDS = "examples/fundamentals/10-commands.lua"
 local SELECTION = "examples/fundamentals/11-act-on-the-selection.lua"
 local BY_ID = "examples/fundamentals/12-select-by-id.lua"
 local BARS = "examples/fundamentals/09-bars-keys-and-times.lua"
+local ASK = "examples/fundamentals/17-ask-and-report.lua"
+local TMP = (os.getenv("TEMP") or os.getenv("TMPDIR") or "/tmp"):gsub("\\", "/")
 local CHORDS = "examples/recipes/chord-symbols.lua"
 local PROOFREAD = "examples/recipes/proofread.lua"
 
@@ -366,5 +368,63 @@ return {
     t:eq(#printed, 1, table.concat(printed, " / "))
     t:eq(printed[1], "The reader couldn't read this project: "
       .. "scorereader: Dorico could not save a copy of the project to read")
+  end,
+
+  form_script_quotes_titles_labels_and_defaults = function(t)
+    local form = helpers.load(ASK, "form")
+    local script = form.script("Zoë's box", {
+      { key = "words", label = "Words & more", kind = "text", default = "it's" },
+      { key = "loud", label = "Loud", kind = "check", default = true },
+      { key = "which", label = "Which", kind = "choice", default = "b", choices = { "a", "b'c" } },
+    })
+    t:ok(script:find("$form.Text = 'Zoë''s box'", 1, true), "the title")
+    t:ok(script:find("$label.Text = 'Words & more'", 1, true), "a label keeps its ampersand")
+    t:ok(script:find("$c.Text = 'it''s'", 1, true), "a text default")
+    t:ok(script:find("$c.Checked = $true", 1, true), "a ticked box")
+    t:ok(script:find("[void]$c.Items.AddRange(@('a', 'b''c'))", 1, true), "the choices")
+    t:ok(script:find("$c.SelectedItem = 'b'", 1, true), "the chosen one")
+  end,
+
+  form_parse_reads_each_kind = function(t)
+    local form = helpers.load(ASK, "form")
+    local fields = { { key = "words", kind = "text" }, { key = "loud", kind = "check" },
+      { key = "which", kind = "choice" } }
+    local answers = form.parse("words=a=b\r\nloud=True\nwhich=b'c\n", fields)
+    t:eq(answers.words, "a=b")
+    t:eq(answers.loud, true)
+    t:eq(answers.which, "b'c")
+    answers = form.parse("words=\nloud=False\nwhich=a\n", fields)
+    t:eq(answers.loud, false)
+    t:eq(answers.words, "", "an empty text is an answer")
+  end,
+
+  form_parse_of_no_answer_is_cancel = function(t)
+    local form = helpers.load(ASK, "form")
+    local fields = { { key = "words", kind = "text" } }
+    t:eq(form.parse(nil, fields), nil)
+    t:eq(form.parse("", fields), nil)
+    t:eq(form.parse("other=x\n", fields), nil, "an answer missing a field")
+  end,
+
+  form_on_windows_runs_the_box_and_reads_its_answer = function(t)
+    local form = helpers.load(ASK, "form")
+    local fields = { { key = "words", label = "Words", kind = "text", default = "" } }
+    local realExecute, ran = os.execute, nil
+    os.execute = function(command)
+      ran = command
+      local f = assert(io.open(command:match('%-Out "([^"]+)"'), "wb"))
+      f:write("words=hello\n")
+      f:close()
+      return true, "exit", 0
+    end
+    local ok, answers = pcall(form.windows, "Box", fields, TMP)
+    os.execute = function() return true, "exit", 0 end
+    local ok2, cancelled = pcall(form.windows, "Box", fields, TMP)
+    os.execute = realExecute
+    t:ok(ok, tostring(answers))
+    t:ok(ran and ran:find("^powershell %-NoProfile"), tostring(ran))
+    t:eq(answers and answers.words, "hello")
+    t:ok(ok2, tostring(cancelled))
+    t:eq(cancelled, nil, "Cancel writes no answer")
   end,
 }
