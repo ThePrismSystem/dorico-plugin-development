@@ -235,4 +235,35 @@ function checks.textsNow(row)
   return checks.joined(now), checks.joined(expected)
 end
 
+-- What parallel-fifths.lua does on the parallels fixture for the sets of findings named in parallels.expected.json:
+-- the lines it prints for them, and the notes it marks, as "<player>|<pos>" keys, with the notes a user coloured
+-- among them left out, since those keep their own colour. Each finding's notes are at its position and a quarter
+-- note before it.
+function checks.parallels(sets)
+  local want = checks.json("parallels.expected.json")
+  local users = {}
+  for _, u in ipairs(want.userColours) do users[u.player .. "|" .. u.pos] = true end
+  local lines, marked, kept = {}, {}, {}
+  for _, set in ipairs(sets) do
+    for _, f in ipairs(want.findings[set]) do
+      lines[#lines + 1] = string.format("%s\tflow 1\tbar %d, beat %g\t%s and %s", f.kind, math.floor(f.pos / 4) + 1,
+        f.pos % 4 + 1, f.a, f.b)
+      for _, who in ipairs({ f.a, f.b }) do
+        for _, pos in ipairs({ f.pos, f.pos - 1 }) do
+          local key = who .. "|" .. pos
+          if users[key] then kept[key] = true else marked[key] = true end
+        end
+      end
+    end
+  end
+  return lines, marked, kept
+end
+
+-- How many keys a set has.
+function checks.count(set)
+  local n = 0
+  for _ in pairs(set) do n = n + 1 end
+  return n
+end
+
 return checks

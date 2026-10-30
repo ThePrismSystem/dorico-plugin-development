@@ -25,6 +25,36 @@ end
 
 local C3, D3, E3, F3, G3, A3, C4, D4, G4, A4, C5, D5, E5, G5 = 48, 50, 52, 53, 55, 57, 60, 62, 67, 69, 72, 74, 76, 79
 
+-- A flow the reader might give, with one voice stream per list of {pos, duration, pitch} notes, all the Piano's.
+local function pianoFlow(...)
+  local flow, id = { streams = {} }, 0
+  for v, notes in ipairs({ ... }) do
+    local stream = { type = "voice", id = v, playerId = 1, events = {} }
+    for _, n in ipairs(notes) do
+      id = id + 1
+      stream.events[#stream.events + 1] = { kind = "note", id = id, position = n[1], duration = n[2], pitch = n[3] }
+    end
+    flow.streams[v] = stream
+  end
+  return flow
+end
+
+local function linesOf(flow)
+  local s = { players = { { id = 1, name = "Piano" } } }
+  return helpers.load(RECIPE, "lines").of(s, flow, { toNumber = function(x) return x end })
+end
+
+-- "name: pitch@pos+duration ..." for each part.
+local function shape(parts)
+  local out = {}
+  for i, p in ipairs(parts) do
+    local notes = {}
+    for j, n in ipairs(p.notes) do notes[j] = n.pitch .. "@" .. n.pos .. "+" .. n.duration end
+    out[i] = p.name .. ": " .. table.concat(notes, " ")
+  end
+  return table.concat(out, " | ")
+end
+
 return {
   consecutive_fifths = function(t)
     local found = find({ part("upper", { { 0, D5 }, { 1, E5 } }), part("lower", { { 0, G3 }, { 1, A3 } }) })
@@ -99,6 +129,12 @@ return {
     t:eq(brief(find({ part("top", { { 0, E5 }, { 1, G5 } }), part("bottom", { { 0, A3 }, { 1, C4 } }) },
       { hidden = true })), "fifths top/bottom @1", "a parallel fifth is not a hidden one")
   end,
+  hidden_fifths_need_a_leap_in_the_upper_part = function(t)
+    t:eq(brief(find({ part("top", { { 0, 77 }, { 1, G5 } }), part("bottom", { { 0, 45 }, { 1, C3 } }) },
+      { hidden = true })), "", "a step in the upper part")
+    t:eq(brief(find({ part("bottom", { { 0, 45 }, { 1, C3 } }), part("top", { { 0, D5 }, { 1, G5 } }) },
+      { hidden = true })), "hidden fifths bottom/top @1", "the upper part listed second")
+  end,
   contrary_octaves = function(t)
     local parts = { part("top", { { 0, C5 }, { 1, D5 } }), part("bottom", { { 0, C3 }, { 1, 38 } }) }
     t:eq(brief(find(parts)), "", "off by default")
@@ -131,6 +167,19 @@ return {
     t:eq(brief(find(parts, { hidden = true, contrary = true })),
       wanted(want.findings.default, want.findings.hiddenAndContrary))
     t:eq(brief(find(parts, { doublings = true })), wanted(want.findings.default, want.findings.doublings))
+  end,
+  a_voice_is_a_part_per_note_of_its_chords_from_the_top = function(t)
+    local parts = linesOf(pianoFlow({ { 0, 1, G4 }, { 0, 1, C4 }, { 1, 1, A4 }, { 1, 1, D4 } }, { { 0, 2, C3 } }))
+    t:eq(shape(parts), "Piano, note 1 from the top: 67@0+1 69@1+1 | Piano, note 2 from the top: 60@0+1 62@1+1"
+      .. " | Piano voice 2: 48@0+2")
+    t:eq(brief(find(parts)), "fifths Piano, note 1 from the top/Piano, note 2 from the top @1")
+  end,
+  a_note_held_in_a_chord_keeps_its_rank = function(t)
+    -- C5 held over beats 1 and 2 above G4 then A4, over C3 then D3 in the second voice
+    local parts = linesOf(pianoFlow({ { 0, 2, C5 }, { 0, 1, G4 }, { 1, 1, A4 } }, { { 0, 1, C3 }, { 1, 1, D3 } }))
+    t:eq(shape(parts), "Piano, note 1 from the top: 72@0+1 72@1+1 | Piano, note 2 from the top: 67@0+1 69@1+1"
+      .. " | Piano voice 2: 48@0+1 50@1+1")
+    t:eq(brief(find(parts)), "fifths Piano, note 2 from the top/Piano voice 2 @1")
   end,
   findings_come_in_time_order = function(t)
     local found = find({ part("a", { { 0, D5 }, { 1, E5 }, { 3, C5 }, { 4, D5 } }),

@@ -177,13 +177,16 @@ row("hotkey_colour_cycle", HOTKEY,
 PARALLELS = RECIPES + "parallel-fifths.lua"
 PARALLELS_OK = {"window": "Parallel fifths and octaves", "button": "OK", "fields": []}
 row("parallel_fifths", PARALLELS, project="parallels", before=OPEN_FIRST, dialog=PARALLELS_OK,
-    after=[then_dialog("parallel-fifths.lua", PARALLELS, PARALLELS_OK),
+    after=[then_dialog("parallel-fifths.lua", PARALLELS, PARALLELS_OK, args={"before": ["default"]}),
            then_dialog("parallel-fifths.none.lua", PARALLELS,
-                       {"window": "Parallel fifths and octaves", "button": "OK", "fields": [("check", 6, True)]})])
+                       {"window": "Parallel fifths and octaves", "button": "OK", "fields": [("check", 6, True)]},
+                       args={"removed": ["default"]})])
 row("parallel_fifths_with_hidden_and_contrary", PARALLELS, project="parallels", before=OPEN_FIRST,
     args={"findings": ["default", "hiddenAndContrary"]},
     dialog={"window": "Parallel fifths and octaves", "button": "OK",
-            "fields": [("check", 0, True), ("check", 1, True)]})
+            "fields": [("check", 0, True), ("check", 1, True)]},
+    after=[then_dialog("parallel-fifths.lua", PARALLELS, PARALLELS_OK,
+                       args={"before": ["default", "hiddenAndContrary"]})])
 row("parallel_fifths_undone", PARALLELS, project="parallels", before=OPEN_FIRST, dialog=PARALLELS_OK,
     after=[then_command("Edit.Undo"), then_check("parallel-fifths.none.lua")])
 row("parallel_fifths_cancelled", PARALLELS, project="parallels", before=OPEN_FIRST,

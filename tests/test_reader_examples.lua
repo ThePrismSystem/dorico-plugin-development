@@ -5,6 +5,8 @@ local ROOT = (arg and arg[0] or ""):match("^(.*[/\\])tests[/\\]") or "./"
 local FIXTURES = ROOT .. "fixtures/6.2.30/"
 local SAMPLE, READING = FIXTURES .. "sample.dorico", FIXTURES .. "reading.dorico"
 local PICKUP = FIXTURES .. "pickup.dorico"
+local PARALLELS = FIXTURES .. "parallels.dorico"
+local TMP = (os.getenv("TEMP") or os.getenv("TMPDIR") or "/tmp"):gsub("\\", "/")
 local CHECKS = ROOT .. "tests/dorico/lib/?.lua;"
 
 local function copy(src, dst)
@@ -54,6 +56,52 @@ local function passes(t, example, fixture, checkName)
   local made, failed = check(checkName, (run("examples/fundamentals/" .. example, fixture)))
   t:ok(made > 0, checkName .. " made no checks")
   t:eq(#failed, 0, table.concat(failed, " / "))
+end
+
+-- Runs a script that asks through the form helper, with text standing in for what the box writes: a "key=value" line
+-- per field. The helper takes its Windows route on any system, with TEMP pointing at a temporary folder. Lua 5.2's
+-- require doesn't read package.config, so changing it changes only the route.
+local function runAnswering(example, fixture, text)
+  local realConfig, realGetenv, realExecute = package.config, os.getenv, os.execute
+  package.config = "\\" .. realConfig:sub(2)
+  os.getenv = function(name)
+    if name == "TEMP" then return TMP end
+    return realGetenv(name)
+  end
+  os.execute = function(command)
+    local f = assert(io.open(command:match('%-Out "([^"]+)"'), "wb"))
+    f:write(text)
+    f:close()
+    return true, "exit", 0
+  end
+  local ok, printed, sent = pcall(run, example, fixture)
+  package.config, os.getenv, os.execute = realConfig, realGetenv, realExecute
+  if not ok then error(printed, 0) end
+  return printed, sent
+end
+
+local PARALLELS_ANSWER = "hidden=False\ncontrary=False\ndoublings=False\nouterOnly=False\nrestBreaks=True\n"
+  .. "unisons=True\nclear=False\n"
+
+-- Stands in for the score module, with this script's mark added to each note that has a colour stored for a layout,
+-- as a colour set from the Properties panel is.
+local function markedWithTheirOwn()
+  return function(name)
+    local real = assert(loadfile(ROOT .. "lib/scorereader/score.lua"))(name)
+    local fake = setmetatable({}, { __index = real })
+    function fake.entries(s, e)
+      local list = real.entries(s, e)
+      for _, x in ipairs(list) do
+        if x.property == "kEventColour" and x.layout ~= -1 then
+          local out = { { property = "kEventColour", value = 'string: "#ffd81b60"', layout = -1, instance = -1 } }
+          for i, y in ipairs(list) do out[i + 1] = y end
+          return out
+        end
+      end
+      return list
+    end
+    return fake
+  end
 end
 
 return {
@@ -128,5 +176,23 @@ return {
     t:eq(table.concat(printed, " / "), "flow 1, bar 1: C / flow 1, bar 2: Am / flow 1, bar 3: F / flow 1, bar 4: G7"
       .. " / flow 1, bar 1: Dorico put in no chord symbol for C / flow 1, bar 2: Dorico put in no chord symbol for Am"
       .. " / flow 1, bar 3: Dorico put in no chord symbol for F / flow 1, bar 4: Dorico put in no chord symbol for G7")
+  end,
+
+  parallel_fifths_finds_and_counts_on_the_fixture = function(t)
+    local printed, sent = runAnswering("examples/recipes/parallel-fifths.lua", PARALLELS, PARALLELS_ANSWER)
+    t:eq(#printed, 6, table.concat(printed, " / "))
+    t:eq(printed[6], "5 found; 19 notes coloured, 1 kept their own colour; 0 old marks taken off.")
+    t:eq(#sent, 19, "a command per note coloured")
+  end,
+
+  parallel_fifths_leaves_its_mark_on_a_note_with_a_colour_of_its_own = function(t)
+    package.preload["scorereader.score"] = markedWithTheirOwn()
+    local ok, printed, sent = pcall(runAnswering, "examples/recipes/parallel-fifths.lua", PARALLELS,
+      (PARALLELS_ANSWER:gsub("clear=False", "clear=True")))
+    package.preload["scorereader.score"] = nil
+    t:ok(ok, tostring(printed))
+    t:eq(table.concat(printed, " / "), "Took this script's colour off 0 notes. / Left it on 1 note that also has a "
+      .. "colour of its own, since taking it off could take that colour too.")
+    t:eq(#sent, 0, "nothing taken off")
   end,
 }

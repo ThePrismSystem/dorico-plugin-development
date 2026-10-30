@@ -1,10 +1,10 @@
 -- Find consecutive fifths and octaves between every pair of parts, and colour the notes involved. It flags; it never
--- changes a note.
+-- changes a pitch or rhythm.
 -- What it does: asks which checks to run, reads a saved copy, and compares every pair of parts in every flow: each
--- voice is a part, and so is each note of a chord, counted from the top. It prints one line per finding (what it is,
--- the flow, bar and beat, and the two parts) and colours the notes involved with its own colour, #ffd81b60, in every
--- layout. A note that already has a colour of its own keeps it and is only listed. Tick "Only remove marks" to take
--- this script's colour off every note and change nothing else.
+-- voice is a part, and so is each note of a chord, counted from the top, a held note included. It prints one line per
+-- finding (what it is, the flow, bar and beat, and the two parts) and colours the notes involved with its own colour,
+-- #ffd81b60, in every layout. A note that already has a colour of its own keeps it and is only listed. Tick "Only
+-- remove marks" to take this script's colour off every note and change nothing else.
 -- Changes: the colour of the notes in a finding, and of notes an earlier run coloured.
 -- Undo: Edit > Undo takes the whole run back in one step.
 -- Builds on: 04-read-the-saved-copy.lua, 09-bars-keys-and-times.lua, 13-set-a-property-by-id.lua and
@@ -13,7 +13,8 @@
 -- It checks common-practice voice leading, and plenty of music breaks those rules on purpose. The rules it follows
 -- are in the parallels helper below. Every run first takes its colour off any note that has exactly #ffd81b60 with no
 -- layout of its own, so a run never piles marks on an earlier one; a colour you set to that exact value, for every
--- layout, would go too. Pitches are sounding pitches.
+-- layout, would go too. A note that also has a colour of its own keeps the mark, and the run says how many did, since
+-- no run has shown that taking the mark off would leave the other colour. Pitches are sounding pitches.
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. The read of app.currentScore goes
@@ -435,7 +436,9 @@ end
 
 -- helper: lines
 -- One part per voice of a flow the reader read, and one per note of a chord, counted from the top, each named after
--- its player: "Violin", "Piano voice 2", "Piano, note 2 from the top".
+-- its player: "Violin", "Piano voice 2", "Piano, note 2 from the top". At each moment a note starts in a voice, every
+-- note sounding there, struck or held, is counted from the top up to the next such moment, so a note held in a chord
+-- stays in its part while the notes under it move.
 --   lines.of(s, flow, values) -> parts as the parallels helper takes them
 local lines = {}
 do
@@ -449,20 +452,32 @@ do
         end
         local name = player and player.name or ("stream " .. stream.id)
         voices[name] = (voices[name] or 0) + 1
-        local chords, order = {}, {}
+        local notes, onsets, seen = {}, {}, {}
         for _, e in ipairs(stream.events) do
           if e.kind == "note" then
             local pos = values.toNumber(e.position)
-            if not chords[pos] then chords[pos], order[#order + 1] = {}, pos end
-            table.insert(chords[pos], e)
+            notes[#notes + 1] = { e = e, pos = pos, stop = pos + values.toNumber(e.duration) }
+            if not seen[pos] then seen[pos], onsets[#onsets + 1] = true, pos end
           end
         end
-        local ranks = {}
-        for _, pos in ipairs(order) do
-          table.sort(chords[pos], function(x, y) return x.pitch > y.pitch end)
-          for rank, e in ipairs(chords[pos]) do
+        table.sort(notes, function(x, y) return x.pos < y.pos end)
+        table.sort(onsets)
+        local ranks, sounding, upto = {}, {}, 1
+        for i, t in ipairs(onsets) do
+          local still = {}
+          for _, n in ipairs(sounding) do
+            if n.stop > t then still[#still + 1] = n end
+          end
+          sounding = still
+          while notes[upto] and notes[upto].pos <= t do
+            if notes[upto].stop > t then sounding[#sounding + 1] = notes[upto] end
+            upto = upto + 1
+          end
+          table.sort(sounding, function(x, y) return x.e.pitch > y.e.pitch end)
+          for rank, n in ipairs(sounding) do
             ranks[rank] = ranks[rank] or {}
-            table.insert(ranks[rank], { id = e.id, pos = pos, duration = values.toNumber(e.duration), pitch = e.pitch })
+            local stop = math.min(n.stop, onsets[i + 1] or n.stop)
+            table.insert(ranks[rank], { id = n.e.id, pos = t, duration = stop - t, pitch = n.e.pitch })
           end
         end
         for rank, notes in ipairs(ranks) do
@@ -503,32 +518,43 @@ local edit = require("scorereader.dorico.edit")
 local score = require("scorereader.score")
 local values = require("scorereader.values")
 
--- Take an earlier run's marks off, and note which notes have a colour of their own.
-local MARKED = 'string: "' .. MARK .. '"'
-local cleared, own = 0, {}
+-- Take an earlier run's marks off, and note which notes have a colour of their own. No run has shown whether taking
+-- the mark off leaves a colour set for one layout alone, so a note with both keeps the mark.
+local cleared, left, own = 0, 0, {}
 for _, flow in ipairs(s.flows) do
   for _, e in ipairs(flow.events) do
     if e.kind == "note" or e.kind == "grace" then
+      local mark, theirs = false, false
       for _, x in ipairs(score.entries(s, e)) do
         if x.property == "kEventColour" then
-          if x.value == MARKED and x.layout == -1 and x.instance == -1 then
-            edit.removeProperty(app, e, "kEventColour")
-            cleared = cleared + 1
-          elseif x.value ~= MARKED then
-            own[e.id] = true
+          if values.typed(x.value).value == MARK and x.layout == -1 and x.instance == -1 then
+            mark = true
+          else
+            theirs = true
           end
         end
+      end
+      own[e.id] = theirs or nil
+      if mark and theirs then
+        left = left + 1
+      elseif mark then
+        edit.removeProperty(app, e, "kEventColour")
+        cleared = cleared + 1
       end
     end
   end
 end
+local function sayLeft()
+  if left == 0 then return end
+  print(string.format("Left it on %d %s also %s a colour of its own, since taking it off could take that colour too.",
+    left, left == 1 and "note that" or "notes that", left == 1 and "has" or "have"))
+end
 if answers.clear then
   print(string.format("Took this script's colour off %d notes.", cleared))
+  sayLeft()
   return
 end
 
-
--- Where each flow's bars start, from its time signatures, as 09 does.
 -- helper: barsOf
 -- Where a flow's bars start, through the bars helper, from the time signatures in its timebase stream. A time
 -- signature in any other stream is left out.
@@ -569,3 +595,4 @@ for id in pairs(toMark) do
 end
 print(string.format("%d found; %d notes coloured, %d kept their own colour; %d old marks taken off.", count, marked,
   kept, cleared))
+sayLeft()
