@@ -35,6 +35,48 @@ local function spans(starts)
   return table.concat(out, " ")
 end
 
+local function writeFile(path, text)
+  local f = assert(io.open(path, "wb"))
+  f:write(text)
+  f:close()
+end
+
+local function readFile(path)
+  local f = io.open(path, "rb")
+  if not f then return nil end
+  local text = f:read("*a")
+  f:close()
+  return text
+end
+
+-- An os.execute for the form's Windows route that writes this answer where the box would.
+local function answering(text)
+  return function(command)
+    writeFile(command:match('%-Out "([^"]+)"'), text)
+    return true, "exit", 0
+  end
+end
+
+-- An io.popen for the form's Mac route: each call gives the next output and records its command in sent.
+local function popening(outputs, sent)
+  return function(command)
+    sent[#sent + 1] = command
+    local text = outputs[#sent]
+    return { read = function() return text end, close = function() return true end }
+  end
+end
+
+-- Parses a form script with PowerShell's own parser and writes the number of parse errors and the box's title.
+local PARSE_TITLE = [[
+param([string]$Path, [string]$Out)
+$tokens = $null; $errors = $null
+$ast = [System.Management.Automation.Language.Parser]::ParseFile($Path, [ref]$tokens, [ref]$errors)
+$title = $ast.Find({ param($a) $a -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+  $a.Left.Extent.Text -eq '$form.Text' }, $true)
+$text = "$($errors.Count)" + [char]10 + $title.Right.Expression.Value
+[System.IO.File]::WriteAllText($Out, $text, (New-Object System.Text.UTF8Encoding $false))
+]]
+
 -- Runs fn with DoApp standing in for Dorico's and print recorded; gives back what was printed.
 local function withDorico(app, fn)
   local printed, realPrint, realApp = {}, print, DoApp
@@ -483,14 +525,119 @@ return {
       return true, "exit", 0
     end
     local ok, answers = pcall(form.windows, "Box", fields, TMP)
-    os.execute = function() return true, "exit", 0 end
-    local ok2, cancelled = pcall(form.windows, "Box", fields, TMP)
+    os.execute = answering("")
+    local ok2, cancelled, why = pcall(form.windows, "Box", fields, TMP)
     os.execute = realExecute
     t:ok(ok, tostring(answers))
     t:ok(ran and ran:find("^powershell %-NoProfile"), tostring(ran))
     t:eq(answers and answers.words, "hello")
     t:eq(head, "\239\187\191", "the script starts with a UTF-8 byte order mark, so PowerShell 5.1 reads it as UTF-8")
     t:ok(ok2, tostring(cancelled))
-    t:eq(cancelled, nil, "Cancel writes no answer")
+    t:eq(cancelled, nil, "Cancel writes an empty answer")
+    t:eq(why, nil, "Cancel isn't a failure")
+  end,
+
+  form_script_doubles_curly_single_quotes = function(t)
+    local form = helpers.load(ASK, "form")
+    local script = form.script("WE\226\128\153LL \226\128\152x\226\128\154y\226\128\155",
+      { { key = "k", label = "L", kind = "text" } })
+    t:ok(script:find("$form.Text = 'WE\226\128\153\226\128\153LL \226\128\152\226\128\152x"
+      .. "\226\128\154\226\128\154y\226\128\155\226\128\155'", 1, true), "every curly single quote doubled")
+  end,
+
+  form_script_parses_to_the_title_it_was_given = function(t)
+    -- Only Windows has PowerShell to parse the script with. The parser reads it without running anything.
+    if package.config:sub(1, 1) ~= "\\" then return end
+    local form = helpers.load(ASK, "form")
+    local title = "x\226\128\153; Write-Output INJECTED; \226\128\152"
+    local script, parse, out = TMP .. "/form-test-box.ps1", TMP .. "/form-test-parse.ps1", TMP .. "/form-test-parse.txt"
+    writeFile(script, "\239\187\191" .. form.script(title,
+      { { key = "k", label = "WE\226\128\153LL GATHER LILACS", kind = "text" } }))
+    writeFile(parse, PARSE_TITLE)
+    os.remove(out)
+    os.execute('powershell -NoProfile -ExecutionPolicy Bypass -File "' .. parse .. '" -Path "' .. script
+      .. '" -Out "' .. out .. '"')
+    local text = readFile(out)
+    os.remove(script)
+    os.remove(parse)
+    os.remove(out)
+    t:eq(text, "0\n" .. title, "no parse errors, and the title is the whole string")
+  end,
+
+  form_on_windows_says_why_when_powershell_gives_no_answer = function(t)
+    local form = helpers.load(ASK, "form")
+    local fields = { { key = "words", label = "Words", kind = "text", default = "" } }
+    local realExecute = os.execute
+    os.execute = function() return nil, "exit", 1 end
+    local ok, answers, why = pcall(form.windows, "Box", fields, TMP)
+    os.execute = answering("other=x\n")
+    local ok2, partial, why2 = pcall(form.windows, "Box", fields, TMP)
+    os.execute = realExecute
+    t:ok(ok and ok2, tostring(answers) .. " " .. tostring(partial))
+    t:eq(answers, nil)
+    t:eq(why, "PowerShell gave no answer")
+    t:eq(partial, nil)
+    t:eq(why2, "the box's answer left out words")
+  end,
+
+  form_on_windows_says_why_when_it_cant_write_the_script = function(t)
+    local form = helpers.load(ASK, "form")
+    local folder = TMP .. "/no-such-folder-" .. os.time()
+    local answers, why = form.windows("Box", { { key = "k", label = "K", kind = "text" } }, folder)
+    t:eq(answers, nil)
+    t:eq(why, "couldn't write " .. folder .. "/dorico-form.ps1")
+  end,
+
+  form_ask_on_windows_says_why_when_there_is_no_temporary_folder = function(t)
+    local form = helpers.load(ASK, "form")
+    local realConfig, realGetenv = package.config, os.getenv
+    package.config = "\\" .. realConfig:sub(2)
+    os.getenv = function() return nil end
+    local ok, answers, why = pcall(form.ask, "Box", { { key = "k", label = "K", kind = "text" } })
+    package.config, os.getenv = realConfig, realGetenv
+    t:ok(ok, tostring(answers))
+    t:eq(answers, nil)
+    t:eq(why, "neither TEMP nor TMP names a folder")
+  end,
+
+  form_on_a_mac_reads_each_answer_and_quotes_what_it_sends = function(t)
+    local form = helpers.load(ASK, "form")
+    local sent = {}
+    local realPopen = io.popen
+    io.popen = popening({ "ok:\n", "ok:Yes\n", "ok:b'c\n" }, sent)
+    local ok, answers = pcall(form.mac, "Zo\195\171's box", {
+      { key = "words", label = 'it\'s "a" \\ b', kind = "text", default = "" },
+      { key = "loud", label = "Loud", kind = "check", default = false },
+      { key = "which", label = "Which", kind = "choice", default = "a", choices = { "a", "b'c" } },
+    })
+    io.popen = realPopen
+    t:ok(ok, tostring(answers))
+    t:eq(answers and answers.words, "", "an empty answer")
+    t:eq(answers and answers.loud, true)
+    t:eq(answers and answers.which, "b'c")
+    t:ok(sent[1]:find([[display dialog "it'\''s \"a\" \\ b" default answer ""]], 1, true), sent[1])
+    t:ok(sent[1]:find([[with title "Zo]] .. "\195\171" .. [['\''s box"]], 1, true), sent[1])
+    t:ok(sent[2]:find([[default button "No"]], 1, true), sent[2])
+    t:ok(sent[3]:find("-e 'if r is false then error number -128'", 1, true), sent[3])
+    t:ok(sent[3]:find([[choose from list {"a", "b'\''c"}]], 1, true), sent[3])
+  end,
+
+  form_on_a_mac_tells_cancel_from_a_failure = function(t)
+    local form = helpers.load(ASK, "form")
+    local fields = { { key = "words", label = "Words", kind = "text", default = "" } }
+    local realPopen = io.popen
+    io.popen = popening({ "0:52: execution error: User canceled. (-128)\n" }, {})
+    local cancelled, cancelWhy = form.mac("Box", fields)
+    io.popen = popening({ "sh: osascript: command not found\n" }, {})
+    local failed, why = form.mac("Box", fields)
+    io.popen = popening({ "" }, {})
+    local silent, silentWhy = form.mac("Box", fields)
+    io.popen = realPopen
+    t:eq(cancelled, nil)
+    t:eq(cancelWhy, nil, "Cancel isn't a failure")
+    t:eq(failed, nil)
+    t:eq(why, "sh: osascript: command not found")
+    t:eq(silent, nil)
+    t:eq(silentWhy, "osascript gave no answer")
   end,
 }

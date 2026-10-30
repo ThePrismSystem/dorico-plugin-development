@@ -621,7 +621,9 @@ local ok, how, code = os.execute(command)   -- Lua 5.2: true|nil, "exit"|"signal
 ```
 
 - Ask before changing anything, so that Cancel leaves nothing to undo.
-- Treat any failure as a cancel: no answer file, an empty answer, a program that didn't start.
+- Tell Cancel from a failure, and print why there was no box. The form helper's box writes an empty answer on
+  Cancel, so no answer file at all means the program didn't start or didn't finish: PowerShell blocked, or no
+  temporary folder.
 - If several runs could leave answer files, give each run an id that the box writes back, and ignore an answer
   without it.
 
@@ -638,6 +640,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "<box.ps
   first and last quotes from a line that starts with one.
 - Write the answer as UTF-8 without a byte-order mark: `[System.IO.File]::WriteAllText(path, text, (New-Object
   System.Text.UTF8Encoding $false))`.
+- Start the box's own script with a UTF-8 byte-order mark. Windows PowerShell 5.1 reads a script without one in the
+  ANSI code page, which garbles accented letters.
+- Put text into the script as a single-quoted string, doubling every quote. PowerShell also ends a single-quoted
+  string at the curly single quotes (U+2018 to U+201B), so double those too. A flow title such as "We’ll Gather
+  Lilacs" otherwise breaks the script, and a title written to do so runs a command of its own.
 
 PowerShell traps the handbells plug-in fell into, for bigger dialogs:
 
@@ -651,8 +658,9 @@ PowerShell traps the handbells plug-in fell into, for bigger dialogs:
 ### Mac: osascript
 
 A one-line AppleScript `display dialog` with `default answer` asks for a word, and `io.popen` reads what
-`osascript` prints. Cancel makes `osascript` fail with no output. This is written from Apple's documentation and
-hasn't been run on a Mac. For a full dialog, the handbells plug-in has a JavaScript for Automation (JXA) window,
+`osascript` prints. Cancel makes `osascript` fail with error -128. `choose from list` gives `false` on Cancel instead,
+so the form helper raises -128 itself when it does. This is written from Apple's documentation and hasn't been run
+on a Mac. For a full dialog, the handbells plug-in has a JavaScript for Automation (JXA) window,
 also not yet run on a Mac.
 
 ## 9. Running a script from a key

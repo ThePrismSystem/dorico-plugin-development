@@ -55,15 +55,19 @@ end
 -- A box with a row per option, to ask before a script changes anything, so that Cancel leaves nothing to undo. Each
 -- field is a text box, a tick box or a list to choose from, with a default, so OK with nothing changed runs on the
 -- defaults. The Windows box is topmost so it can't open behind Dorico's window, and it writes one "key=value" line
--- per field as UTF-8, so accented letters survive; Cancel writes nothing. The Mac route asks one question at a time.
---   form.ask(title, fields) -> {[key] = text, or true or false for a tick box}, or nil on Cancel or when no box
---     could be shown; fields: {{key, label, kind = "text" | "check" | "choice", default, choices = {...}}}
+-- per field as UTF-8, so accented letters survive; Cancel writes an empty answer. The Mac route asks one question at
+-- a time.
+--   form.ask(title, fields) -> {[key] = text, or true or false for a tick box}; nil on Cancel; nil and the reason
+--     when no box could be shown; fields: {{key, label, kind = "text" | "check" | "choice", default, choices = {...}}}
 --   form.windows(title, fields, folder) and form.mac(title, fields): the two routes form.ask picks between
---   form.script(title, fields) -> the PowerShell; form.parse(text, fields) -> the answers, or nil for none
+--   form.script(title, fields) -> the PowerShell
+--   form.parse(text, fields) -> the answers; nil for no answer; nil and the key of a field the answer leaves out
 local form = {}
 do
-  -- A PowerShell single-quoted string doubles its quotes; an AppleScript string escapes quotes and backslashes.
-  local function ps(s) return "'" .. (tostring(s):gsub("'", "''")) .. "'" end
+  -- A PowerShell single-quoted string doubles its quotes. PowerShell also takes the curly single quotes (U+2018 to
+  -- U+201B) as quotes, and a project's titles and names can hold them. An AppleScript string escapes quotes and
+  -- backslashes.
+  local function ps(s) return "'" .. (tostring(s):gsub("'", "''"):gsub("\226\128[\152-\155]", "%0%0")) .. "'" end
   local function apple(s) return '"' .. (tostring(s):gsub("\\", "\\\\"):gsub('"', '\\"')) .. '"' end
 
   local function readFile(path)
@@ -137,8 +141,9 @@ do
       "    else { $v = $c.Text }",
       "    $f[0] + '=' + $v",
       "  }",
-      "  [System.IO.File]::WriteAllText($Out, ($lines -join [char]10), (New-Object System.Text.UTF8Encoding $false))",
-      "}",
+      "  $text = $lines -join [char]10",
+      "} else { $text = '' }",
+      "[System.IO.File]::WriteAllText($Out, $text, (New-Object System.Text.UTF8Encoding $false))",
     }) do add(line) end
     return table.concat(out, "\r\n") .. "\r\n"
   end
@@ -153,7 +158,7 @@ do
     local answers = {}
     for _, f in ipairs(fields) do
       local value = got[f.key]
-      if value == nil then return nil end
+      if value == nil then return nil, f.key end
       if f.kind == "check" then value = value:lower() == "true" end
       answers[f.key] = value
     end
@@ -164,7 +169,7 @@ do
   function form.windows(title, fields, folder)
     local script, answer = folder .. "/dorico-form.ps1", folder .. "/dorico-form.txt"
     local f = io.open(script, "wb")
-    if not f then return nil end
+    if not f then return nil, "couldn't write " .. script end
     -- Windows PowerShell 5.1 reads a script with no byte order mark in the ANSI code page, which garbles accents.
     f:write("\239\187\191" .. form.script(title, fields))
     f:close()
@@ -174,32 +179,45 @@ do
     local text = readFile(answer)
     os.remove(script)
     os.remove(answer)
-    return form.parse(text, fields)
+    -- Cancel writes an empty answer, so no answer at all means PowerShell didn't run the box to the end.
+    if not text then return nil, "PowerShell gave no answer" end
+    if text == "" then return nil end
+    local answers, missing = form.parse(text, fields)
+    if not answers then return nil, "the box's answer left out " .. missing end
+    return answers
   end
 
-  -- Not run on a Mac. Each answer comes back after "ok:", so an empty answer can be told from Cancel, which makes
-  -- osascript fail with no output.
+  -- Not run on a Mac. Each answer comes back after "ok:", so an empty answer can be told from Cancel, which
+  -- AppleScript reports as error -128. Any other output is why osascript failed.
   function form.mac(title, fields)
     local answers = {}
     for _, f in ipairs(fields) do
-      local ask
+      local lines
       if f.kind == "check" then
-        ask = "button returned of (display dialog " .. apple(f.label) .. ' buttons {"No", "Yes"} default button '
-          .. apple(f.default and "Yes" or "No") .. " with title " .. apple(title) .. ")"
+        lines = { '"ok:" & button returned of (display dialog ' .. apple(f.label) .. ' buttons {"No", "Yes"}'
+          .. " default button " .. apple(f.default and "Yes" or "No") .. " with title " .. apple(title) .. ")" }
       elseif f.kind == "choice" then
         local items = {}
         for _, choice in ipairs(f.choices) do items[#items + 1] = apple(choice) end
-        ask = "item 1 of (choose from list {" .. table.concat(items, ", ") .. "} with prompt " .. apple(f.label)
-          .. " default items {" .. apple(f.default) .. "} with title " .. apple(title) .. ")"
+        -- choose from list gives false on Cancel where display dialog raises -128, so it's made to raise it too.
+        lines = { "set r to choose from list {" .. table.concat(items, ", ") .. "} with prompt " .. apple(f.label)
+          .. " default items {" .. apple(f.default) .. "} with title " .. apple(title),
+          "if r is false then error number -128", '"ok:" & item 1 of r' }
       else
-        ask = "text returned of (display dialog " .. apple(f.label) .. " default answer " .. apple(f.default or "")
-          .. " with title " .. apple(title) .. ")"
+        lines = { '"ok:" & text returned of (display dialog ' .. apple(f.label) .. " default answer "
+          .. apple(f.default or "") .. " with title " .. apple(title) .. ")" }
       end
-      local p = io.popen("osascript -e '\"ok:\" & " .. ask:gsub("'", "'\\''") .. "' 2>/dev/null")
+      local command = "osascript"
+      for _, line in ipairs(lines) do command = command .. " -e '" .. line:gsub("'", "'\\''") .. "'" end
+      local p = io.popen(command .. " 2>&1")
       local text = p:read("*a")
       p:close()
       local value = text:match("^ok:(.-)\r?\n?$")
-      if not value then return nil end
+      if not value then
+        if text:find("(-128)", 1, true) then return nil end
+        local why = text:match("^%s*(.-)%s*$")
+        return nil, why ~= "" and why or "osascript gave no answer"
+      end
       if f.kind == "check" then value = value == "Yes" end
       answers[f.key] = value
     end
@@ -209,7 +227,7 @@ do
   function form.ask(title, fields)
     if package.config:sub(1, 1) == "\\" then
       local folder = os.getenv("TEMP") or os.getenv("TMP")
-      if not folder then return nil end
+      if not folder then return nil, "neither TEMP nor TMP names a folder" end
       return form.windows(title, fields, folder)
     end
     return form.mac(title, fields)
@@ -462,9 +480,9 @@ local FIELDS = {
 local app, project = guard()
 if not project then return end
 -- Ask before changing anything, so that Cancel leaves nothing to undo.
-local answers = form.ask(TITLE, FIELDS)
+local answers, noBox = form.ask(TITLE, FIELDS)
 if not answers then
-  print("Cancelled: nothing changed.")
+  print(noBox and "Couldn't show the box: " .. noBox or "Cancelled: nothing changed.")
   return
 end
 local s = readCopy(app)
