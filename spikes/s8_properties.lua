@@ -2,7 +2,7 @@
 -- holds only notes, so stream.events lists them and each change can be read straight back. Each command form is
 -- tried on its own note, selected by id. Scratch copy only.
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
-local mine = here .. "?.lua;" .. here .. "lib/?.lua;" .. here .. "../fixtures/?.lua"
+local mine = here .. "?.lua;" .. here .. "lib/?.lua;" .. here .. "../fixtures/?.lua;" .. here .. "../lib/?.lua"
 for name in pairs(package.loaded) do
   if package.searchpath(name, mine) then package.loaded[name] = nil end
 end
@@ -17,6 +17,8 @@ local TRIES = {
 }
 
 probe.run("s8_properties", function(p)
+  local dump = require("scorereader.dorico.dump")
+  local edit = require("scorereader.dorico.edit")
   local dumpparse = require("dumpparse")
   local app = DoApp.DoApp()
   local score = app.currentScore
@@ -47,10 +49,10 @@ probe.run("s8_properties", function(p)
   local results = {}
   for _, try in ipairs(TRIES) do
     local e = noteAt(try.pos)
-    local parsed = dumpparse.parse(trumpet:dump())
+    local parsed = dump.parse(trumpet:dump())
     app:doCommand("Edit.SelectNone")
     app:doCommand(string.format("EventEdit.Select?FlowID=%d&EventID=%d&EventBlockID=%d", flow.id, e.id,
-      dumpparse.blockIdOf(trumpet, e.id, parsed)))
+      edit.blockIdOf(trumpet, e.id, parsed)))
     app:doCommand(try.command)
     app:doCommand("Edit.SelectNone")
     results[#results + 1] = { command = try.command, after = props(noteAt(try.pos)) }

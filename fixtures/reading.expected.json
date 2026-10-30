@@ -1,0 +1,959 @@
+{
+ "flows": [
+  {
+   "title": "Reading",
+   "players": [
+    {
+     "name": "Flute",
+     "notes": [
+      {
+       "spelling": "C5",
+       "pos": "0",
+       "duration": "1",
+       "grace": false,
+       "articulations": [
+        "staccato"
+       ]
+      },
+      {
+       "spelling": "D5",
+       "pos": "1",
+       "duration": "1",
+       "grace": false,
+       "articulations": [
+        "accent"
+       ]
+      },
+      {
+       "spelling": "E5",
+       "pos": "2",
+       "duration": "1",
+       "grace": false,
+       "articulations": [
+        "tenuto"
+       ]
+      },
+      {
+       "spelling": "F#5",
+       "pos": "3",
+       "duration": "1",
+       "grace": false
+      },
+      {
+       "spelling": "G5",
+       "pos": "4",
+       "duration": "1/3",
+       "grace": false
+      },
+      {
+       "spelling": "A5",
+       "pos": "13/3",
+       "duration": "1/3",
+       "grace": false
+      },
+      {
+       "spelling": "B5",
+       "pos": "14/3",
+       "duration": "1/3",
+       "grace": false
+      },
+      {
+       "spelling": "F5",
+       "pos": "5",
+       "duration": "1",
+       "grace": false
+      },
+      {
+       "spelling": "E5",
+       "pos": "6",
+       "duration": null,
+       "grace": true
+      },
+      {
+       "spelling": "G5",
+       "pos": "6",
+       "duration": "2",
+       "grace": false
+      },
+      {
+       "spelling": "E5",
+       "pos": "8",
+       "duration": "2",
+       "grace": false
+      },
+      {
+       "spelling": "D5",
+       "pos": "10",
+       "duration": "1",
+       "grace": false
+      },
+      {
+       "spelling": "C5",
+       "pos": "11",
+       "duration": "3",
+       "grace": false
+      },
+      {
+       "spelling": "D5",
+       "pos": "14",
+       "duration": "2",
+       "grace": false
+      },
+      {
+       "spelling": "G5",
+       "pos": "16",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "F#5",
+       "pos": "20",
+       "duration": "2",
+       "grace": false
+      },
+      {
+       "spelling": "E5",
+       "pos": "22",
+       "duration": "2",
+       "grace": false
+      },
+      {
+       "spelling": "D5",
+       "pos": "24",
+       "duration": "3",
+       "grace": false
+      },
+      {
+       "spelling": "G5",
+       "pos": "27",
+       "duration": "3",
+       "grace": false
+      }
+     ]
+    },
+    {
+     "name": "Clarinet (B{@flat@})",
+     "notes": [
+      {
+       "spelling": "D5",
+       "pos": "0",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "E5",
+       "pos": "4",
+       "duration": "2",
+       "grace": false
+      },
+      {
+       "spelling": "F#5",
+       "pos": "6",
+       "duration": "2",
+       "grace": false
+      },
+      {
+       "spelling": "G5",
+       "pos": "8",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "F5",
+       "pos": "12",
+       "duration": "2",
+       "grace": false
+      },
+      {
+       "spelling": "E5",
+       "pos": "14",
+       "duration": "2",
+       "grace": false
+      },
+      {
+       "spelling": "A5",
+       "pos": "16",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "B5",
+       "pos": "20",
+       "duration": "2",
+       "grace": false
+      },
+      {
+       "spelling": "A5",
+       "pos": "22",
+       "duration": "2",
+       "grace": false
+      },
+      {
+       "spelling": "G5",
+       "pos": "24",
+       "duration": "3",
+       "grace": false
+      },
+      {
+       "spelling": "D5",
+       "pos": "27",
+       "duration": "3",
+       "grace": false
+      }
+     ]
+    },
+    {
+     "name": "Guitar",
+     "notes": [
+      {
+       "spelling": "C3",
+       "pos": "0",
+       "duration": "1",
+       "grace": false,
+       "string": 5,
+       "fret": 3
+      },
+      {
+       "spelling": "E3",
+       "pos": "1",
+       "duration": "1",
+       "grace": false,
+       "string": 4,
+       "fret": 2
+      },
+      {
+       "spelling": "G3",
+       "pos": "2",
+       "duration": "1",
+       "grace": false,
+       "string": 3,
+       "fret": 0
+      },
+      {
+       "spelling": "C4",
+       "pos": "3",
+       "duration": "1",
+       "grace": false,
+       "string": 2,
+       "fret": 1
+      },
+      {
+       "spelling": "B2",
+       "pos": "4",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "A2",
+       "pos": "8",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "A2",
+       "pos": "12",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "B2",
+       "pos": "16",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "A2",
+       "pos": "20",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "B2",
+       "pos": "24",
+       "duration": "3",
+       "grace": false
+      },
+      {
+       "spelling": "G2",
+       "pos": "27",
+       "duration": "3",
+       "grace": false
+      }
+     ]
+    },
+    {
+     "name": "Piano",
+     "notes": [
+      {
+       "spelling": "C3",
+       "pos": "0",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "C5",
+       "pos": "0",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "E5",
+       "pos": "0",
+       "duration": "2",
+       "grace": false
+      },
+      {
+       "spelling": "G5",
+       "pos": "0",
+       "duration": "2",
+       "grace": false
+      },
+      {
+       "spelling": "F5",
+       "pos": "2",
+       "duration": "2",
+       "grace": false
+      },
+      {
+       "spelling": "A5",
+       "pos": "2",
+       "duration": "2",
+       "grace": false
+      },
+      {
+       "spelling": "G2",
+       "pos": "4",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "G5",
+       "pos": "4",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "A2",
+       "pos": "8",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "E5",
+       "pos": "8",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "F2",
+       "pos": "12",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "F5",
+       "pos": "12",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "G2",
+       "pos": "16",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "G5",
+       "pos": "16",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "D3",
+       "pos": "20",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "F#5",
+       "pos": "20",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "G2",
+       "pos": "24",
+       "duration": "3",
+       "grace": false
+      },
+      {
+       "spelling": "D5",
+       "pos": "24",
+       "duration": "3",
+       "grace": false
+      },
+      {
+       "spelling": "G2",
+       "pos": "27",
+       "duration": "3",
+       "grace": false
+      },
+      {
+       "spelling": "G5",
+       "pos": "27",
+       "duration": "3",
+       "grace": false
+      }
+     ]
+    },
+    {
+     "name": "Soprano",
+     "notes": [
+      {
+       "spelling": "C5",
+       "pos": "0",
+       "duration": "1",
+       "grace": false
+      },
+      {
+       "spelling": "D5",
+       "pos": "1",
+       "duration": "1",
+       "grace": false
+      },
+      {
+       "spelling": "E5",
+       "pos": "2",
+       "duration": "1",
+       "grace": false
+      },
+      {
+       "spelling": "F5",
+       "pos": "3",
+       "duration": "1",
+       "grace": false
+      },
+      {
+       "spelling": "G5",
+       "pos": "4",
+       "duration": "2",
+       "grace": false
+      },
+      {
+       "spelling": "A5",
+       "pos": "6",
+       "duration": "2",
+       "grace": false
+      },
+      {
+       "spelling": "G5",
+       "pos": "8",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "F5",
+       "pos": "12",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "G5",
+       "pos": "16",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "A5",
+       "pos": "20",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "B5",
+       "pos": "24",
+       "duration": "3",
+       "grace": false
+      },
+      {
+       "spelling": "G5",
+       "pos": "27",
+       "duration": "3",
+       "grace": false
+      }
+     ]
+    },
+    {
+     "name": "Violin",
+     "notes": [
+      {
+       "spelling": "G4",
+       "pos": "0",
+       "duration": "1",
+       "grace": false
+      },
+      {
+       "spelling": "A4",
+       "pos": "1",
+       "duration": "1",
+       "grace": false
+      },
+      {
+       "spelling": "B4",
+       "pos": "2",
+       "duration": "1",
+       "grace": false
+      },
+      {
+       "spelling": "C5",
+       "pos": "3",
+       "duration": "1",
+       "grace": false
+      },
+      {
+       "spelling": "D5",
+       "pos": "4",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "E5",
+       "pos": "8",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "F5",
+       "pos": "12",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "G5",
+       "pos": "16",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "F#5",
+       "pos": "20",
+       "duration": "4",
+       "grace": false
+      },
+      {
+       "spelling": "G5",
+       "pos": "24",
+       "duration": "3",
+       "grace": false
+      },
+      {
+       "spelling": "B4",
+       "pos": "27",
+       "duration": "3",
+       "grace": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "title": "Second",
+   "players": [
+    {
+     "name": "Flute",
+     "notes": [
+      {
+       "spelling": "C5",
+       "pos": "0",
+       "duration": "1",
+       "grace": false
+      },
+      {
+       "spelling": "D5",
+       "pos": "1",
+       "duration": "1",
+       "grace": false
+      },
+      {
+       "spelling": "E5",
+       "pos": "2",
+       "duration": "1",
+       "grace": false
+      },
+      {
+       "spelling": "F5",
+       "pos": "3",
+       "duration": "1",
+       "grace": false
+      }
+     ]
+    },
+    {
+     "name": "Clarinet (B{@flat@})",
+     "notes": []
+    },
+    {
+     "name": "Guitar",
+     "notes": []
+    },
+    {
+     "name": "Piano",
+     "notes": []
+    },
+    {
+     "name": "Soprano",
+     "notes": []
+    },
+    {
+     "name": "Violin",
+     "notes": []
+    }
+   ]
+  }
+ ],
+ "keys": [
+  {
+   "flow": 1,
+   "pos": "0",
+   "fifths": 0
+  },
+  {
+   "flow": 1,
+   "pos": "16",
+   "fifths": 1
+  }
+ ],
+ "times": [
+  {
+   "flow": 1,
+   "pos": "0",
+   "beats": 4,
+   "beatType": 4
+  },
+  {
+   "flow": 1,
+   "pos": "24",
+   "beats": 3,
+   "beatType": 4
+  }
+ ],
+ "texts": [
+  {
+   "flow": 1,
+   "player": "Flute",
+   "pos": "0",
+   "words": "dolce",
+   "above": true
+  },
+  {
+   "flow": 1,
+   "player": "Flute",
+   "pos": "8",
+   "words": "espress.",
+   "above": true
+  },
+  {
+   "flow": 1,
+   "player": "Flute",
+   "pos": "20",
+   "words": "Sing out",
+   "above": true
+  }
+ ],
+ "lyrics": [
+  {
+   "flow": 1,
+   "player": "Soprano",
+   "pos": "0",
+   "line": 1,
+   "text": "Hal",
+   "syllable": "begin",
+   "extend": false
+  },
+  {
+   "flow": 1,
+   "player": "Soprano",
+   "pos": "0",
+   "line": 2,
+   "text": "Glo",
+   "syllable": "begin",
+   "extend": false
+  },
+  {
+   "flow": 1,
+   "player": "Soprano",
+   "pos": "1",
+   "line": 1,
+   "text": "le",
+   "syllable": "middle",
+   "extend": false
+  },
+  {
+   "flow": 1,
+   "player": "Soprano",
+   "pos": "1",
+   "line": 2,
+   "text": "ri",
+   "syllable": "middle",
+   "extend": false
+  },
+  {
+   "flow": 1,
+   "player": "Soprano",
+   "pos": "2",
+   "line": 1,
+   "text": "lu",
+   "syllable": "middle",
+   "extend": false
+  },
+  {
+   "flow": 1,
+   "player": "Soprano",
+   "pos": "2",
+   "line": 2,
+   "text": "a",
+   "syllable": "end",
+   "extend": false
+  },
+  {
+   "flow": 1,
+   "player": "Soprano",
+   "pos": "3",
+   "line": 1,
+   "text": "jah",
+   "syllable": "end",
+   "extend": false
+  },
+  {
+   "flow": 1,
+   "player": "Soprano",
+   "pos": "3",
+   "line": 2,
+   "text": "now",
+   "syllable": "single",
+   "extend": false
+  },
+  {
+   "flow": 1,
+   "player": "Soprano",
+   "pos": "4",
+   "line": 1,
+   "text": "Sing",
+   "syllable": "single",
+   "extend": true
+  },
+  {
+   "flow": 1,
+   "player": "Soprano",
+   "pos": "8",
+   "line": 1,
+   "text": "joy",
+   "syllable": "single",
+   "extend": false
+  }
+ ],
+ "chords": [
+  {
+   "flow": 1,
+   "pos": "0",
+   "root": "C",
+   "chord": "major"
+  },
+  {
+   "flow": 1,
+   "pos": "4",
+   "root": "G",
+   "chord": "dominant"
+  },
+  {
+   "flow": 1,
+   "pos": "8",
+   "root": "A",
+   "chord": "minor"
+  },
+  {
+   "flow": 1,
+   "pos": "12",
+   "root": "F",
+   "chord": "major"
+  },
+  {
+   "flow": 1,
+   "pos": "16",
+   "root": "G",
+   "chord": "major"
+  }
+ ],
+ "dynamics": [
+  {
+   "flow": 1,
+   "player": "Flute",
+   "pos": "0",
+   "name": "mf"
+  },
+  {
+   "flow": 1,
+   "player": "Flute",
+   "pos": "14",
+   "name": "f"
+  },
+  {
+   "flow": 1,
+   "player": "Clarinet (B{@flat@})",
+   "pos": "0",
+   "name": "pp"
+  },
+  {
+   "flow": 1,
+   "player": "Clarinet (B{@flat@})",
+   "pos": "4",
+   "name": "p"
+  },
+  {
+   "flow": 1,
+   "player": "Clarinet (B{@flat@})",
+   "pos": "8",
+   "name": "mp"
+  },
+  {
+   "flow": 1,
+   "player": "Clarinet (B{@flat@})",
+   "pos": "12",
+   "name": "mf"
+  },
+  {
+   "flow": 1,
+   "player": "Clarinet (B{@flat@})",
+   "pos": "16",
+   "name": "f"
+  },
+  {
+   "flow": 1,
+   "player": "Clarinet (B{@flat@})",
+   "pos": "20",
+   "name": "ff"
+  },
+  {
+   "flow": 1,
+   "player": "Clarinet (B{@flat@})",
+   "pos": "24",
+   "name": "fp"
+  },
+  {
+   "flow": 1,
+   "player": "Clarinet (B{@flat@})",
+   "pos": "27",
+   "name": "sfz"
+  }
+ ],
+ "techniques": [
+  {
+   "flow": 1,
+   "player": "Violin",
+   "pos": "0",
+   "name": "pizz."
+  },
+  {
+   "flow": 1,
+   "player": "Violin",
+   "pos": "8",
+   "name": "arco"
+  }
+ ],
+ "tempos": [
+  {
+   "flow": 1,
+   "pos": "0",
+   "text": "Allegro",
+   "bpm": 120
+  }
+ ],
+ "rehearsalMarks": [
+  {
+   "flow": 1,
+   "pos": "16",
+   "text": "A"
+  }
+ ],
+ "tuplets": [
+  {
+   "flow": 1,
+   "player": "Flute",
+   "pos": "4",
+   "actual": 3,
+   "normal": 2
+  }
+ ],
+ "hairpins": [
+  {
+   "flow": 1,
+   "player": "Flute",
+   "pos": "12",
+   "type": "crescendo"
+  },
+  {
+   "flow": 1,
+   "player": "Flute",
+   "pos": "14",
+   "type": "stop"
+  }
+ ],
+ "props": [
+  {
+   "player": "Flute",
+   "pos": "0",
+   "spelling": "C5",
+   "property": "kNoteheadSetOverride",
+   "value": "noteheadset.diamondNoteheads",
+   "how": "lua"
+  },
+  {
+   "player": "Flute",
+   "pos": "1",
+   "spelling": "D5",
+   "property": "kNoteheadSetOverride",
+   "value": "noteheadset.Xnoteheads",
+   "how": "command"
+  },
+  {
+   "player": "Flute",
+   "pos": "2",
+   "spelling": "E5",
+   "property": "kEventColour",
+   "value": "#ff00a050",
+   "how": "part"
+  },
+  {
+   "player": "Clarinet (B{@flat@})",
+   "pos": "0",
+   "spelling": "D5",
+   "property": "kEventColour",
+   "value": "#ff0080ff",
+   "how": "byId"
+  },
+  {
+   "player": "Piano",
+   "pos": "0",
+   "spelling": "C3",
+   "property": "kEventColour",
+   "value": "#ffc80000",
+   "how": "lua"
+  },
+  {
+   "player": "Violin",
+   "pos": "0",
+   "spelling": "G4",
+   "property": "kNoteAccidentalVisibility_v3",
+   "value": "kRoundBrackets",
+   "how": "byId"
+  },
+  {
+   "player": "Violin",
+   "pos": "1",
+   "spelling": "A4",
+   "property": "kNoteAccidentalVisibility_v3",
+   "value": "kSquareBrackets",
+   "how": "menu"
+  }
+ ]
+}

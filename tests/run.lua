@@ -4,7 +4,8 @@
 -- { testName = function(t) ... end }. Exits 1 on any failure.
 local here = (arg and arg[0] or ""):match("^(.*[/\\])") or "./"
 local root = here .. "../"
-package.path = here .. "lib/?.lua;" .. here .. "?.lua;" .. root .. "spikes/lib/?.lua;" .. package.path
+package.path = here .. "lib/?.lua;" .. here .. "?.lua;" .. root .. "lib/?.lua;" .. root .. "spikes/lib/?.lua;"
+  .. package.path
 
 local filter = arg and arg[1]
 

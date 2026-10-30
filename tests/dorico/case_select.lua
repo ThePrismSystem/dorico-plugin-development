@@ -5,7 +5,7 @@
 --   undo step of its own, apart from the example's)
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
 local repo = here .. "../../"
-local mine = here .. "lib/?.lua;" .. repo .. "spikes/lib/?.lua;" .. repo .. "fixtures/?.lua"
+local mine = here .. "lib/?.lua;" .. repo .. "spikes/lib/?.lua;" .. repo .. "fixtures/?.lua;" .. repo .. "lib/?.lua"
 for name in pairs(package.loaded) do
   if package.searchpath(name, mine) then package.loaded[name] = nil end
 end
@@ -13,6 +13,8 @@ if not package.path:find(mine, 1, true) then package.path = mine .. ";" .. packa
 local probe = require("probe")
 
 probe.run("case_select", function(p)
+  local dump = require("scorereader.dorico.dump")
+  local edit = require("scorereader.dorico.edit")
   local dumpparse = require("dumpparse")
   local app = DoApp.DoApp()
   local score = app.currentScore
@@ -23,14 +25,14 @@ probe.run("case_select", function(p)
   local owners = dumpparse.owners(score, flow)
   for _, s in ipairs(flow.voiceStreams) do
     if owners[s.id] == p.args.player then
-      local parsed = dumpparse.parse(s:dump())
+      local parsed = dump.parse(s:dump())
       for _, ev in ipairs(parsed.events) do
         if ev.kind == "note" and ev.pos == p.args.pos then
           app:doCommand("NoteInput.Exit")
           app:doCommand("Window.SwitchMode?WindowMode=kWriteMode")
           app:doCommand("Edit.SelectNone")
           app:doCommand(string.format("EventEdit.Select?FlowID=%d&EventID=%d&EventBlockID=%d", flow.id, ev.id,
-            dumpparse.blockIdOf(s, ev.id, parsed)))
+            edit.blockIdOf(s, ev.id, parsed)))
           for _ = 1, p.args.extend or 0 do app:doCommand("EventEdit.NavigateRightExtend") end
           p:fact("selectedFrom", { id = ev.id, spelling = ev.spelling })
           return

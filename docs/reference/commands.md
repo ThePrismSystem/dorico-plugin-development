@@ -29,6 +29,12 @@ Remote Control API's `getcommands` lists them all.
 | `Edit.Undo` | | verified | Inside a script, takes back everything the run has done so far. Only the first in a run is safe ([13](../../examples/fundamentals/13-undo.lua)). |
 | `Edit.RemoveRests` | | verified | On the selection. Leaves no trace in the dump. |
 | `Edit.HideAccidental` | | verified | On the selected note (the handbells plug-in). |
+| `EventEdit.ChangeProperty` | `FlowID`, `EventID`, `EventBlockID`, `Type`, `Value` | verified | Sets a property on one event by its ids, with nothing selected, stored for every layout; it joins the run's one undo step. With no `Value` it takes the property off. It stores any name and value without checking: an unknown accidental visibility becomes `kHide` (W5, `spikes/w5_accidentals.lua`). |
+| `Edit.ShowAccidentalInParentheses`, `Edit.ShowAccidentalInBrackets` | | verified | On the selected notes; stored only for the layout on screen, layout 0 when the full score is showing (W5). |
+| `Edit.SetNoteheadSetOverride` | `NoteheadSetEntityID` | verified | On the selected notes; stored for every layout and the note's block instance (F3). |
+| `Edit.FlipItem` | | verified | Flips the selected text above or below, stored as `kTextEventAboveOrBelow` for the layout on screen (W1). |
+| `Edit.ChangeStaffTextToSystemText` | | verified | Makes the selected staff text a system text: a new event in the timebase stream (W1). |
+| `UI.InvokePropertyEnableSwitch` | `Type`, `Value` | verified | `Value=false` takes the property off the selection, as unticking it in the Properties panel does (W5, W7). Properties Dorico doesn't know are ignored. |
 | `Edit.CreateSystemBreak` | | verified | At the selection, which needs a barline there (the handbells plug-in). |
 | `Edit.GenerateChordSymbolsFromSelection` | | not tried | Dorico's own chord detection. |
 | `NoteEdit.PitchUpOctave`, `NoteEdit.PitchDownOctave` | | verified | Move the selected notes an octave, keeping their spelling ([07](../../examples/fundamentals/07-act-on-the-selection.lua)). |
@@ -42,6 +48,8 @@ Remote Control API's `getcommands` lists them all.
 | `NoteInput.Exit` | | verified | Leaves note input; do it before selecting. |
 | `NoteInput.StartChordSymbolInput` | | verified | Opens chord symbol input at the selection. |
 | `NoteInput.AcceptCurrentChordSymbolTextInput` | `Definition`, `ChordSymbolEntryAdvanceType` | verified | After the command above, `Definition=G7&ChordSymbolEntryAdvanceType=kEndInput` makes the chord symbol. Alone it makes nothing. Each chord symbol takes three undo steps ([chord-symbols](../../examples/recipes/chord-symbols.lua)). |
+| `NoteInput.StartLyricInput` | | verified | Opens lyric input at the selected note (W2). |
+| `NoteInput.AcceptCurrentLyricInput` | `LyricText`, `LyricsEntryAdvanceType` | verified | After the start command, `LyricText=glad&LyricsEntryAdvanceType=kEndInput` puts a whole-word lyric on line 1. A trailing hyphen stays in the word (W2). |
 | `NoteInput.CreateDynamic` | `Definition` | verified | `Definition=mf` makes a dynamic at the selection; `Dynamic=ff` makes nothing (S4). |
 | `NoteInput.CreateTimeSignature` | `Definition` | verified | `Definition=X` makes an open meter at the selection (the handbells plug-in). |
 | `NoteInput.CreateText` | | fails | Opens the text editor and waits for typing; Dorico runs no scripts until someone clicks the page. Use `stream:createText`. |

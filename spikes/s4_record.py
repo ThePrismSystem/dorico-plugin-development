@@ -13,6 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import dws  # noqa: E402
+import fixture_versions  # noqa: E402
 import run_lua  # noqa: E402
 
 PRESS = ROOT / "tools" / "press.ps1"
@@ -30,7 +31,7 @@ def press(keys):
 def main():
     client = dws.DoricoClient()
     client.connect()
-    code, result, sid = run_lua.run(ROOT / "spikes" / "select_note.lua", open_file=ROOT / "fixtures" / "sample.dorico",
+    code, result, sid = run_lua.run(ROOT / "spikes" / "select_note.lua", open_file=fixture_versions.newest("sample.dorico"),
                                     keep_open=True, client=client, extra_args={"player": "Piano", "pos": 0})
     verified = bool(result and result["facts"].get("scratchVerified"))
     print("selected", code, verified, result and result["facts"].get("selected"))

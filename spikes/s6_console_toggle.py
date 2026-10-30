@@ -11,13 +11,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import dws  # noqa: E402
+import fixture_versions  # noqa: E402
 import run_lua  # noqa: E402
 
 
 def main():
     client = dws.DoricoClient()
     client.connect()
-    code, result, sid = run_lua.run(ROOT / "spikes" / "00_smoke.lua", open_file=ROOT / "fixtures" / "sample.dorico",
+    code, result, sid = run_lua.run(ROOT / "spikes" / "00_smoke.lua", open_file=fixture_versions.newest("sample.dorico"),
                                     keep_open=True, client=client)
     verified = bool(result and result["facts"].get("scratchVerified"))
     print("smoke", code, "verified", verified)

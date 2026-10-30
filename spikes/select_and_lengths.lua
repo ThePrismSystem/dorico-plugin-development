@@ -3,7 +3,7 @@
 --   whether a second EventEdit.Select adds to the selection or replaces it (found with the S1 trick);
 --   whether DoCore.RhythmicLength takes a fraction of a quarter note, for a text at position 0.5.
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
-local mine = here .. "?.lua;" .. here .. "lib/?.lua;" .. here .. "../fixtures/?.lua"
+local mine = here .. "?.lua;" .. here .. "lib/?.lua;" .. here .. "../fixtures/?.lua;" .. here .. "../lib/?.lua"
 for name in pairs(package.loaded) do
   if package.searchpath(name, mine) then package.loaded[name] = nil end
 end
@@ -11,6 +11,8 @@ if not package.path:find(mine, 1, true) then package.path = mine .. ";" .. packa
 local probe = require("probe")
 
 probe.run("select_and_lengths", function(p)
+  local dump = require("scorereader.dorico.dump")
+  local edit = require("scorereader.dorico.edit")
   local dumpparse = require("dumpparse")
   local app = DoApp.DoApp()
   local score = app.currentScore
@@ -27,7 +29,7 @@ probe.run("select_and_lengths", function(p)
   p:fact("returns", { exit = type(r1) .. ":" .. tostring(r1), mode = type(r2) .. ":" .. tostring(r2),
     unknown = type(r3) .. ":" .. tostring(r3) })
 
-  local parsed = dumpparse.parse(violin:dump())
+  local parsed = dump.parse(violin:dump())
   local ids = {}
   for _, ev in ipairs(parsed.events) do
     if ev.kind == "note" and (ev.pos == 0 or ev.pos == 2) then ids[#ids + 1] = ev.id end
@@ -35,13 +37,13 @@ probe.run("select_and_lengths", function(p)
   app:doCommand("Edit.SelectNone")
   for _, id in ipairs(ids) do
     app:doCommand(string.format("EventEdit.Select?FlowID=%d&EventID=%d&EventBlockID=%d", flow.id, id,
-      dumpparse.blockIdOf(violin, id, parsed)))
+      edit.blockIdOf(violin, id, parsed)))
   end
   local before = {}
-  for _, ev in ipairs(dumpparse.parse(violin:dump()).events) do before[ev.id] = ev.spelling end
+  for _, ev in ipairs(dump.parse(violin:dump()).events) do before[ev.id] = ev.spelling end
   app:doCommand("NoteEdit.PitchUpChromatic")
   local moved = {}
-  for _, ev in ipairs(dumpparse.parse(violin:dump()).events) do
+  for _, ev in ipairs(dump.parse(violin:dump()).events) do
     if ev.spelling and before[ev.id] ~= ev.spelling then moved[#moved + 1] = before[ev.id] .. "->" .. ev.spelling end
   end
   app:doCommand("Edit.Undo")

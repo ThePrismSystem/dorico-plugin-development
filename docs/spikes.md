@@ -1,7 +1,7 @@
 # What the spikes found
 
 Each spike asked one question about Dorico 6's Lua scripting that the examples needed answered. The probes are in
-`spikes/`, run on scratch copies with `python tools/run_lua.py spikes/<probe>.lua --open fixtures/sample.dorico`.
+`spikes/`, run on scratch copies with `python tools/run_lua.py spikes/<probe>.lua --open fixtures/6.2.30/sample.dorico`.
 Everything here was seen on Dorico 6.2.30 (build 6245) on Windows 11.
 
 ## The sample project's import
@@ -239,3 +239,104 @@ an `Info.lua` that returns a table whose `MenuCommands` entries have a `name` an
 up a new plug-in of either kind without a restart wasn't checked: that would mean adding files to the user's own
 Script Plug-ins folder, and if it needed a restart, trying the plug-in would too, which this repository's tests never
 do. The examples are single files, run with Script > Run Script.
+
+## F1: what a saved score holds
+
+Probes: `f1_catalogue.lua` and `f1_changes.lua`, both run on stock Lua outside Dorico over 52 projects: the
+fixtures, copies of the 7 example projects Dorico installs, and the 39 projects at
+<https://ancientgroove.co.uk/dorico/index.html>. Between them they were saved by every Dorico from 6.0.22 to 6.2.30.
+
+- Every project decoded, the 7 installed examples from `score.xml` and the rest from `score.dtn`. The biggest, an
+  installed example with 695,427 nodes, took 4.4 s in stock Lua, most of it unzipping.
+- The catalogue lists every node path with its values. It found 46 kinds of event definition, from
+  `NoteEventDefinition` (533,846 of them) to a single `MultiRestEventDefinition`. None of the projects has a chord
+  symbol or a tab staff. [file-format.md](file-format.md) describes the tree it found. The reading fixture came
+  later, with five chord symbols, and makes 53 projects and 47 kinds.
+- `fileVersion` changed with every release, patch releases included: 1.1392 from 6.0.22, 1.1416 from 6.1.0, 1.1417
+  from 6.1.10, 1.1444 from 6.2.0, 1.1450 from 6.2.20 and 1.1452 from 6.2.30. The installed examples say 6.1.5 and
+  1.1412.
+- `f1_changes.lua` looks for paths that every parent node has in some versions and none has in others. Across all 52
+  projects, every such path was an option (about 80 engraving, playback, notation and view options, such as
+  `repeatNotationOptions` from 6.2.0 on) or a library field, and each was an addition. Events, element tables,
+  players, layouts and project info kept the same paths in every version. Run on only a few projects, the probe also
+  reports content that some projects happen not to have, such as dynamics.
+
+## F7: XML and binary
+
+The installed example projects hold `score.xml` and `scorelibrary.xml`; every other project found holds `.dtn` files,
+including the 8 guided-tutorial projects in Dorico's program folder. Neither Dorico's `preferences.xml` nor its 1,090
+commands has anything that saves XML. Dorico 6.2.30 opens the XML projects, and the reader reads them into the same
+tree: for one installed example, `scorereader.xml` gave 238,312 nodes and Python's XML parser counted 238,312
+elements.
+
+## F2 to F6: what the events hold, and how they match Lua
+
+Probes: `tree_dump.lua` (stock Lua: writes any project's tree as text), `f2_events.lua` (in Dorico: every stream's
+dump with its owners, the players and the layouts) and `f2_compare.lua` (stock Lua: sets `f2_events.lua`'s result
+beside the decoded file). Run on `fixtures/6.2.30/reading.dorico`, whose source says what each item is, and on Fauré's
+*Dolly* from `fixtures/6.2.20`.
+
+- Stream ids, event ids and instrument ids in the file are the ones Lua gives. For both projects, every event in every
+  stream's dump matched a decoded event by id and position, and every decoded event was in a dump: 0 mismatches over
+  22 streams in the fixture and over 8,794 notes, 933 slurs, 288 dynamics, 200 breaks and the rest in *Dolly*.
+- *Dolly* was saved by 6.2.20. Opening it in 6.2.30 kept every id, so a reader can match Lua's view of an upgraded
+  project to the file the user opened. Dorico shows a notice ("This project was created in version 6.2.20 of Dorico.
+  It will be automatically updated to the current version.") with only an OK button; `tools/run_lua.py` now clicks it.
+- Where events live: the timebase stream holds time and key signatures, tempos, chord symbols and rehearsal marks; a
+  staff's stream holds its clefs, dynamics and any text imported from MusicXML; a voice stream holds notes, tuplets,
+  lyrics, slurs, playing techniques and the text `createText` makes.
+- What the file adds to the dump: lyric text and syllable types, dynamic names, time and key signatures, chord symbol
+  roots and qualities (the dump names chords too), text styles and fragments, articulations, string numbers, and
+  every property with its context. [file-format.md](file-format.md) has the details.
+- Contexts (F3): a value set through Lua's property table or by `EventEdit.ChangeProperty` has no context;
+  `Edit.SetNoteheadSetOverride` stores layout -1 with the note's block instance; the Properties panel with a part on
+  screen stores that part's layout; `Edit.ShowAccidentalInBrackets` stores the layout on screen, as the panel does.
+- Ownership (F4): each flow's `flowPlayers` lists every player's instruments and their stave and voice streams, the same
+  ownership as `flow.instruments`. Instruments' transpositions and ranges are in their library definitions.
+- Options (F5): every flow carries a full set of notation options, including the accidental duration rule and every
+  cautionary-accidental setting; layouts carry their layout options.
+- Definitions (F6): every library definition has an `entityID` and a `name`, so one pass over the library turns the ids
+  events use into names.
+
+The reading fixture also showed what Dorico 6.2.30's MusicXML import does with text: every `<words>` direction lands
+above the staff whatever its `placement`, a direction with two `<words>` keeps only the last, and `font-weight` is
+dropped. `pizz.` and `arco` arrive as playing techniques, not text.
+
+## W1 to W7: changing what the reader found
+
+Probes: `w1_text_rebuild.lua`, `w2_lyrics.lua`, `w3_chord_replace.lua`, `w4_bulk_text.lua`, `w5_accidentals.lua` with
+`w5_undo.py`, and `w7_selected_text.lua`, each on a scratch copy of `fixtures/6.2.30/reading.dorico`. Each one finds
+its events with the reader, acts on them by the ids the file gives, and reads the result back from a saved copy.
+
+- W1, text. Deleting a text by its ids and creating one with new words in the same stream at the same position
+  works; `createText` works on a stave stream too. `Edit.FlipItem` stores `kTextEventAboveOrBelow = kBelow` for the
+  layout on screen, and the same property set by `EventEdit.ChangeProperty` holds in every layout.
+  `Edit.ChangeStaffTextToSystemText` turns the selected text into a system text, which is a new event in the timebase
+  stream. No route set a paragraph style: three guessed property names through the Properties panel did nothing, and
+  `ChangeProperty` stored two invented names as properties without complaint, changing nothing. A text in another
+  style, or with formatting inside it, can't be rebuilt as it was.
+- W2, lyrics. Deleting a lyric by its ids and entering `NoteInput.StartLyricInput` then
+  `NoteInput.AcceptCurrentLyricInput?LyricsEntryAdvanceType=kEndInput&LyricText=glad` on the selected note puts the
+  whole word on line 1. Sent the same way, "hap-" became a whole word with the hyphen in it, so syllables need
+  another route.
+- W3, chord symbols. Deleting the Am by its ids, selecting a note at the same position and entering `Dm7` with the
+  chord-symbol commands gave a Dm7 there (`kMinor`, `k7`).
+- W4, many texts. 300 `createText` calls took 18.7 s, about 62 ms each, and all 300 read back. Reading the copy took
+  1.3 s.
+- W5, accidentals. `EventEdit.ChangeProperty` with `kNoteAccidentalVisibility_v3` takes `kRoundBrackets`,
+  `kSquareBrackets`, `kShow` and `kHide`, writing the older `kNoteAccidentalVisibility` beside each (`kParenthesise`
+  for both bracket kinds); it stores `kDefault`, or any other value, as `kHide`. The command with no `Value`, and the
+  Properties panel's enable switch on a selection, both take the property off. The panel's route on a selection stores
+  the layout on screen, layout 0 for the full score, and so do the menu commands: with the flute part on screen,
+  `Edit.ShowAccidentalInBrackets` stored the part's layout (`w5_menu_in_part.py`). A value set by id has no context,
+  so it can be told apart from one set by hand. One `Edit.Undo` from outside took back a run's `ChangeProperty` and its `createText`
+  together: the property joins the run's one undo step.
+- W6, showing a problem. A colour set by `ChangeProperty` holds in every layout and reads back
+  (`tests/dorico/case_reader.lua`). The only command found that creates a comment, `NoteInput.ShowCommentDialog`, opens
+  a dialog.
+- W7, the selection. Marking the selection with `UI.InvokePropertyChangeValue?Type=kEventColour` and reading a saved
+  copy finds every selected event, texts included: their colour is stored for the layout on screen. The enable switch takes the
+  marks off again, leaving nothing behind. It would also take off a colour a selected item already had, so a plug-in
+  notes those from a saved copy first and puts them back by the same route. The panel ignores a property Dorico
+  doesn't know, so a private marker isn't possible. `EventEdit.Select` replaces the selection; the probe's attempt to
+  add to it with an `Add` parameter did nothing.

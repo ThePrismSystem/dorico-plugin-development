@@ -1,7 +1,8 @@
 <#
 Capture Dorico's main window to a PNG, even when another window is in front of it.
   powershell -NoProfile -File tools/capture.ps1 -Out <png> [-All] [-TitleLike <wildcard>]
--All captures every top-level Dorico window (dialogs included) into <png> with an index suffix.
+-All captures every top-level Dorico window (dialogs included) into <png> with an index suffix, and lists
+nothing when Dorico has no window open.
 -ProcessId captures another process's windows instead (the plug-in's own dialog, which PowerShell shows).
 #>
 param(
@@ -48,7 +49,8 @@ if ($ProcessId -gt 0) {
     $proc = Get-Process -Name Dorico6 -ErrorAction Stop | Select-Object -First 1
 }
 $windows = [HbucWin]::WindowsOf([uint32]$proc.Id)
-if ($windows.Count -eq 0) { throw "process $($proc.Id) has no visible windows" }
+# -All lists what it captured, so no windows is an empty list: Dorico shows none with no project open.
+if ($windows.Count -eq 0 -and -not $All) { throw "process $($proc.Id) has no visible windows" }
 
 function Save-Window([IntPtr]$h, [string]$path) {
     if ([HbucWin]::IsIconic($h)) { [void][HbucWin]::ShowWindow($h, 9) ; Start-Sleep -Milliseconds 500 }
