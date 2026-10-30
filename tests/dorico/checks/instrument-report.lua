@@ -29,5 +29,5 @@ return function(p, run)
   end
   p:check("the report", table.concat(run.printed, " / ") == table.concat(want, " / "),
     "got " .. table.concat(run.printed, " / ") .. " | want " .. table.concat(want, " / "))
-  p:check("no marker left", #checks.texts(1) == 0 and #checks.texts(2) == 0)
+  p:check("no text added", #checks.texts(1) == 0 and #checks.texts(2) == 0)
 end

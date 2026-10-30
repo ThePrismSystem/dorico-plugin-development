@@ -21,6 +21,11 @@ function checks.reading()
   return readJson("reading.expected.json")
 end
 
+-- Any JSON file in fixtures/, by name.
+function checks.json(name)
+  return readJson(name)
+end
+
 -- The open project as the reader sees it, from a saved copy: the score, and the score and values modules.
 function checks.savedCopy()
   local lib = here .. "../../../lib/?.lua"
@@ -190,6 +195,80 @@ function checks.printed(run, line)
     if l == line then return true end
   end
   return false
+end
+
+-- The texts fixture's texts, lyrics and chord symbols as the open project has them, and as texts.expected.json says
+-- they should be after a row's changes (row.texts, row.lyrics and row.chords: new words by bar; row.gone: the bars
+-- whose text is gone), each as one string.
+function checks.textsNow(row)
+  row = row or {}
+  local want = readJson("texts.expected.json")
+  local s, score, values = checks.savedCopy()
+  local function changed(list, bar, words)
+    return list and list[tostring(bar)] or words
+  end
+  local gone = {}
+  for _, bar in ipairs(row.gone or {}) do gone[bar] = true end
+  local expected = {}
+  for _, t in ipairs(want.texts) do
+    if not gone[t.bar] then
+      expected[#expected + 1] = string.format("text %s|%g|%s|%s|%s", t.player, t.bar,
+        changed(row.texts, t.bar, t.words), tostring(t.above), tostring(t.system))
+    end
+  end
+  for _, l in ipairs(want.lyrics) do
+    local text = (l.line == 1 and l.beat == 1) and changed(row.lyrics, l.bar, l.text) or l.text
+    expected[#expected + 1] = string.format("lyric %g|%g|%d|%s|%s", l.bar, l.beat, l.line, text, l.syllable)
+  end
+  for _, c in ipairs(want.chords) do
+    expected[#expected + 1] = string.format("chord %g|%s", c.bar, changed(row.chords, c.bar, c.name))
+  end
+  local now = {}
+  for _, e in ipairs(s.flows[1].events) do
+    local pos = values.toNumber(e.position)
+    local bar, beat = math.floor(pos / 4) + 1, pos % 4 + 1
+    if e.kind == "text" then
+      local owner = score.ownerOf(s, e)
+      now[#now + 1] = string.format("text %s|%g|%s|%s|%s", owner and owner.name or "-", bar, e.words,
+        tostring(score.above(s, e, s.layouts[1].id)), tostring(e.system))
+    elseif e.kind == "lyric" then
+      now[#now + 1] = string.format("lyric %g|%g|%d|%s|%s", bar, beat, e.line, e.text, e.syllable)
+    elseif e.kind == "chordSymbol" then
+      now[#now + 1] = string.format("chord %g|%s", bar, tostring(e.name))
+    end
+  end
+  return checks.joined(now), checks.joined(expected)
+end
+
+-- What parallel-fifths.lua does on the parallels fixture for the sets of findings named in parallels.expected.json:
+-- the lines it prints for them, and the notes it marks, as "<player>|<pos>" keys, with the notes a user coloured
+-- among them left out, since those keep their own colour. Each finding's notes are at its position and a quarter
+-- note before it.
+function checks.parallels(sets)
+  local want = checks.json("parallels.expected.json")
+  local users = {}
+  for _, u in ipairs(want.userColours) do users[u.player .. "|" .. u.pos] = true end
+  local lines, marked, kept = {}, {}, {}
+  for _, set in ipairs(sets) do
+    for _, f in ipairs(want.findings[set]) do
+      lines[#lines + 1] = string.format("%s\tflow 1\tbar %d, beat %g\t%s and %s", f.kind, math.floor(f.pos / 4) + 1,
+        f.pos % 4 + 1, f.a, f.b)
+      for _, who in ipairs({ f.a, f.b }) do
+        for _, pos in ipairs({ f.pos, f.pos - 1 }) do
+          local key = who .. "|" .. pos
+          if users[key] then kept[key] = true else marked[key] = true end
+        end
+      end
+    end
+  end
+  return lines, marked, kept
+end
+
+-- How many keys a set has.
+function checks.count(set)
+  local n = 0
+  for _ in pairs(set) do n = n + 1 end
+  return n
 end
 
 return checks

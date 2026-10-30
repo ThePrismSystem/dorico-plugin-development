@@ -1,38 +1,20 @@
--- Recipe: a proofreading report. Lists notes outside their instrument's range, and parallel fifths and octaves between
--- the voices of one player (a piano's two hands, say), without changing the music.
--- What it does: prints one line per finding, "<flow> bar <n> beat <b>: <finding>", then how many it found.
--- Changes: nothing that stays. It makes marker texts to read instrument names and bar numbers from the text export,
--- and deletes them again.
--- Undo: nothing to undo. The markers still make an undo step, so Edit > Undo straight after this script changes
--- nothing you can see; a second press reaches your own last edit.
--- Builds on: 03-read-notes.lua, 15-layout-and-notation-options.lua (the export helper) and 12-select-by-id.lua (the
--- midi helper). Open Script > Show Script Console to read what it prints.
+-- Recipe: a proofreading report of the notes outside their instrument's range, by bar and beat, without changing the
+-- music.
+-- What it does: reads a saved copy and prints one line per note outside its instrument's range, "<flow> bar <n> beat
+-- <b>: <finding>", then how many it found, then any pitched instrument it couldn't check for want of a range.
+-- Changes: nothing (read-only).
+-- Undo: nothing to undo.
+-- Builds on: 04-read-the-saved-copy.lua, 09-bars-keys-and-times.lua and 12-select-by-id.lua (the midi helper). Open
+-- Script > Show Script Console to read what it prints.
 --
--- Ranges are by instrument, and Lua can't name an instrument, so the script puts a marker text in each voice and reads
--- the instrument's name off the marker's row in the text export (docs/guide.md, section 4). RANGES below matches the
--- start of that name: "Trumpet" covers "Trumpet in Bb" and "Trumpet Zoë". Its ranges are sounding pitches, wide
--- enough for a confident player; narrow them for young players.
---
--- Lua can't read time signatures either, so it can't count bars. The export can: every text's row has the bar it's
--- in. For each finding the script puts markers at the finding and at each of the sixteen quarter notes before it, and
--- exports, which finds the first whole quarter note in the finding's bar. A second round of markers, every 1/24 of a
--- quarter note in the gap before that, finds where the bar really starts, which can be between quarter notes after a
--- pickup or in 3/8. Beats are counted in quarter notes from there, so in 6/8 the second dotted-quarter beat shows as
--- beat 2.5. A bar longer than sixteen quarter notes gives a beat counted from a later point.
---
--- The parallels check compares the top note of each voice wherever either voice moves, and reports two voices that
--- both move the same way from a fifth to a fifth, or from an octave (or unison) to an octave. It doesn't look across
--- players, and a voice's chords count only by their top note.
+-- The ranges are each instrument's own, from the saved copy: a standard range and a wider advanced one, both in
+-- sounding pitch, as the reader gives them (instrument.range). A note past the advanced range is reported against
+-- that one, and a note inside it but past the standard range against the standard one. Bars and beats come from the
+-- bars helper, with beats counted in quarter notes from the start of the bar, so in 6/8 the second dotted-quarter
+-- beat shows as beat 2.5. Parallel fifths and octaves have a recipe of their own, parallel-fifths.lua.
 --
 -- Nothing here looks for incomplete bars. A bar whose rests were removed looks the same to a script as a bar of
 -- implicit rests (docs/spikes.md, S3).
-
-local RANGES = { -- {start of the instrument's name, lowest, highest}, sounding
-  { "Piccolo", "D5", "C8" }, { "Flute", "C4", "C7" }, { "Oboe", "Bb3", "G6" }, { "Clarinet", "D3", "Bb6" },
-  { "Bassoon", "Bb1", "Eb5" }, { "Horn", "B1", "F5" }, { "Trumpet", "E3", "Bb5" }, { "Trombone", "E2", "F5" },
-  { "Tuba", "D1", "F4" }, { "Violin", "G3", "A7" }, { "Viola", "C3", "E6" }, { "Cello", "C2", "A5" },
-  { "Double Bass", "E1", "G4" }, { "Contrabass", "E1", "G4" }, { "Piano", "A0", "C8" },
-}
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. The read of app.currentScore goes
@@ -46,209 +28,84 @@ local function guard()
 end
 -- end helper: guard
 
--- helper: dump
--- stream:dump() as tables. Each event line reads "<pos> (<pos>)[ dur: <d>]: <event>", where <event> is what
--- tostring(event) gives, such as "kNoteEvent (id:7932) at 0, duration 1  E5 (ends 1)". A "Start block id:" line
--- starts each block instance; the events after it belong to that instance (EventEdit.Select needs it).
---   dump.parse(text) -> {events = {{kind, id, pos, duration, spelling, grace, instance, raw}}}
---   dump.event(text, instance) -> one event from tostring(event), or nil
---   dump.notes(parsed) -> the notes and grace notes, {{id, spelling, pos, duration, grace, instance}}
---   dump.owners(score, flow) -> {[voice stream id] = player name}
--- Kinds are "note", "grace", "rest", "text" and "other". Positions and durations are quarter notes.
-local dump = {}
+-- helper: readCopy
+-- Reads a saved copy of the open project with the reader library, or prints why it couldn't and gives nil. The
+-- library is lib/ two folders up in this repository, or a lib folder beside the script once both are copied into
+-- Script Plug-ins. Dorico keeps one Lua state, so the library's modules from an earlier run are cleared, and its
+-- folders are moved to the front of the module path, where no other copy of the library can come before them.
+local function readCopy(app)
+  local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])") or ""
+  local paths = here .. "../../lib/?.lua;" .. here .. "lib/?.lua;"
+  for name in pairs(package.loaded) do
+    if name:match("^scorereader") then package.loaded[name] = nil end
+  end
+  local at = package.path:find(paths, 1, true)
+  if at then package.path = package.path:sub(1, at - 1) .. package.path:sub(at + #paths) end
+  package.path = paths .. package.path
+  local ok, s = pcall(function() return require("scorereader.dorico.savedcopy").read(app) end)
+  if ok then return s end
+  print("The reader couldn't read this project: " .. tostring(s))
+end
+-- end helper: readCopy
+
+-- helper: bars
+-- Where bars start, from a flow's bar divisions, and the bar and beat of a position. Positions are quarter notes from
+-- the start of the flow. A bar is numerator * 4 / denominator quarter notes long ("3+2" counts as 5). A time
+-- signature partway through a bar starts a new bar there, and so does a barline-only division, keeping the time
+-- signature. Where there is no length to go by (before the first time signature, or an open meter with no beats), a
+-- bar runs to the next division. A flow with no time signature is one bar. A time signature's pickup makes its first
+-- bar that long; that bar's beats count back from its end, so a one-beat pickup in 4/4 is on beat 4, and a pickup at
+-- the start of the flow is bar 0.
+--   bars.starts(divisions, endPos) -> {{bar, pos, length, offset}}; divisions: {{pos, numerator, denominator,
+--     pickup}} in order, with no numerator for a barline-only division and pickup in quarter notes or nil
+--   bars.at(starts, pos) -> bar, beat (from 1)
+local bars = {}
 do
-  local KINDS = {
-    kNoteEvent = "note", kGraceNoteEvent = "grace", kRestEvent = "rest", kBarRestEvent = "rest", kTextEvent = "text",
-  }
-  local SPELLING = "[A-G][#bx]*%-?%d+"
-
-  -- "13/2 (6.5)" gives 6.5 and "4" gives 4: the exact fraction, where there is one, beats the rounded decimal.
-  local function number(s)
-    local raw = s and s:match("^([%-%d%./]+)")
-    if not raw then return nil end
-    local a, b = raw:match("^(%-?%d+)/(%d+)$")
-    if a then return tonumber(a) / tonumber(b) end
-    return tonumber(raw)
+  local function beats(numerator)
+    local sum = 0
+    for part in tostring(numerator):gmatch("%d+") do sum = sum + tonumber(part) end
+    return sum
   end
 
-  function dump.event(text, instance)
-    local s = text and text:match("^(k%a+ %(id:%d+%).*)$")
-    if not s then return nil end
-    local ev = { kind = KINDS[s:match("^(k%a+)")] or "other", raw = s, instance = instance }
-    ev.id = tonumber(s:match("%(id:(%d+)%)"))
-    ev.pos = number(s:match(" at (%S+)"))
-    ev.duration = number(s:match(", duration (%S+)"))
-    ev.grace = ev.kind == "grace"
-    if ev.kind == "note" then
-      ev.spelling = s:match("%s(" .. SPELLING .. ") %(ends")
-    elseif ev.kind == "grace" then
-      ev.spelling = s:match(",%s*(" .. SPELLING .. ")%s*$")
-      ev.duration = nil
-    elseif ev.kind == "text" then
-      ev.text = s:match(" : (.*)$")
+  function bars.starts(divisions, endPos)
+    local out, length = {}, nil
+    local d1 = divisions[1]
+    local base = (d1 and d1.pos == 0 and d1.numerator and d1.pickup and d1.pickup > 0) and -1 or 0
+    local function add(pos, len, offset)
+      out[#out + 1] = { bar = #out + 1 + base, pos = pos, length = len, offset = offset or 0 }
     end
-    return ev
-  end
-
-  function dump.parse(text)
-    local out, instance = { events = {} }, nil
-    for line in (text or ""):gmatch("[^\r\n]+") do
-      local start = line:match("^Start block id: (%d+)")
-      if start then
-        instance = tonumber(start)
-      else
-        local ev = dump.event(line:match(": (k%a+ %(id:%d+%).*)$"), instance)
-        if ev then out.events[#out.events + 1] = ev end
+    local first = d1 and d1.pos or endPos
+    if first > 0 then add(0, first) end
+    for i, d in ipairs(divisions) do
+      if d.numerator then
+        local n = beats(d.numerator) * 4 / d.denominator
+        length = n > 0 and n or nil
+      end
+      local stop = divisions[i + 1] and divisions[i + 1].pos or endPos
+      local pos = d.pos
+      if length and d.numerator and d.pickup and d.pickup > 0 and pos < stop then
+        add(pos, math.min(d.pickup, stop - pos), length - d.pickup)
+        pos = pos + d.pickup
+      end
+      while pos < stop do
+        local len = math.min(length or stop - pos, stop - pos)
+        add(pos, len)
+        pos = pos + len
       end
     end
+    if #out == 0 then add(0, endPos) end
     return out
   end
 
-  function dump.notes(parsed)
-    local notes = {}
-    for _, ev in ipairs(parsed.events) do
-      if (ev.kind == "note" or ev.kind == "grace") and ev.spelling then
-        notes[#notes + 1] = { id = ev.id, spelling = ev.spelling, pos = ev.pos, duration = ev.duration,
-          grace = ev.grace, instance = ev.instance }
-      end
+  function bars.at(starts, pos)
+    local found = starts[1]
+    for _, b in ipairs(starts) do
+      if b.pos <= pos then found = b else break end
     end
-    return notes
-  end
-
-  -- flow.instruments[i] owns flow.voiceStreams[i], and tostring(player) is the player's name.
-  function dump.owners(score, flow)
-    local nameOf = {}
-    for _, player in ipairs(score.players) do
-      for _, instrument in ipairs(player.instruments) do nameOf[instrument.id] = tostring(player) end
-    end
-    local owners = {}
-    for i, stream in ipairs(flow.voiceStreams) do owners[stream.id] = nameOf[flow.instruments[i].id] end
-    return owners
+    return found.bar, pos - found.pos + 1 + found.offset
   end
 end
--- end helper: dump
-
--- helper: commands
--- Builds a command string, "Name?key=value&key=value", for app:doCommand. Dorico reads a backslash in a value as an
--- escape, and a bare "&" or "," ends the value, so a value's own backslashes, ampersands and commas each get a
--- backslash in front; "=" and any other character pass as they are. A nil value is refused, since tostring would
--- send Dorico the word "nil". Only single ids have been tried in list parameters such as FlowIDArray; given several,
--- as "1,2", this would escape the commas between them.
---   commands.value(v) -> v escaped
---   commands.build(name, params) -> the command, params a list of {key, value} pairs
-local commands = {}
-do
-  function commands.value(v)
-    if v == nil then error("a command parameter has no value", 2) end
-    return (tostring(v):gsub("\\", "\\\\"):gsub("&", "\\&"):gsub(",", "\\,"))
-  end
-
-  function commands.build(name, params)
-    local parts = {}
-    for i, kv in ipairs(params or {}) do parts[i] = kv[1] .. "=" .. commands.value(kv[2]) end
-    if #parts == 0 then return name end
-    return name .. "?" .. table.concat(parts, "&")
-  end
-end
--- end helper: commands
-
--- helper: export
--- File > Export > Text from a script: Dorico writes <name>.csv beside the <name>.txt it is given, without asking
--- anything. Fields can hold quoted commas, doubled quotes and newlines, so a row can run over several lines; the
--- reader below keeps track of quotes to find where each field and row ends. A column the export leaves out reads as "".
---   export.records(app, folder, name) -> the rows, as tables keyed by column name (the file is deleted afterwards)
---   export.parse(csv) -> the same, from CSV text
---   export.folder() -> the temporary folder, ending in a slash
--- Needs the commands helper above it.
-local export = {}
-do
-  local COLUMNS = { "Path", "ID", "FlowNumber", "FlowName", "Instrument", "Page", "Bar", "Type", "Text", "Hidden" }
-
-  local function rows(csv)
-    if csv:sub(1, 3) == "\239\187\191" then csv = csv:sub(4) end -- a UTF-8 byte-order mark
-    local out, row, field = {}, {}, {}
-    local i, n, quoted, lineStart = 1, #csv, false, 1
-    while i <= n do
-      local c = csv:sub(i, i)
-      if not quoted and (c == "\n" or c == "\r") and i == lineStart then
-        -- a blank line is no row
-        if c == "\r" and csv:sub(i + 1, i + 1) == "\n" then i = i + 1 end
-        lineStart = i + 1
-      elseif quoted then
-        if c == '"' then
-          if csv:sub(i + 1, i + 1) == '"' then field[#field + 1] = '"'; i = i + 1 else quoted = false end
-        else
-          field[#field + 1] = c
-        end
-      elseif c == '"' then
-        quoted = true
-      elseif c == "," then
-        row[#row + 1] = table.concat(field)
-        field = {}
-      elseif c == "\n" or c == "\r" then
-        if c == "\r" and csv:sub(i + 1, i + 1) == "\n" then i = i + 1 end
-        row[#row + 1] = table.concat(field)
-        out[#out + 1] = row
-        row, field, lineStart = {}, {}, i + 1
-      else
-        field[#field + 1] = c
-      end
-      i = i + 1
-    end
-    if #field > 0 or #row > 0 then
-      row[#row + 1] = table.concat(field)
-      out[#out + 1] = row
-    end
-    return out
-  end
-
-  function export.parse(csv)
-    local all = rows(csv)
-    local header = all[1] or {}
-    local records = {}
-    for r = 2, #all do
-      local rec = {}
-      for _, name in ipairs(COLUMNS) do rec[name] = "" end
-      for col, name in ipairs(header) do rec[name] = all[r][col] or "" end
-      records[#records + 1] = rec
-    end
-    return records
-  end
-
-  function export.folder()
-    local dir = os.getenv("TEMP") or os.getenv("TMPDIR") or os.getenv("TMP")
-    if not dir then error("there is no TEMP or TMPDIR folder to export into") end
-    if not dir:match("[/\\]$") then dir = dir .. "/" end
-    return dir
-  end
-
-  function export.records(app, folder, name)
-    local base = folder .. name
-    os.remove(base .. ".csv")
-    app:doCommand(commands.build("File.Export.Text", { { "File", base .. ".txt" }, { "Show", "false" } }))
-    local f = io.open(base .. ".csv", "rb")
-    if not f then error("File.Export.Text wrote no " .. base .. ".csv") end
-    local csv = f:read("*a")
-    f:close()
-    os.remove(base .. ".csv")
-    return export.parse(csv)
-  end
-end
--- end helper: export
-
--- helper: length
--- A position or duration in quarter notes, as the DoCore.RhythmicLength that createNote, createRest and createText
--- take. RhythmicLength(n) keeps only the whole part of n (0.5 gives 0), so a fraction goes in as
--- RhythmicLength(numerator, denominator): 1.5 quarter notes is RhythmicLength(3, 2).
-local function length(quarters)
-  for d = 1, 3840 do
-    local n = quarters * d
-    local whole = math.floor(n + 0.5)
-    if math.abs(n - whole) < 1e-6 then return DoCore.RhythmicLength(whole, d) end
-  end
-  error("no fraction for " .. tostring(quarters) .. " quarter notes")
-end
--- end helper: length
+-- end helper: bars
 
 -- helper: midi
 -- A spelling from the dump, such as "F#5", "Eb4" or "Bbb2", as a MIDI note number (middle C, "C4", is 60), or nil.
@@ -264,193 +121,89 @@ local function midi(spelling)
 end
 -- end helper: midi
 
--- helper: markedBars
--- Where a bar starts, from marker texts: the text export gives each marker's bar, and the bar starts at the earliest
--- marked position in the same bar. Mark in two rounds:
---   markedBars.coarse(pos) -> whole quarter notes to mark first: pos rounded down, and up to 16 before it
---   markedBars.fine(start) -> points to mark next, every 1/24 of a quarter note between the whole quarter before
---                             start and start, since a bar can begin between whole quarters (after a pickup, or in
---                             3/8)
---   markedBars.start(pos, barAt) -> the earliest marked position in pos's bar; barAt is {[position] = bar} for
---                                   every marker placed, pos's own included
-local markedBars = {}
+-- helper: outofrange
+-- Whether a sounding MIDI pitch is outside an instrument's ranges as the reader gives them ({standard = "C4-A6",
+-- advanced = "B3-D7"}, sounding): the advanced range is tried first, then the standard one. An instrument with no
+-- range, such as unpitched percussion, has nothing out of range.
+--   outofrange.check(pitch, range, midi) -> nil, or {side = "below" | "above", which = "advanced" | "standard", from,
+--     to}; midi is the midi helper
+--   outofrange.readable(range) -> whether check can read either range
+local outofrange = {}
 do
-  function markedBars.coarse(pos)
-    local out = {}
-    for q = math.floor(pos), math.max(0, math.floor(pos) - 16), -1 do out[#out + 1] = q end
-    return out
+  local function ends(range, which)
+    return tostring((range or {})[which]):match("^([A-G][#bx]*%-?%d+)%-([A-G][#bx]*%-?%d+)$")
   end
 
-  function markedBars.fine(start)
-    local out = {}
-    for k = 1, 23 do
-      local q = start - 1 + k / 24
-      if q >= 0 then out[#out + 1] = q end
-    end
-    return out
-  end
-
-  function markedBars.start(pos, barAt)
-    local bar, start = barAt[pos], pos
-    for q, b in pairs(barAt) do
-      if b == bar and q < start then start = q end
-    end
-    return start
-  end
-end
--- end helper: markedBars
-
-local app, score = guard()
-if not score then return end
-
-local MARKER = "proofread "
-
--- Makes a marker text for each {stream, position, key}, exports, deletes the markers whatever happens, and gives back
--- {[key] = the marker's export row}.
-local function marked(points)
-  local made = {}
-  for i, point in ipairs(points) do
-    made[i] = { stream = point.stream,
-      event = point.stream:createText(length(point.pos), length(1), MARKER .. i) }
-  end
-  local ok, records = pcall(export.records, app, export.folder(), "proofread")
-  for _, m in ipairs(made) do m.stream:delete(m.event) end
-  if not ok then error(records, 0) end
-  local rows = {}
-  for _, rec in ipairs(records) do
-    if rec.Text:sub(1, #MARKER) == MARKER then
-      local point = points[tonumber(rec.Text:sub(#MARKER + 1))]
-      if point then rows[point.key] = rec end
+  function outofrange.check(pitch, range, midi)
+    for _, which in ipairs({ "advanced", "standard" }) do
+      local from, to = ends(range, which)
+      if from and pitch < midi(from) then return { side = "below", which = which, from = from, to = to } end
+      if from and pitch > midi(to) then return { side = "above", which = which, from = from, to = to } end
     end
   end
-  return rows
-end
 
--- Every voice of every flow, with its notes (grace notes left out) and its player.
-local voices = {}
-for n, flow in ipairs(score.flows) do
-  local owners = dump.owners(score, flow)
-  for i, stream in ipairs(flow.voiceStreams) do
-    local notes = {}
-    for _, note in ipairs(dump.notes(dump.parse(stream:dump()))) do
-      if not note.grace then
-        note.midi = midi(note.spelling)
-        notes[#notes + 1] = note
-      end
+  function outofrange.readable(range)
+    return ends(range, "advanced") ~= nil or ends(range, "standard") ~= nil
+  end
+end
+-- end helper: outofrange
+
+local app, project = guard()
+if not project then return end
+local s = readCopy(app)
+if not s then return end
+local score = require("scorereader.score")
+local values = require("scorereader.values")
+
+-- helper: barsOf
+-- Where a flow's bars start, through the bars helper, from the time signatures in its timebase stream. A time
+-- signature in any other stream is left out.
+local function barsOf(flow)
+  local divisions, endPos = {}, 0
+  for _, e in ipairs(flow.events) do
+    local pos = values.toNumber(e.position)
+    endPos = math.max(endPos, pos + values.toNumber(e.duration))
+    if e.kind == "timeSignature" and flow.streamById[e.streamId].type == "timebase" then
+      divisions[#divisions + 1] = { pos = pos, numerator = e.numerator, denominator = e.denominator,
+        pickup = e.pickup and values.toNumber(e.pickup) }
     end
-    voices[#voices + 1] = { flow = n, stream = stream, player = owners[stream.id] or "?",
-      key = flow.instruments[i].id, notes = notes }
   end
+  table.sort(divisions, function(a, b) return a.pos < b.pos end)
+  return bars.starts(divisions, endPos)
 end
+-- end helper: barsOf
 
--- Instrument names, one marker per voice.
-local points = {}
-for v, voice in ipairs(voices) do points[#points + 1] = { stream = voice.stream, pos = 0, key = v } end
-local rows = marked(points)
-
-local findings = {}
-local function find(voice, pos, text)
-  findings[#findings + 1] = { flow = voice.flow, stream = voice.stream, pos = pos, text = text }
-end
-
-for v, voice in ipairs(voices) do
-  local name = rows[v] and rows[v].Instrument or ""
-  local range
-  for _, r in ipairs(RANGES) do
-    if not range and name:lower():sub(1, #r[1]) == r[1]:lower() then range = r end
-  end
-  if range then
-    for _, note in ipairs(voice.notes) do
-      if note.midi < midi(range[2]) then
-        find(voice, note.pos, string.format("%s plays %s, below its range (%s to %s)", voice.player, note.spelling,
-          range[2], range[3]))
-      elseif note.midi > midi(range[3]) then
-        find(voice, note.pos, string.format("%s plays %s, above its range (%s to %s)", voice.player, note.spelling,
-          range[2], range[3]))
+local total = 0
+for n, flow in ipairs(s.flows) do
+  local starts, findings = barsOf(flow), {}
+  for _, player in ipairs(s.players) do
+    for _, e in ipairs(score.eventsOf(s, flow, player)) do
+      local instrument = e.kind == "note" and s.instruments[flow.streamById[e.streamId].instrumentId]
+      local out = instrument and outofrange.check(e.pitch, instrument.range, midi)
+      if out then
+        findings[#findings + 1] = { pos = values.toNumber(e.position), text = string.format(
+          "%s plays %s, %s its %s range (%s to %s)", player.name, e.spelling, out.side, out.which, out.from, out.to) }
       end
     end
   end
-end
-
--- The top note a voice has sounding at a position, or nil.
-local function top(voice, at)
-  local best
-  for _, note in ipairs(voice.notes) do
-    if note.pos <= at and at < note.pos + note.duration and (not best or note.midi > best) then best = note.midi end
+  table.sort(findings, function(x, y)
+    if x.pos ~= y.pos then return x.pos < y.pos end
+    return x.text < y.text
+  end)
+  for _, f in ipairs(findings) do
+    local bar, beat = bars.at(starts, f.pos)
+    print(string.format("%d bar %d beat %g: %s", n, bar, beat, f.text))
   end
-  return best
+  total = total + #findings
 end
-
--- Each pair of voices of one player in one flow, numbered within the player.
-for a = 1, #voices do
-  for b = a + 1, #voices do
-    local va, vb = voices[a], voices[b]
-    if va.flow == vb.flow and va.key == vb.key then
-      local na, nb = 0, 0
-      for v = 1, b do
-        if voices[v].flow == va.flow and voices[v].key == va.key then
-          if v <= a then na = na + 1 end
-          nb = nb + 1
-        end
-      end
-      local times, seen = {}, {}
-      for _, note in ipairs(va.notes) do
-        if not seen[note.pos] then seen[note.pos] = true; times[#times + 1] = note.pos end
-      end
-      for _, note in ipairs(vb.notes) do
-        if not seen[note.pos] then seen[note.pos] = true; times[#times + 1] = note.pos end
-      end
-      table.sort(times)
-      for i = 2, #times do
-        local a1, b1, a2, b2 = top(va, times[i - 1]), top(vb, times[i - 1]), top(va, times[i]), top(vb, times[i])
-        if a1 and b1 and a2 and b2 and a1 ~= a2 and b1 ~= b2 and (a2 - a1) * (b2 - b1) > 0 then
-          local first, second = math.abs(a1 - b1) % 12, math.abs(a2 - b2) % 12
-          local kind = (first == 7 and second == 7 and "fifths") or (first == 0 and second == 0 and "octaves")
-          if kind then
-            find(va, times[i], string.format("%s has parallel %s between voices %d and %d", va.player, kind, na, nb))
-          end
-        end
-      end
+print(total .. (total == 1 and " finding" or " findings"))
+-- A pitched instrument with no range the helper can read has nothing out of range, so the report names it rather than
+-- let it pass as checked. An unpitched one has no transposition and no range to check.
+for _, player in ipairs(s.players) do
+  for _, instrument in ipairs(player.instruments) do
+    if instrument.transposition and not outofrange.readable(instrument.range) then
+      print(string.format("Couldn't check %s (%s): it has no range this script can read.", player.name,
+        instrument.name))
     end
   end
 end
-
-table.sort(findings, function(x, y)
-  if x.flow ~= y.flow then return x.flow < y.flow end
-  if x.pos ~= y.pos then return x.pos < y.pos end
-  return x.text < y.text
-end)
-
--- Bars and beats, in two rounds of markers (see the markedBars helper). barAt[f] is {[position] = bar} for finding f.
-local barAt = {}
-local function markRound(round) -- round: a list of {finding number, position}
-  local pts = {}
-  for i, r in ipairs(round) do pts[i] = { stream = findings[r[1]].stream, pos = r[2], key = i } end
-  local got = #pts > 0 and marked(pts) or {}
-  for i, r in ipairs(round) do
-    barAt[r[1]] = barAt[r[1]] or {}
-    if got[i] then barAt[r[1]][r[2]] = got[i].Bar end
-  end
-end
-
-local round = {}
-for f, finding in ipairs(findings) do
-  round[#round + 1] = { f, finding.pos }
-  for _, q in ipairs(markedBars.coarse(finding.pos)) do round[#round + 1] = { f, q } end
-end
-markRound(round)
-round = {}
-for f, finding in ipairs(findings) do
-  if barAt[f] and barAt[f][finding.pos] then
-    for _, q in ipairs(markedBars.fine(markedBars.start(finding.pos, barAt[f]))) do round[#round + 1] = { f, q } end
-  end
-end
-markRound(round)
-
-for f, finding in ipairs(findings) do
-  local at = barAt[f] or {}
-  local bar = at[finding.pos] or "?"
-  local start = at[finding.pos] and markedBars.start(finding.pos, at) or finding.pos
-  print(string.format("%d bar %s beat %s: %s", finding.flow, bar, tostring(finding.pos - start + 1), finding.text))
-end
-print(#findings .. (#findings == 1 and " finding" or " findings"))

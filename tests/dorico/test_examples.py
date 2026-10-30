@@ -27,16 +27,22 @@ EXAMPLES = []
 
 
 def row(name, example, twice=False, args=None, check=None, before=None, after=(), dialog=None, project=None):
-    """dialog: {"window", "button", "text"?} for an example that waits on a box; the example then runs in the
-    background while the test answers the box. project: None for the sample, "reading" for the reading fixture."""
+    """dialog: {"window", "button", "text"?} for an example that waits on a box, or {"window", "button", "fields"}
+    with fields as harness.answer_form takes them; the example then runs in the background while the test answers
+    the box. project: a key of harness.PROJECTS, None for the sample."""
     EXAMPLES.append({"name": name, "example": example, "check": check or CHECKS + Path(example).name,
                      "twice": twice, "args": args or {}, "before": before, "after": list(after), "dialog": dialog,
                      "project": harness.PROJECTS[project]})
 
 
-def then_check(check, example=None):
+def then_check(check, example=None, args=None):
     """A step after the example: run another example (or none) on the same copy, and a check."""
-    return {"example": example, "check": CHECKS + check}
+    return {"example": example, "check": CHECKS + check, "args": args or {}}
+
+
+def then_dialog(check, example, dialog, args=None):
+    """A step that runs an example again on the same copy, answering its box, then its check."""
+    return {"example": example, "check": CHECKS + check, "dialog": dialog, "args": args or {}}
 
 
 def then_command(command):
@@ -115,6 +121,8 @@ row("text_lyrics_chords_dynamics", FUNDAMENTALS + "08-text-lyrics-chords-dynamic
 row("text_flipped_in_the_full_score", FUNDAMENTALS + "08-text-lyrics-chords-dynamics.lua", project="reading",
     args={"below": "dolce"}, before={"case": "case_flip.lua", "args": {"words": "dolce"}})
 row("bars_keys_and_times", FUNDAMENTALS + "09-bars-keys-and-times.lua", twice=True, project="reading")
+row("bars_after_a_pickup", FUNDAMENTALS + "09-bars-keys-and-times.lua", project="pickup",
+    check=CHECKS + "09-bars-keys-and-times.pickup.lua")
 row("commands", FUNDAMENTALS + "10-commands.lua",
     after=[then_command("Edit.Undo"), then_check("10-commands.undone.lua")])
 row("act_on_the_selection", FUNDAMENTALS + "11-act-on-the-selection.lua",
@@ -136,6 +144,13 @@ row("layout_and_notation_options", FUNDAMENTALS + "15-layout-and-notation-option
 row("flows_and_players", FUNDAMENTALS + "16-flows-and-players.lua",
     after=[then_command("Edit.Undo"), then_check("16-flows-and-players.undone.lua")])
 OPEN_FIRST = {"case": "case_open.lua"}
+
+
+def box(window, *fields):
+    """A recipe's box answered with OK, after setting fields as harness.answer_form takes them."""
+    return {"window": window, "button": "OK", "fields": list(fields)}
+
+
 ANSWER = "Hello, world & Zoë"
 row("ask_and_report", FUNDAMENTALS + "17-ask-and-report.lua", args={"answer": ANSWER}, before=OPEN_FIRST,
     dialog={"window": "Ask and report", "text": ANSWER, "button": "OK"})
@@ -166,9 +181,126 @@ row("hotkey_colour_cycle", HOTKEY,
            then_check("hotkey-colour-cycle.restart.lua", HOTKEY),
            then_check("hotkey-colour-cycle.coloured.lua", READ_COLOURS)])
 
+PARALLELS = RECIPES + "parallel-fifths.lua"
+PARALLELS_OK = box("Parallel fifths and octaves")
+row("parallel_fifths", PARALLELS, project="parallels", before=OPEN_FIRST, dialog=PARALLELS_OK,
+    after=[then_dialog("parallel-fifths.lua", PARALLELS, PARALLELS_OK, args={"before": ["default"]}),
+           then_dialog("parallel-fifths.none.lua", PARALLELS,
+                       box("Parallel fifths and octaves", ("check", 6, True)),
+                       args={"removed": ["default"]})])
+row("parallel_fifths_with_hidden_and_contrary", PARALLELS, project="parallels", before=OPEN_FIRST,
+    args={"findings": ["default", "hiddenAndContrary"]},
+    dialog=box("Parallel fifths and octaves", ("check", 0, True), ("check", 1, True)),
+    after=[then_dialog("parallel-fifths.lua", PARALLELS, PARALLELS_OK,
+                       args={"before": ["default", "hiddenAndContrary"]})])
+row("parallel_fifths_undone", PARALLELS, project="parallels", before=OPEN_FIRST, dialog=PARALLELS_OK,
+    after=[then_command("Edit.Undo"), then_check("parallel-fifths.none.lua")])
+row("parallel_fifths_cancelled", PARALLELS, project="parallels", before=OPEN_FIRST,
+    check=CHECKS + "parallel-fifths.none.lua", args={"cancelled": True},
+    dialog={"window": "Parallel fifths and octaves", "button": "Cancel"})
+NAMES = RECIPES + "note-names.lua"
+NAMES_OK = box("Note names")
+row("note_names", NAMES, project="reading", before=OPEN_FIRST, dialog=NAMES_OK,
+    after=[then_dialog("note-names.lua", NAMES, NAMES_OK, args={"second": True}),
+           then_dialog("note-names.none.lua", NAMES, box("Note names", ("check", 2, True)), args={"removed": True})])
+row("note_names_at_sounding_pitch", NAMES, project="reading", before=OPEN_FIRST, args={"sounding": True},
+    dialog=box("Note names", ("check", 1, False)))
+row("note_names_undone", NAMES, project="reading", before=OPEN_FIRST, dialog=NAMES_OK,
+    after=[then_command("Edit.Undo"), then_check("note-names.none.lua")])
+row("note_names_cancelled", NAMES, project="reading", before=OPEN_FIRST, check=CHECKS + "note-names.none.lua",
+    args={"cancelled": True}, dialog={"window": "Note names", "button": "Cancel"})
+# The Players list is the third list: 1 is the flute, 2 the clarinet.
+row("note_names_one_player_then_another", NAMES, project="reading", before=OPEN_FIRST,
+    check=CHECKS + "note-names.two-players.lua", args={"players": ["Flute"]},
+    dialog=box("Note names", ("choice", 2, 1)),
+    after=[then_dialog("note-names.two-players.lua", NAMES,
+                       box("Note names", ("choice", 2, 2)),
+                       args={"players": ["Flute", "Clarinet (B{@flat@})"]})])
+CAUTIONARY = RECIPES + "cautionary-accidentals.lua"
+CAUTIONARY_OK = box("Cautionary accidentals")
+row("cautionary_accidentals", CAUTIONARY, project="cautionary", before=OPEN_FIRST, dialog=CAUTIONARY_OK,
+    after=[then_dialog("cautionary-accidentals.lua", CAUTIONARY, CAUTIONARY_OK, args={"kept": True}),
+           then_dialog("cautionary-accidentals.none.lua", CAUTIONARY,
+                       box("Cautionary accidentals", ("check", 3, True)),
+                       args={"takenBack": 5})])
+# Square brackets (the second item of the second list) and other instruments find the flute's B after the violin's
+# B flat too; a run on the defaults then takes that one off and puts round brackets on the rest.
+row("cautionary_accidentals_square_and_other_instruments", CAUTIONARY, project="cautionary", before=OPEN_FIRST,
+    args={"findings": "otherInstruments", "value": "kSquareBrackets"},
+    dialog=box("Cautionary accidentals", ("choice", 1, 1), ("check", 2, True)),
+    after=[then_dialog("cautionary-accidentals.lua", CAUTIONARY, CAUTIONARY_OK, args={"takenBack": 1})])
+row("cautionary_accidentals_undone", CAUTIONARY, project="cautionary", before=OPEN_FIRST, dialog=CAUTIONARY_OK,
+    after=[then_command("Edit.Undo"), then_check("cautionary-accidentals.none.lua")])
+row("cautionary_accidentals_cancelled", CAUTIONARY, project="cautionary", before=OPEN_FIRST,
+    check=CHECKS + "cautionary-accidentals.none.lua", args={"cancelled": True},
+    dialog={"window": "Cautionary accidentals", "button": "Cancel"})
+FIND = RECIPES + "find-and-replace.lua"
+
+
+def find_box(*fields):
+    """The find and replace box answered with OK. Text fields: 0 find, 1 replace with, 2 from bar, 3 to bar. Tick
+    boxes: 0 match case, 1 whole words, 2 Lua pattern. Lists: 0 mode (1 is Replace), 1 flows, 2 players."""
+    return box("Find and replace", *fields)
+
+
+def selection_kept(test, client, printed):
+    test.assertTrue(client.status().get("hasSelection"), "the first match isn't selected")
+
+
+REPLACE = ("choice", 0, 1)
+# Deleting the selection shows which item is selected: the first match, the flute's staff text in bar 1.
+row("find_and_replace_find", FIND, project="texts", before=OPEN_FIRST, args={"row": "find"},
+    dialog=find_box(("text", 0, "dolce")),
+    after=[then_python(selection_kept), then_command("Edit.Delete"),
+           then_check("find-and-replace.none.lua", args={"gone": [1]})])
+row("find_and_replace_found_nothing", FIND, project="texts", before=OPEN_FIRST,
+    check=CHECKS + "find-and-replace.none.lua", args={"said": "Found nothing."},
+    dialog=find_box(("text", 0, "zzz")))
+row("find_and_replace_replacement_it_cant_work_out", FIND, project="texts", before=OPEN_FIRST,
+    check=CHECKS + "find-and-replace.none.lua",
+    args={"said": "The replacement couldn't be worked out: the pattern has no capture 3. Nothing changed."},
+    dialog=find_box(REPLACE, ("text", 0, "dolce"), ("text", 1, "%3"), ("check", 2, True)))
+row("find_and_replace_find_one_player_from_a_bar", FIND, project="texts", before=OPEN_FIRST,
+    args={"row": "findSopranoFromBar2"}, dialog=find_box(("text", 0, "dolce"), ("choice", 2, 2), ("text", 2, "2")))
+row("find_and_replace_replace", FIND, project="texts", before=OPEN_FIRST, args={"row": "replace"},
+    dialog=find_box(REPLACE, ("text", 0, "dolce"), ("text", 1, "sweet"), ("check", 1, True)),
+    after=[then_command("Edit.Undo"), then_check("find-and-replace.none.lua")])
+row("find_and_replace_pattern", FIND, project="texts", before=OPEN_FIRST, args={"row": "pattern"},
+    dialog=find_box(REPLACE, ("text", 0, "^(%a+) (sempre)$"), ("text", 1, "%2 %1"), ("check", 0, True),
+                    ("check", 2, True)))
+CHORD_UNDO_PRESSES = 2  # one press takes back too little (tried)
+row("find_and_replace_chord_symbol", FIND, project="texts", before=OPEN_FIRST, args={"row": "chord"},
+    dialog=find_box(REPLACE, ("text", 0, "Am"), ("text", 1, "Dm"), ("check", 0, True), ("check", 1, True)),
+    after=[then_command("Edit.Undo")] * CHORD_UNDO_PRESSES + [then_check("find-and-replace.none.lua")])
+row("find_and_replace_chord_symbol_dorico_cant_read", FIND, project="texts", before=OPEN_FIRST,
+    args={"row": "chordUnreadable"},
+    dialog=find_box(REPLACE, ("text", 0, "G7"), ("text", 1, "Xyzzy"), ("check", 0, True), ("check", 1, True)))
+row("find_and_replace_cancelled", FIND, project="texts", before=OPEN_FIRST,
+    check=CHECKS + "find-and-replace.none.lua", args={"cancelled": True},
+    dialog={"window": "Find and replace", "button": "Cancel"})
+# Flow 10 of the Somervell project has two texts "espress.": a plain one, and one with formatting inside it.
+row("find_and_replace_leaves_formatted_text", FIND, project="somervell", before=OPEN_FIRST,
+    check=CHECKS + "find-and-replace.somervell.lua",
+    dialog=find_box(REPLACE, ("text", 0, "espress."), ("text", 1, "espressivo"), ("choice", 1, 10)))
 
 class Examples(unittest.TestCase):
     pass
+
+
+def run_answering(test, client, args, box):
+    """Run case_example.lua in the background while answering the example's box, and give back the result."""
+    run = harness.Background(lambda: harness.run_more(test, client, "case_example.lua", args, timeout=180,
+                                                      expect_ok=False))
+    if "fields" in box:
+        answered = harness.answer_form(box["window"], box["button"], box["fields"])
+    else:
+        answered = harness.answer(box["window"], box["button"], box.get("text"))
+    if not answered:
+        # Dorico runs nothing else while the box is open, so close it before failing.
+        harness.click(box["window"], "Cancel")
+    result = harness.check(test, run.join(240), "case_example.lua")
+    test.assertTrue(answered, f"couldn't answer the '{box['window']}' box")
+    return result
 
 
 def make_test(spec):
@@ -178,16 +310,7 @@ def make_test(spec):
             ("case_example.lua", harness.example_args(spec))
         with harness.scratch(self, first, args=first_args, open_file=spec["project"]) as (client, result):
             if spec["dialog"]:
-                box = spec["dialog"]
-                run = harness.Background(lambda: harness.run_more(self, client, "case_example.lua",
-                                                                  harness.example_args(spec), timeout=180,
-                                                                  expect_ok=False))
-                answered = harness.answer(box["window"], box["button"], box.get("text"))
-                if not answered:
-                    # Dorico runs nothing else while the box is open, so close it before failing.
-                    harness.click(box["window"], "Cancel")
-                result = harness.check(self, run.join(240), "case_example.lua")
-                self.assertTrue(answered, f"couldn't answer the '{box['window']}' box")
+                result = run_answering(self, client, harness.example_args(spec), spec["dialog"])
             elif before:
                 result = harness.run_more(self, client, "case_example.lua", harness.example_args(spec))
             printed = (result.get("facts") or {}).get("printed") or []
@@ -196,6 +319,8 @@ def make_test(spec):
                     send(self, client, step["command"])
                 elif "python" in step:
                     step["python"](self, client, printed)
+                elif "dialog" in step:
+                    run_answering(self, client, harness.example_args(step), step["dialog"])
                 else:
                     harness.run_more(self, client, "case_example.lua", harness.example_args(step))
     return test

@@ -346,6 +346,37 @@ return {
     end
     t:ok(find(got, function(x) return x == "Flute|12|crescendo" end), "the hairpin")
   end,
+  accidental_options_of_every_flow = function(t)
+    local SHOWN = { kShow = true, kHide = true, kParenthesise = true }
+    for _, entry in ipairs(readJson(fixtures .. "versions.json")) do
+      for _, flow in ipairs(load(entry.path).flows) do
+        local a = flow.options and flow.options.accidentals
+        if t:ok(a, entry.path .. " has accidental options") then
+          t:eq(a.durationBehaviour, "kCommonPractice", entry.path .. " the only duration rule seen so far")
+          for _, k in ipairs({ "showCautionariesForNotesInNextBarAtSameOctave",
+            "showCautionariesForNotesInNextBarAtDifferentOctaves", "showCautionariesForNotesInSameBarAtDifferentOctaves",
+            "showCautionariesAtTiesOnSystemBreaks" }) do
+            t:ok(SHOWN[a.cautionary[k]], entry.path .. " " .. k .. " = " .. tostring(a.cautionary[k]))
+          end
+          t:eq(type(a.cautionary.suppressCautionariesAlreadyStatedInBar), "boolean", entry.path)
+          t:eq(type(a.common.restateAccidentalsForEachPlayer), "boolean", entry.path)
+        end
+      end
+    end
+  end,
+  a_pickup_is_the_first_bars_length = function(t)
+    local time = events(load("6.2.30/pickup.dorico"), "timeSignature")[1]
+    t:eq(time.numerator, 4)
+    t:eq(time.pickup and pos(time.pickup), "1", "a one-beat pickup")
+    t:eq(events(load("6.2.30/reading.dorico"), "timeSignature")[1].pickup, nil, "no pickup, no field")
+    local somervell = {}
+    for _, e in ipairs(events(load("6.1.10/Somervell_Shropshire_Lad.dorico"), "timeSignature")) do
+      if e.pickup then somervell[#somervell + 1] = e.numerator .. "/" .. e.denominator .. " " .. pos(e.pickup) end
+    end
+    t:eq(table.concat(somervell, ", "), "4/4 1/2, 4/4 1, 4/4 1/2, 6/8 1/2",
+      "eighth-note pickups, and a quarter-note one, in flows 1, 5, 9 and 10")
+    t:eq(pos(events(load("6.1.0/Purcell_Remember.dorico"), "timeSignature")[1].pickup), "1", "Purcell's one beat")
+  end,
   a_diminuendo_and_messa_di_voce = function(t)
     local function hairpinWith(field, v)
       local s = score.readFile(fixtures .. "6.2.30/reading.dorico")
@@ -512,6 +543,22 @@ return {
     t:eq(clarinet.transposition.chromatic, 2)
     t:eq(clarinet.range.standard, "D3-F6")
     t:eq(s.instruments[clarinet.id], clarinet)
+  end,
+  each_voice_is_on_a_staff_of_its_instrument = function(t)
+    local s = load("6.2.30/reading.dorico")
+    local piano = find(s.players, function(p) return p.name == "Piano" end)
+    local staves = {}
+    for _, stream in ipairs(s.flows[1].streams) do
+      if stream.type == "voice" and stream.playerId == piano.id then staves[#staves + 1] = stream.staff end
+    end
+    t:eq(table.concat(staves, ","), "0,0,1", "two voices on the upper staff, one on the lower")
+    for _, entry in ipairs(readJson(fixtures .. "versions.json")) do
+      for _, flow in ipairs(load(entry.path).flows) do
+        for _, stream in ipairs(flow.streams) do
+          if stream.type == "voice" then t:eq(type(stream.staff), "number", entry.path .. " stream " .. stream.id) end
+        end
+      end
+    end
   end,
   layouts_and_parts = function(t)
     local s = load("6.2.30/reading.dorico")

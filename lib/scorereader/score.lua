@@ -104,12 +104,31 @@ local function elementsOf(ctx, flowNode)
   return out
 end
 
+-- The flow's accidental options with Dorico's own names and values, and "true" and "false" turned into booleans:
+-- {durationBehaviour, cautionary = {...}, common = {...}}. Nil when the flow has none.
+local function accidentalOptions(ctx, flowNode)
+  local n = tree.path(ctx.t, flowNode, "notationOptions/accidentalStateCalcOptions")
+  if not n then return nil end
+  local function group(path)
+    local out = {}
+    for _, c in ipairs(ctx.optList(n, path)) do
+      local v = tree.value(ctx.t, c)
+      if v == "true" then v = true elseif v == "false" then v = false end
+      out[tree.name(ctx.t, c)] = v
+    end
+    return out
+  end
+  return { durationBehaviour = ctx.opt(n, "durationBehaviour"), cautionary = group("cautionaryOptions"),
+    common = group("commonOptions") }
+end
+
 local function readFlow(ctx, flowNode)
   local t = ctx.t
   local flow = { id = ctx.int(flowNode, "flowID"), title = ctx.text(flowNode, "flowName"), streams = {},
     streamById = {}, events = {}, info = {} }
   for _, c in ipairs(ctx.list(flowNode, "flowInfo")) do flow.info[tree.name(t, c)] = tree.value(t, c) end
   flow.elements = elementsOf(ctx, flowNode)
+  flow.options = { accidentals = accidentalOptions(ctx, flowNode) }
 
   for _, sNode in ipairs(ctx.list(flowNode, "eventStreams/array")) do
     local raw = ctx.text(sNode, "eventStreamType")
@@ -125,13 +144,20 @@ local function readFlow(ctx, flowNode)
     if ps then ps.playerId = playerId end
     for _, inst in ipairs(ctx.list(fp, "flowPlayerInstruments")) do
       local instrumentId = ctx.int(inst, "instrumentID")
+      local nth = {}
       for _, info in ipairs(ctx.list(inst, "staveStreamInfos")) do
         local s = flow.streamById[ctx.int(info, "staveStreamID")]
-        if s then s.playerId, s.instrumentId, s.staff = playerId, instrumentId, ctx.int(info, "nthStaveInInstrument") end
+        local staveId = ctx.int(info, "staveID")
+        nth[staveId] = ctx.int(info, "nthStaveInInstrument")
+        if s then s.playerId, s.instrumentId, s.staff = playerId, instrumentId, nth[staveId] end
       end
+      -- A voice's staff is the stave its defaultLogicalStaveID names, counted from 0 at the top as for staves.
       for _, info in ipairs(ctx.list(inst, "voiceStreamInfos")) do
         local s = flow.streamById[ctx.int(info, "voiceStreamID")]
-        if s then s.playerId, s.instrumentId = playerId, ctx.int(info, "instrumentID") end
+        if s then
+          s.playerId, s.instrumentId = playerId, ctx.int(info, "instrumentID")
+          s.staff = nth[ctx.int(info, "defaultLogicalStaveID")]
+        end
       end
     end
   end

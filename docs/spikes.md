@@ -317,7 +317,8 @@ beside the decoded file). Run on `fixtures/6.2.30/reading.dorico`, whose source 
 
 The reading fixture also showed what Dorico 6.2.30's MusicXML import does with text: every `<words>` direction lands
 above the staff whatever its `placement`, a direction with two `<words>` keeps only the last, and `font-weight` is
-dropped. `pizz.` and `arco` arrive as playing techniques, not text.
+dropped. `pizz.` and `arco` arrive as playing techniques, not text. The texts fixture's "poco dolce" and
+"dolce cantando" came in as "dolce".
 
 ## Reading speed
 
@@ -364,3 +365,24 @@ its events with the reader, acts on them by the ids the file gives, and reads th
   plug-in notes those from a saved copy first and puts them back by the same route. The panel ignores a property Dorico
   doesn't know, so a private marker isn't possible. `EventEdit.Select` replaces the selection; the probe's attempt to
   add to it with an `Add` parameter did nothing.
+
+## Probes for the recipes
+
+Probes: `multiline_text.lua` on a scratch copy of `fixtures/6.2.30/sample.dorico`, and `pickup.lua` on an import of
+`fixtures/pickup.musicxml`. The rest came from building the recipes' fixtures and running their tests.
+
+- A newline in `createText`'s words stays in the text: "E5\nC5" is one paragraph, drawn as two stacked lines. The
+  note-names recipe writes a chord's names in one text this way, top note first.
+- A pickup is `barDivisionData/irregularBarLength` on the time signature's bar division element: the first bar's
+  length in quarter notes, 1 for a one-beat pickup in 4/4. Notes start at 0 and the first full bar at that length.
+  The reader gives it as the time signature's `pickup`.
+- A voice stream's `defaultLogicalStaveID` is the `staveID` of the stave it's on, so a piano's voices can be told
+  apart by staff.
+- `createText` makes its text in `paragraph.defaulttext`.
+- A tick box that Windows Forms draws itself, the default `FlatStyle`, ignores a check message from another program,
+  so `tools/setfield.ps1` couldn't untick one. With `FlatStyle = 'System'` Windows draws it and the message works. A
+  list's `CB_SETCURSEL` sets the item the form reads back.
+- `chord_replace.lua`, on a scratch copy of the texts fixture: entering a chord symbol with the chord-symbol commands
+  over an existing one replaces it, giving it a new event id. A definition Dorico can't read, such as "Xyzzy", leaves
+  the old chord symbol as it was, with its old id. In the find and replace recipe's test
+  (`find_and_replace_chord_symbol`), one chord symbol replaced this way took two Edit > Undo presses to take back.

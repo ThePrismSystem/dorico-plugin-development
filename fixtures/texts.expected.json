@@ -1,0 +1,183 @@
+{
+ "texts": [
+  {
+   "player": "Flute",
+   "bar": 1,
+   "words": "dolce",
+   "above": true,
+   "system": false
+  },
+  {
+   "player": "Flute",
+   "bar": 2,
+   "words": "dolce e cantabile",
+   "above": false,
+   "system": false
+  },
+  {
+   "player": "Flute",
+   "bar": 3,
+   "words": "Dolce",
+   "above": true,
+   "system": false
+  },
+  {
+   "player": "Flute",
+   "bar": 4,
+   "words": "dolcemente",
+   "above": true,
+   "system": false
+  },
+  {
+   "player": "-",
+   "bar": 5,
+   "words": "dolce sempre",
+   "above": true,
+   "system": true
+  },
+  {
+   "player": "Flute",
+   "bar": 6,
+   "words": "dolce assai",
+   "above": true,
+   "system": false
+  },
+  {
+   "player": "Flute",
+   "bar": 7,
+   "words": "dolce cantando",
+   "above": false,
+   "system": false
+  }
+ ],
+ "lyrics": [
+  {
+   "bar": 1,
+   "beat": 1,
+   "line": 1,
+   "text": "sweet",
+   "syllable": "single"
+  },
+  {
+   "bar": 1,
+   "beat": 1,
+   "line": 2,
+   "text": "dolce",
+   "syllable": "single"
+  },
+  {
+   "bar": 1,
+   "beat": 2,
+   "line": 1,
+   "text": "dol",
+   "syllable": "begin"
+  },
+  {
+   "bar": 1,
+   "beat": 3,
+   "line": 1,
+   "text": "ce",
+   "syllable": "end"
+  },
+  {
+   "bar": 2,
+   "beat": 1,
+   "line": 1,
+   "text": "dolce",
+   "syllable": "single"
+  }
+ ],
+ "chords": [
+  {
+   "bar": 1,
+   "name": "C"
+  },
+  {
+   "bar": 2,
+   "name": "Am"
+  },
+  {
+   "bar": 3,
+   "name": "G7"
+  }
+ ],
+ "belowBar": 2,
+ "colouredBar": 6,
+ "colour": "#ff0000c0",
+ "flippedText": {
+  "bar": 7,
+  "words": "dolce cantando"
+ },
+ "systemText": {
+  "bar": 5,
+  "words": "dolce sempre"
+ },
+ "rows": {
+  "find": {
+   "lines": [
+    "staff text\tflow 1\tbar 1, beat 1\tFlute\tdolce",
+    "lyric\tflow 1\tbar 1, beat 1\tSoprano\tdolce",
+    "staff text\tflow 1\tbar 2, beat 1\tFlute\tdolce e cantabile",
+    "lyric\tflow 1\tbar 2, beat 1\tSoprano\tdolce",
+    "staff text\tflow 1\tbar 3, beat 1\tFlute\tDolce",
+    "staff text\tflow 1\tbar 4, beat 1\tFlute\tdolcemente",
+    "system text\tflow 1\tbar 5, beat 1\t-\tdolce sempre",
+    "staff text\tflow 1\tbar 6, beat 1\tFlute\tdolce assai",
+    "staff text\tflow 1\tbar 7, beat 1\tFlute\tdolce cantando"
+   ],
+   "summary": "Found 9; the first is selected."
+  },
+  "findSopranoFromBar2": {
+   "lines": [
+    "lyric\tflow 1\tbar 2, beat 1\tSoprano\tdolce"
+   ],
+   "summary": "Found 1; the first is selected."
+  },
+  "replace": {
+   "lines": [
+    "staff text\tflow 1\tbar 1, beat 1\tFlute\tdolce -> sweet",
+    "lyric\tflow 1\tbar 1, beat 1\tSoprano\tdolce: left as it is, only a whole-word verse lyric on line 1 can be replaced",
+    "staff text\tflow 1\tbar 2, beat 1\tFlute\tdolce e cantabile -> sweet e cantabile",
+    "lyric\tflow 1\tbar 2, beat 1\tSoprano\tdolce -> sweet",
+    "staff text\tflow 1\tbar 3, beat 1\tFlute\tDolce -> sweet",
+    "system text\tflow 1\tbar 5, beat 1\t-\tdolce sempre -> sweet sempre",
+    "staff text\tflow 1\tbar 6, beat 1\tFlute\tdolce assai: left as it is, it has settings of its own (kEventColour)",
+    "staff text\tflow 1\tbar 7, beat 1\tFlute\tdolce cantando: left as it is, it is above or below the staff in one layout only"
+   ],
+   "summary": "Replaced 5; left 3 as they were.",
+   "texts": {
+    "1": "sweet",
+    "2": "sweet e cantabile",
+    "3": "sweet",
+    "5": "sweet sempre"
+   },
+   "lyrics": {
+    "2": "sweet"
+   }
+  },
+  "pattern": {
+   "lines": [
+    "system text\tflow 1\tbar 5, beat 1\t-\tdolce sempre -> sempre dolce"
+   ],
+   "summary": "Replaced 1; left 0 as they were.",
+   "texts": {
+    "5": "sempre dolce"
+   }
+  },
+  "chord": {
+   "lines": [
+    "chord symbol\tflow 1\tbar 2, beat 1\t-\tAm -> Dm"
+   ],
+   "summary": "Replaced 1; left 0 as they were.",
+   "chords": {
+    "2": "Dm"
+   }
+  },
+  "chordUnreadable": {
+   "lines": [
+    "chord symbol\tflow 1\tbar 3, beat 1\t-\tG7: left as it is, Dorico couldn't read the new one, so the old one is still there"
+   ],
+   "summary": "Replaced 0; left 1 as they were."
+  }
+ }
+}

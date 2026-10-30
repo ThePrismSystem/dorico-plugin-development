@@ -1,16 +1,17 @@
 -- Ask the user something, then act on the answer: here, a word or phrase to put in a new flow.
 -- What it does: shows a box asking "What should the new flow say?". On OK it adds a flow at the end, titled with
 -- the answer, with the answer as a staff text at its start, and prints what it did. On Cancel, or with nothing
--- typed, it changes nothing.
+-- typed, it changes nothing, and when no box can be shown it prints why.
 -- Changes: adds a flow, with one staff text in it.
 -- Undo: Edit > Undo takes the new flow away, and the text in it goes with it.
 -- Builds on: 10-commands.lua and 14-add-notes-rests-text.lua. Open Script > Show Script Console to read what it
 -- prints.
 --
--- Lua in Dorico has no dialogs of its own, but it can start a program and wait for it. On Windows the script writes
--- a small PowerShell script into the temporary folder and runs it with os.execute; PowerShell shows a Windows Forms
--- box and writes the answer to a file, which the script reads back. Dorico waits while the box is open. On a Mac it
--- runs osascript, which can show a "display dialog" box with a text field. The Mac route is written from Apple's
+-- Lua in Dorico has no dialogs of its own, but it can start a program and wait for it. The form helper below asks
+-- for any number of options, each a text box, a tick box or a list to choose from; this script asks for one. On
+-- Windows it writes a small PowerShell script into the temporary folder and runs it with os.execute; PowerShell shows
+-- a Windows Forms box and writes the answers to a file, which the script reads back. Dorico waits while the box is
+-- open. On a Mac it asks one question at a time through osascript. The Mac route is written from Apple's
 -- documentation and has not been run on a Mac.
 --
 -- Whatever the user types goes into a command (the flow's title) through the commands helper, so commas,
@@ -55,77 +56,195 @@ do
 end
 -- end helper: commands
 
--- The box, in PowerShell. It's topmost so that it can't open behind Dorico's window, and it writes the answer as
--- UTF-8 so that accented letters survive. Cancel writes nothing.
-local POWERSHELL = [[
-param([string]$Out)
-Add-Type -AssemblyName System.Windows.Forms, System.Drawing
-$form = New-Object System.Windows.Forms.Form
-$form.Text = '%s'
-$form.TopMost = $true
-$form.StartPosition = 'CenterScreen'
-$form.FormBorderStyle = 'FixedDialog'
-$form.MaximizeBox = $false
-$form.MinimizeBox = $false
-$form.ClientSize = New-Object System.Drawing.Size(340, 110)
-$label = New-Object System.Windows.Forms.Label
-$label.Text = '%s'
-$label.SetBounds(12, 12, 316, 20)
-$box = New-Object System.Windows.Forms.TextBox
-$box.SetBounds(12, 36, 316, 24)
-$ok = New-Object System.Windows.Forms.Button
-$ok.Text = 'OK'
-$ok.DialogResult = 'OK'
-$ok.SetBounds(172, 72, 75, 26)
-$cancel = New-Object System.Windows.Forms.Button
-$cancel.Text = 'Cancel'
-$cancel.DialogResult = 'Cancel'
-$cancel.SetBounds(253, 72, 75, 26)
-$form.Controls.AddRange(@($label, $box, $ok, $cancel))
-$form.AcceptButton = $ok
-$form.CancelButton = $cancel
-if ($form.ShowDialog() -eq 'OK') {
-  [System.IO.File]::WriteAllText($Out, $box.Text, (New-Object System.Text.UTF8Encoding $false))
-}
-]]
+-- helper: form
+-- A box with a row per option, to ask before a script changes anything, so that Cancel leaves nothing to undo. Each
+-- field is a text box, a tick box or a list to choose from, with a default, so OK with nothing changed runs on the
+-- defaults. The Windows box is topmost so it can't open behind Dorico's window, and it writes one "key=value" line
+-- per field as UTF-8, so accented letters survive; Cancel writes an empty answer. The Mac route asks one question at
+-- a time.
+--   form.ask(title, fields) -> {[key] = text, or true or false for a tick box}; nil on Cancel; nil and the reason
+--     when no box could be shown; fields: {{key, label, kind = "text" | "check" | "choice", default, choices = {...}}}
+--   form.windows(title, fields, folder) and form.mac(title, fields): the two routes form.ask picks between
+--   form.script(title, fields) -> the PowerShell
+--   form.parse(text, fields) -> the answers; nil for no answer; nil and the reason for an answer that leaves out a
+--     field or gives a choice the list doesn't offer
+local form = {}
+do
+  -- A PowerShell single-quoted string doubles its quotes. PowerShell also takes the curly single quotes (U+2018 to
+  -- U+201B) as quotes, and a project's titles and names can hold them. An AppleScript string escapes quotes and
+  -- backslashes.
+  local function ps(s) return "'" .. (tostring(s):gsub("'", "''"):gsub("\226\128[\152-\155]", "%0%0")) .. "'" end
+  local function apple(s) return '"' .. (tostring(s):gsub("\\", "\\\\"):gsub('"', '\\"')) .. '"' end
 
--- A PowerShell single-quoted string doubles its quotes; an AppleScript string escapes quotes and backslashes.
-local function psQuote(s) return (s:gsub("'", "''")) end
-local function appleQuote(s) return (s:gsub("\\", "\\\\"):gsub('"', '\\"')) end
+  local function readFile(path)
+    local f = io.open(path, "rb")
+    if not f then return nil end
+    local text = f:read("*a")
+    f:close()
+    return text
+  end
 
-local function readFile(path)
-  local f = io.open(path, "rb")
-  if not f then return nil end
-  local text = f:read("*a")
-  f:close()
-  return text
+  function form.script(title, fields)
+    local bottom = 12 + 32 * #fields
+    local out = {
+      "param([string]$Out)",
+      "Add-Type -AssemblyName System.Windows.Forms, System.Drawing",
+      "$form = New-Object System.Windows.Forms.Form",
+      "$form.Text = " .. ps(title),
+      "$form.TopMost = $true",
+      "$form.StartPosition = 'CenterScreen'",
+      "$form.FormBorderStyle = 'FixedDialog'",
+      "$form.MaximizeBox = $false",
+      "$form.MinimizeBox = $false",
+      string.format("$form.ClientSize = New-Object System.Drawing.Size(452, %d)", bottom + 46),
+      "$fields = @()",
+    }
+    local function add(line) out[#out + 1] = line end
+    for i, f in ipairs(fields) do
+      local y = 12 + 32 * (i - 1)
+      add("$label = New-Object System.Windows.Forms.Label")
+      add("$label.Text = " .. ps(f.label))
+      add("$label.UseMnemonic = $false")
+      add(string.format("$label.SetBounds(12, %d, 200, 24)", y + 3))
+      add("$form.Controls.Add($label)")
+      if f.kind == "check" then
+        -- Windows draws a System-style tick box itself, so another program can read and set its state.
+        add("$c = New-Object System.Windows.Forms.CheckBox")
+        add("$c.FlatStyle = 'System'")
+        add("$c.Checked = $" .. tostring(f.default == true))
+      elseif f.kind == "choice" then
+        local items = {}
+        for _, choice in ipairs(f.choices) do items[#items + 1] = ps(choice) end
+        add("$c = New-Object System.Windows.Forms.ComboBox")
+        add("$c.DropDownStyle = 'DropDownList'")
+        add("[void]$c.Items.AddRange(@(" .. table.concat(items, ", ") .. "))")
+        add("$c.SelectedItem = " .. ps(f.default))
+      else
+        add("$c = New-Object System.Windows.Forms.TextBox")
+        add("$c.Text = " .. ps(f.default or ""))
+      end
+      add(string.format("$c.SetBounds(220, %d, 220, 24)", y))
+      add("$form.Controls.Add($c)")
+      add("$fields += ,@(" .. ps(f.key) .. ", $c)")
+    end
+    for _, line in ipairs({
+      "$ok = New-Object System.Windows.Forms.Button",
+      "$ok.Text = 'OK'",
+      "$ok.DialogResult = 'OK'",
+      string.format("$ok.SetBounds(284, %d, 75, 26)", bottom + 8),
+      "$cancel = New-Object System.Windows.Forms.Button",
+      "$cancel.Text = 'Cancel'",
+      "$cancel.DialogResult = 'Cancel'",
+      string.format("$cancel.SetBounds(365, %d, 75, 26)", bottom + 8),
+      "$form.Controls.AddRange(@($ok, $cancel))",
+      "$form.AcceptButton = $ok",
+      "$form.CancelButton = $cancel",
+      "if ($form.ShowDialog() -eq 'OK') {",
+      "  $lines = foreach ($f in $fields) {",
+      "    $c = $f[1]",
+      "    if ($c -is [System.Windows.Forms.CheckBox]) { $v = $c.Checked }",
+      "    elseif ($c -is [System.Windows.Forms.ComboBox]) { $v = $c.SelectedItem }",
+      "    else { $v = $c.Text }",
+      "    $f[0] + '=' + $v",
+      "  }",
+      "  $text = $lines -join [char]10",
+      "} else { $text = '' }",
+      "[System.IO.File]::WriteAllText($Out, $text, (New-Object System.Text.UTF8Encoding $false))",
+    }) do add(line) end
+    return table.concat(out, "\r\n") .. "\r\n"
+  end
+
+  function form.parse(text, fields)
+    if not text or text == "" then return nil end
+    local got = {}
+    for line in text:gmatch("[^\r\n]+") do
+      local key, value = line:match("^([^=]+)=(.*)$")
+      if key then got[key] = value end
+    end
+    local answers = {}
+    for _, f in ipairs(fields) do
+      local value = got[f.key]
+      if value == nil then return nil, "its answer left out " .. f.key end
+      if f.kind == "check" then value = value:lower() == "true" end
+      if f.kind == "choice" then
+        local offered = false
+        for _, choice in ipairs(f.choices) do offered = offered or choice == value end
+        if not offered then
+          return nil, string.format("its answer for %s, \"%s\", isn't one of the choices", f.label, value)
+        end
+      end
+      answers[f.key] = value
+    end
+    return answers
+  end
+
+  -- Windows paths take forward slashes too, which keeps the folder's own backslashes out of the command line.
+  function form.windows(title, fields, folder)
+    local script, answer = folder .. "/dorico-form.ps1", folder .. "/dorico-form.txt"
+    local f = io.open(script, "wb")
+    if not f then return nil, "couldn't write " .. script end
+    -- Windows PowerShell 5.1 reads a script with no byte order mark in the ANSI code page, which garbles accents.
+    f:write("\239\187\191" .. form.script(title, fields))
+    f:close()
+    os.remove(answer)
+    os.execute('powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "' .. script .. '" -Out "'
+      .. answer .. '"')
+    local text = readFile(answer)
+    os.remove(script)
+    os.remove(answer)
+    -- Cancel writes an empty answer, so no answer at all means PowerShell didn't run the box to the end.
+    if not text then return nil, "PowerShell gave no answer" end
+    if text == "" then return nil end
+    return form.parse(text, fields)
+  end
+
+  -- Not run on a Mac. Each answer comes back after "ok:", so an empty answer can be told from Cancel, which
+  -- AppleScript reports as error -128. Any other output is why osascript failed.
+  function form.mac(title, fields)
+    local answers = {}
+    for _, f in ipairs(fields) do
+      local lines
+      if f.kind == "check" then
+        lines = { '"ok:" & button returned of (display dialog ' .. apple(f.label) .. ' buttons {"No", "Yes"}'
+          .. " default button " .. apple(f.default and "Yes" or "No") .. " with title " .. apple(title) .. ")" }
+      elseif f.kind == "choice" then
+        local items = {}
+        for _, choice in ipairs(f.choices) do items[#items + 1] = apple(choice) end
+        -- choose from list gives false on Cancel where display dialog raises -128, so it's made to raise it too.
+        lines = { "set r to choose from list {" .. table.concat(items, ", ") .. "} with prompt " .. apple(f.label)
+          .. " default items {" .. apple(f.default) .. "} with title " .. apple(title),
+          "if r is false then error number -128", '"ok:" & item 1 of r' }
+      else
+        lines = { '"ok:" & text returned of (display dialog ' .. apple(f.label) .. " default answer "
+          .. apple(f.default or "") .. " with title " .. apple(title) .. ")" }
+      end
+      local command = "osascript"
+      for _, line in ipairs(lines) do command = command .. " -e '" .. line:gsub("'", "'\\''") .. "'" end
+      local p = io.popen(command .. " 2>&1")
+      local text = p:read("*a")
+      p:close()
+      local value = text:match("^ok:(.-)\r?\n?$")
+      if not value then
+        if text:find("(-128)", 1, true) then return nil end
+        local why = text:match("^%s*(.-)%s*$")
+        return nil, why ~= "" and why or "osascript gave no answer"
+      end
+      if f.kind == "check" then value = value == "Yes" end
+      answers[f.key] = value
+    end
+    return answers
+  end
+
+  function form.ask(title, fields)
+    if package.config:sub(1, 1) == "\\" then
+      local folder = os.getenv("TEMP") or os.getenv("TMP")
+      if not folder then return nil, "neither TEMP nor TMP names a folder" end
+      return form.windows(title, fields, folder)
+    end
+    return form.mac(title, fields)
+  end
 end
-
-local function askWindows()
-  local folder = os.getenv("TEMP") or os.getenv("TMP")
-  if not folder then error("there is no TEMP folder for the box's script") end
-  local script, answer = folder .. "\\ask-and-report.ps1", folder .. "\\ask-and-report.txt"
-  local f = assert(io.open(script, "wb"))
-  f:write(string.format(POWERSHELL, psQuote(TITLE), psQuote(QUESTION)))
-  f:close()
-  os.remove(answer)
-  os.execute('powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "' .. script .. '" -Out "'
-    .. answer .. '"')
-  local text = readFile(answer)
-  os.remove(script)
-  os.remove(answer)
-  return text
-end
-
--- Not run on a Mac. Cancel makes osascript fail, which leaves its output empty.
-local function askMac()
-  local command = string.format("osascript -e 'text returned of (display dialog \"%s\" default answer \"\" "
-    .. "with title \"%s\")' 2>/dev/null", appleQuote(QUESTION), appleQuote(TITLE))
-  local p = io.popen(command)
-  local text = p:read("*a")
-  p:close()
-  return (text:gsub("\r?\n$", ""))
-end
+-- end helper: form
 
 local app, score = guard()
 if not score then return end
@@ -135,8 +254,12 @@ if #score.players == 0 then
 end
 
 -- Ask before changing anything, so that Cancel leaves nothing to undo.
-local answer
-if package.config:sub(1, 1) == "\\" then answer = askWindows() else answer = askMac() end
+local answers, noBox = form.ask(TITLE, { { key = "words", label = QUESTION, kind = "text", default = "" } })
+if noBox then
+  print("The box didn't work: " .. noBox)
+  return
+end
+local answer = answers and answers.words
 if not answer or answer == "" then
   print("Cancelled: nothing changed.")
   return

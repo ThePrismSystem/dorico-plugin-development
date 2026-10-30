@@ -134,6 +134,9 @@ A `flow` has:
   and every cautionary-accidental setting (`showCautionariesForNotesInNextBarAtSameOctave = kParenthesise` and so
   on). Every flow carries a full set; `scoreOptions/defaultNotationOptionsForFlow` holds the defaults new flows take.
   Layout options are in each layout's `layoutOptions`, with defaults in `scoreOptions/defaultLayoutOptionsMap`.
+  The reader gives each flow's accidental options as `flow.options.accidentals`: `durationBehaviour`, plus the
+  `cautionaryOptions` and `commonOptions` groups as `cautionary` and `common`. Values are Dorico's own (`kShow`,
+  `kHide`, `kParenthesise`), with `true` and `false` turned into booleans. Every fixture so far uses `kCommonPractice`.
 
 ### Streams and what they hold
 
@@ -153,7 +156,9 @@ block instances to their blocks. In the reading fixture and in a 6.2.20 project 
 A flow's `flowPlayers` says who owns what. Each `flowPlayer` names its `playerID` and its player stream
 (`eventStreamID`), and each of its `flowPlayerInstruments` names the `instrumentID` with its stave streams
 (`staveStreamInfos`: `staveStreamID`, `staveID`, `nthStaveInInstrument`) and voice streams (`voiceStreamInfos`:
-`voiceStreamID`, `instrumentID`). That's the same ownership Lua gives through `flow.instruments[i]`, which owns
+`voiceStreamID`, `instrumentID`, and `defaultLogicalStaveID`, the `staveID` of the stave the voice is on). The
+reader gives a stave's `nthStaveInInstrument`, counted from 0 at the top, as its `staff`, and a voice the `staff` of
+the stave it's on. That's the same ownership Lua gives through `flow.instruments[i]`, which owns
 `flow.voiceStreams[i]`.
 
 Two kinds of stream are left out of `flowPlayers`, so the reader gives them no owner. The flow's
@@ -254,11 +259,13 @@ the `text`, a `syllableType` (`kStart`, `kMiddle`, `kEnd`, `kWholeWord`), a `lin
 A `BarDivisionEventDefinition` in the timebase stream points by `barDivisionElementID`
 to `barDivisionData/timeSignature/timeSignaturesAndDivisions/timeSignatureAndDivision/timeSignature`, with
 `numerator`, `denominator` and the beat grouping. The list is empty in 29 of the 961 bar divisions in the 53
-projects, most of them barline changes; the reader gives those `barlineOnly`. A `TonalityDivisionEventDefinition`
-points to `tonalityDivisionData/keySignature`, whose `root` has a `tonalityType` (`kKeySigMajor`) and a `root` note
-(`noteName` `G`, `accidentalID` `accidental.12et.western.natural`). Every major and minor key has a root note. Steinberg's
-Smith example uses another tonality system, and its flat keys name `accidental.24et.western.flat.gould`; the reader
-gives such a key its `accidentalID` but no `root` or `fifths`.
+projects, most of them barline changes; the reader gives those `barlineOnly`. A pickup is
+`barDivisionData/irregularBarLength`, the first bar's length in quarter notes: `1` for the one-beat pickup in 4/4 of
+`fixtures/6.2.30/pickup.dorico`, an import of `fixtures/pickup.musicxml`. The reader gives it as the time signature's
+`pickup`. A `TonalityDivisionEventDefinition` points to `tonalityDivisionData/keySignature`, whose `root` has a
+`tonalityType` (`kKeySigMajor`) and a `root` note (`noteName` `G`, `accidentalID` `accidental.12et.western.natural`).
+Every major and minor key has a root note. Steinberg's Smith example uses another tonality system, and its flat keys
+name `accidental.24et.western.flat.gould`; the reader gives such a key its `accidentalID` but no `root` or `fifths`.
 
 #### Tuplets, tempos and techniques
 

@@ -48,8 +48,9 @@ local root = here .. "My Plug-in/"
 ```
 
 Most examples are single files with no modules, so they run from Script > Run Script as they are. Fundamentals 04 to 09
-and 13 read a saved copy and load the reader from `lib/`: run from this repository they find it two folders up, and in
-Script Plug-ins they need the `lib` folder copied beside them. DoricoUse found a second kind of plug-in in Dorico's
+and 13, and every recipe but colour-by-pitch and hotkey-colour-cycle, read a saved copy and load the reader from
+`lib/`: run from this repository they find it two folders up, and in Script Plug-ins they need the `lib` folder copied
+beside them. DoricoUse found a second kind of plug-in in Dorico's
 binary, a folder holding an `Info.lua` with `MenuCommands`; it's described in [spikes.md](spikes.md) (S7) and wasn't
 tried here. Whether Dorico notices a new plug-in of either kind without a restart wasn't checked either, so restart to
 be sure.
@@ -159,7 +160,7 @@ What Lua can't read, and the way round it:
 | The selection | Mark it with a colour and read a saved copy, or move it by command and see what moved (section 3) |
 | An event looked up by id | `s.events[id]` in a saved copy ([06-match-by-event-id.lua](../examples/fundamentals/06-match-by-event-id.lua)) |
 | A value set by command or in the Properties panel | A saved copy ([07-values-per-layout.lua](../examples/fundamentals/07-values-per-layout.lua)) |
-| Layout and notation options | Set them by command. A saved copy holds them all, but the reader doesn't decode them yet; the text export can show a value indirectly (section 4) |
+| Layout and notation options | Set them by command. A saved copy holds them all, and the reader decodes each flow's accidental options (`flow.options.accidentals`) but no others yet; the text export can show a value indirectly (section 4) |
 | Time signatures, key signatures, bar numbers | A saved copy ([09-bars-keys-and-times.lua](../examples/fundamentals/09-bars-keys-and-times.lua)) |
 | Texts, lyrics, chord symbols, dynamics | A saved copy ([08-text-lyrics-chords-dynamics.lua](../examples/fundamentals/08-text-lyrics-chords-dynamics.lua)) |
 
@@ -349,12 +350,11 @@ place of `.txt`). Its columns are `Path, ID, FlowNumber, FlowName, Instrument, P
 Titles and instrument names come from a saved copy now (section 3). The export still gives:
 
 - The project's file path: every row's `Path`, empty until the project is saved. A saved copy doesn't know it.
-- Which instrument a text is on, in its `Instrument` column. [proofread.lua](../examples/recipes/proofread.lua) still
-  finds instrument names this way, with marker texts made by `stream:createText` and deleted again. The `ID` column is
-  `<flow>-<stream>-<event>`, counting flows from 0.
-- Bar numbers. Every row has its `Bar`. A marker at a position tells you the bar it's in, and markers at the quarter
-  notes before it tell you where that bar starts, so a script can report "bar 2, beat 3" without reading a time
-  signature ([proofread.lua](../examples/recipes/proofread.lua)).
+- Which instrument a text is on, in its `Instrument` column. The `ID` column is `<flow>-<stream>-<event>`, counting
+  flows from 0.
+- Bar numbers: every row has its `Bar`. A marker text made with `stream:createText` at a position, exported and
+  deleted again, gives the bar there. A saved copy's time signatures give bars directly, through the bars helper
+  ([09](../examples/fundamentals/09-bars-keys-and-times.lua)).
 - Layout options, indirectly. A flow heading is a `Text Frame` row, there only while headings show, so comparing
   exports shows whether a change took ([15-layout-and-notation-options.lua](../examples/fundamentals/15-layout-and-notation-options.lua)).
   To learn an option's value, export again under each candidate and see which matches. With a single flow, two of
@@ -469,8 +469,9 @@ What the W spikes found for other changes ([spikes.md](spikes.md#w1-to-w7-changi
 - A lyric is replaced by deleting it and entering a word on the selected note with `NoteInput.StartLyricInput`, then
   `NoteInput.AcceptCurrentLyricInput?LyricsEntryAdvanceType=kEndInput&LyricText=<word>`. That makes a whole word on line
   1, and a hyphen stays in the text, so syllables need another route.
-- A chord symbol is replaced by deleting it and entering the new one with the chord-symbol commands (below) on a note at
-  the same position.
+- A chord symbol is replaced by entering the new one over it with the chord-symbol commands (below), on a note at the
+  same position. The new one gets a new id. When Dorico can't read the new definition it enters nothing and the old one
+  stays, with its old id, which is how a script can tell.
 - 300 `createText` calls take about 19 s.
 
 ### Chord symbols and dynamics
@@ -485,7 +486,8 @@ NoteInput.CreateDynamic?Definition=mf
 ```
 
 The accept command alone makes nothing. Chord symbols made this way don't join a run's one undo step: each takes
-three presses of Edit > Undo. `NoteInput.CreatePlayingTechnique?Definition=pizz.` made nothing.
+three presses of Edit > Undo, or two when it was entered over an existing one.
+`NoteInput.CreatePlayingTechnique?Definition=pizz.` made nothing.
 
 Never use `NoteInput.CreateText`. It opens Dorico's text editor at the selection and waits for typing, and while
 it's open Dorico runs no scripts at all. Escape doesn't close it; clicking empty paper does. Use `stream:createText`.
@@ -583,7 +585,7 @@ Dorico 6.2.30 they do ([spikes.md](spikes.md#undo)). This is what was seen;
 - Everything a script run changes is one undo step, whether by command or through the object model (`createNote`,
   `createText`, `stream:delete`, `propertyTable:set`). Edit > Undo afterwards takes the whole run back. Options set
   by command go with the rest. Chord symbols made with the popover's commands are the exception found so far: they
-  make undo steps of their own, three to a chord symbol.
+  make undo steps of their own, three to a chord symbol, or two to one entered over an existing one.
 - `Edit.Undo` inside a script takes back everything that run has done so far, object-model edits included, and
   nothing from before the run.
 - Only the first undo is safe. After an undo inside a run, whatever the run changes next joins the user's previous
@@ -622,7 +624,9 @@ local ok, how, code = os.execute(command)   -- Lua 5.2: true|nil, "exit"|"signal
 ```
 
 - Ask before changing anything, so that Cancel leaves nothing to undo.
-- Treat any failure as a cancel: no answer file, an empty answer, a program that didn't start.
+- Tell Cancel from a failure, and print why there was no box. The form helper's box writes an empty answer on
+  Cancel, so no answer file at all means the program didn't start or didn't finish: PowerShell blocked, or no
+  temporary folder.
 - If several runs could leave answer files, give each run an id that the box writes back, and ignore an answer
   without it.
 
@@ -639,6 +643,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "<box.ps
   first and last quotes from a line that starts with one.
 - Write the answer as UTF-8 without a byte-order mark: `[System.IO.File]::WriteAllText(path, text, (New-Object
   System.Text.UTF8Encoding $false))`.
+- Start the box's own script with a UTF-8 byte-order mark. Windows PowerShell 5.1 reads a script without one in the
+  ANSI code page, which garbles accented letters.
+- Put text into the script as a single-quoted string, doubling every quote. PowerShell also ends a single-quoted
+  string at the curly single quotes (U+2018 to U+201B), so double those too. A flow title such as "We’ll Gather
+  Lilacs" otherwise breaks the script, and a title written to do so runs a command of its own.
 
 PowerShell traps the handbells plug-in fell into, for bigger dialogs:
 
@@ -652,8 +661,9 @@ PowerShell traps the handbells plug-in fell into, for bigger dialogs:
 ### Mac: osascript
 
 A one-line AppleScript `display dialog` with `default answer` asks for a word, and `io.popen` reads what
-`osascript` prints. Cancel makes `osascript` fail with no output. This is written from Apple's documentation and
-hasn't been run on a Mac. For a full dialog, the handbells plug-in has a JavaScript for Automation (JXA) window,
+`osascript` prints. Cancel makes `osascript` fail with error -128. `choose from list` gives `false` on Cancel instead,
+so the form helper raises -128 itself when it does. This is written from Apple's documentation and hasn't been run
+on a Mac. For a full dialog, the handbells plug-in has a JavaScript for Automation (JXA) window,
 also not yet run on a Mac.
 
 ## 9. Running a script from a key
@@ -716,6 +726,9 @@ With Remote Control enabled in Dorico's preferences, a WebSocket at `ws://127.0.
   which reads titles without asking the program.
 - UI Automation sees Windows Forms controls as bare panes. Press their buttons with `BM_CLICK`
   (`tools/click.ps1`) and fill their text boxes with `WM_SETTEXT` (`tools/fill.ps1`).
+- `tools/setfield.ps1` sets one field of a box by its kind and number: a text box, a tick box or a list. It reads
+  the field back and fails when it doesn't hold the value. A tick box takes another program's click only with
+  `FlatStyle = 'System'`, which the form helper sets.
 
 ### Unit tests without Dorico
 
@@ -743,11 +756,11 @@ tests decode every fixture, one folder per Dorico version, in stock Lua.
 - A value set by command or in the Properties panel is stored for the layout on screen. Lua can't read it back; a saved
   copy can.
 - `kEventHide` hides neither texts nor rests. Naturals hide only by command.
-- Lua can't read layout options. A saved copy holds them, but the reader doesn't decode them yet. `setoptions` with
-  `flowIDs` changes flow 0.
+- Lua can't read layout options. A saved copy holds them; the reader decodes only each flow's accidental options
+  so far. `setoptions` with `flowIDs` changes flow 0.
 - A script can't delete a player. `Project.Flow.New` adds every player to the new flow.
 - Every edit a run makes, object-model edits included, is one undo step. Only the first `Edit.Undo` in a run is
-  safe. Chord symbols by popover make three undo steps each.
+  safe. Chord symbols by popover make three undo steps each, or two when entered over an existing one.
 - `os.execute` freezes Dorico until it returns.
 - The text export may have no flow numbers and no hidden texts.
 - A text's words can't be changed in place: delete it and create it again.
@@ -773,13 +786,17 @@ tests decode every fixture, one folder per Dorico version, in stock Lua.
 | Writing notes, rests and text | [14-add-notes-rests-text.lua](../examples/fundamentals/14-add-notes-rests-text.lua) |
 | Layout and notation options | [15-layout-and-notation-options.lua](../examples/fundamentals/15-layout-and-notation-options.lua) |
 | Adding flows and players, player ids | [16-flows-and-players.lua](../examples/fundamentals/16-flows-and-players.lua) |
-| A box asking the user | [17-ask-and-report.lua](../examples/fundamentals/17-ask-and-report.lua) |
+| A box asking the user, with text boxes, tick boxes and lists (the form helper) | [17-ask-and-report.lua](../examples/fundamentals/17-ask-and-report.lua) |
 | What undo does | [18-undo.lua](../examples/fundamentals/18-undo.lua) |
 | A script for a key, state between runs | [19-key-command.lua](../examples/fundamentals/19-key-command.lua) |
 | Colouring every note | [colour-by-pitch.lua](../examples/recipes/colour-by-pitch.lua) |
 | Labels at each note | [label-notes.lua](../examples/recipes/label-notes.lua) |
-| Ranges, parallels, bar numbers from the export | [proofread.lua](../examples/recipes/proofread.lua) |
-| Naming chords, chord symbols by command | [chord-symbols.lua](../examples/recipes/chord-symbols.lua) |
+| Each instrument's ranges, the bar and beat of a note | [proofread.lua](../examples/recipes/proofread.lua) |
+| Naming chords bar by bar, chord symbols by command | [chord-symbols.lua](../examples/recipes/chord-symbols.lua) |
 | A report on players and instruments | [instrument-report.lua](../examples/recipes/instrument-report.lua) |
 | A key that cycles colours | [hotkey-colour-cycle.lua](../examples/recipes/hotkey-colour-cycle.lua) |
+| Comparing every pair of parts, a mark a later run can take back | [parallel-fifths.lua](../examples/recipes/parallel-fifths.lua) |
+| Note names as text, written pitch from the transposition | [note-names.lua](../examples/recipes/note-names.lua) |
+| The flow's notation options, accidentals set by id | [cautionary-accidentals.lua](../examples/recipes/cautionary-accidentals.lua) |
+| Rebuilding texts, lyrics and chord symbols with new words | [find-and-replace.lua](../examples/recipes/find-and-replace.lua) |
 | A complete plug-in with a dialog and tests | [Handbells Used Chart](https://github.com/ThePrismSystem/handbells-used-chart-dorico-plugin) |

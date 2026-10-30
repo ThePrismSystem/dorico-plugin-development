@@ -57,12 +57,18 @@
 ---@field instances scorereader.Instance[]
 ---@field events scorereader.Event[]
 
+---@class scorereader.AccidentalOptions
+---@field durationBehaviour string|nil
+---@field cautionary table<string, string|boolean>
+---@field common table<string, string|boolean>
+
 ---@class scorereader.Flow
 ---@field id integer
 ---@field title string
 ---@field info table<string, string>
 ---@field streams scorereader.Stream[]
 ---@field streamById table<integer, scorereader.Stream>
+---@field options {accidentals: scorereader.AccidentalOptions|nil}
 ---@field events scorereader.Event[]
 ---@field elements table<string, table<integer, integer>> table name: {[elementID] = node}
 
@@ -137,6 +143,7 @@
 ---@field denominator integer|nil timeSignature
 ---@field barlineOnly boolean|nil timeSignature
 ---@field barline string|nil timeSignature
+---@field pickup scorereader.Position|nil timeSignature: the length of a short first bar
 ---@field mode "major"|"minor"|"atonal"|"custom"|nil keySignature
 ---@field atonal boolean|nil keySignature
 ---@field fifths integer|nil keySignature

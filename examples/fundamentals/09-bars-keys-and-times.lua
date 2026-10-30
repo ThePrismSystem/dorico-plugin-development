@@ -10,10 +10,10 @@
 -- Lua can't read a time signature or a key signature, so before the reader a script had to find bars through the text
 -- export. The saved copy has every bar division (a time signature, or a barline with no new one) in the flow's timebase
 -- stream, and the bars helper counts bars from them. A division in any other stream is left out. Beats are quarter
--- notes from the start of the bar, counted from 1. Bar numbers here count every bar from 1 and don't follow a bar
--- number change. None of the projects this was tried on had a pickup bar, so how Dorico stores one isn't known. If a
--- pickup has no division of its own, it counts as a whole bar, and every barline after it comes out early by the beats
--- the pickup lacks.
+-- notes from the start of the bar, counted from 1, except in a pickup, whose beats count back from its end: a one-beat
+-- pickup in 4/4 is on beat 4. Bar numbers count every bar from 1, a pickup at the start of a flow being bar 0, and
+-- don't follow a bar number change. Dorico stores a pickup as the length of the first bar after its time signature
+-- (e.pickup).
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. The read of app.currentScore goes
@@ -52,9 +52,11 @@ end
 -- the start of the flow. A bar is numerator * 4 / denominator quarter notes long ("3+2" counts as 5). A time
 -- signature partway through a bar starts a new bar there, and so does a barline-only division, keeping the time
 -- signature. Where there is no length to go by (before the first time signature, or an open meter with no beats), a
--- bar runs to the next division. A flow with no time signature is one bar.
---   bars.starts(divisions, endPos) -> {{bar, pos, length}}; divisions: {{pos, numerator, denominator}} in order,
---     with no numerator for a barline-only division
+-- bar runs to the next division. A flow with no time signature is one bar. A time signature's pickup makes its first
+-- bar that long; that bar's beats count back from its end, so a one-beat pickup in 4/4 is on beat 4, and a pickup at
+-- the start of the flow is bar 0.
+--   bars.starts(divisions, endPos) -> {{bar, pos, length, offset}}; divisions: {{pos, numerator, denominator,
+--     pickup}} in order, with no numerator for a barline-only division and pickup in quarter notes or nil
 --   bars.at(starts, pos) -> bar, beat (from 1)
 local bars = {}
 do
@@ -66,8 +68,12 @@ do
 
   function bars.starts(divisions, endPos)
     local out, length = {}, nil
-    local function add(pos, len) out[#out + 1] = { bar = #out + 1, pos = pos, length = len } end
-    local first = divisions[1] and divisions[1].pos or endPos
+    local d1 = divisions[1]
+    local base = (d1 and d1.pos == 0 and d1.numerator and d1.pickup and d1.pickup > 0) and -1 or 0
+    local function add(pos, len, offset)
+      out[#out + 1] = { bar = #out + 1 + base, pos = pos, length = len, offset = offset or 0 }
+    end
+    local first = d1 and d1.pos or endPos
     if first > 0 then add(0, first) end
     for i, d in ipairs(divisions) do
       if d.numerator then
@@ -76,6 +82,10 @@ do
       end
       local stop = divisions[i + 1] and divisions[i + 1].pos or endPos
       local pos = d.pos
+      if length and d.numerator and d.pickup and d.pickup > 0 and pos < stop then
+        add(pos, math.min(d.pickup, stop - pos), length - d.pickup)
+        pos = pos + d.pickup
+      end
       while pos < stop do
         local len = math.min(length or stop - pos, stop - pos)
         add(pos, len)
@@ -91,7 +101,7 @@ do
     for _, b in ipairs(starts) do
       if b.pos <= pos then found = b else break end
     end
-    return found.bar, pos - found.pos + 1
+    return found.bar, pos - found.pos + 1 + found.offset
   end
 end
 -- end helper: bars
@@ -113,7 +123,8 @@ for n, flow in ipairs(s.flows) do
     if e.kind == "keySignature" then
       line("key", n, values.positionText(e.position), e.fifths or "-", e.mode)
     elseif e.kind == "timeSignature" and flow.streamById[e.streamId].type == "timebase" then
-      divisions[#divisions + 1] = { pos = pos, numerator = e.numerator, denominator = e.denominator }
+      divisions[#divisions + 1] = { pos = pos, numerator = e.numerator, denominator = e.denominator,
+        pickup = e.pickup and values.toNumber(e.pickup) }
       if e.numerator then line("time", n, values.positionText(e.position), e.numerator .. "/" .. e.denominator) end
     end
   end

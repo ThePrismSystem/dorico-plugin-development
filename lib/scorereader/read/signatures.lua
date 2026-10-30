@@ -1,9 +1,12 @@
 -- Time and key signatures, from the flow's bar division and tonality division elements.
+local values = require("scorereader.values")
+
 local signatures = {}
 
 -- numerator and denominator of the first time signature, or barlineOnly when the bar division's list of time
 -- signatures is empty, as when it changes only a barline or a bar number; barline is the barline change's type when
--- there is one.
+-- there is one; pickup is the length of a short first bar, such as a one-beat pickup, when Dorico stores one
+-- (irregularBarLength).
 function signatures.time(ctx, e, node)
   local el = ctx.element(e, node, "barDivisionElementID", "BarDivisionElementTableDefinition", "bar division")
   local first = ctx.list(el, "barDivisionData/timeSignature/timeSignaturesAndDivisions")[1]
@@ -15,6 +18,8 @@ function signatures.time(ctx, e, node)
     e.barlineOnly = true
   end
   e.barline = ctx.opt(el, "barDivisionData/barlineChangeIfAny/type")
+  local pickup = ctx.opt(el, "barDivisionData/irregularBarLength")
+  if pickup then e.pickup = ctx.read(values.position, pickup, "a pickup length") end
 end
 
 local LETTERS = "FCGDAEB"

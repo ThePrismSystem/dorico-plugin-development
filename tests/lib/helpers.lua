@@ -14,9 +14,10 @@ function helpers.text(path, name)
 end
 
 -- The block's value. DoApp and DoCore are left out, so a helper that needs Dorico still loads and fails only when
--- it is called.
-function helpers.load(path, name)
-  local chunk = assert(load(helpers.text(path, name) .. "\nreturn " .. name, "=" .. path .. ":" .. name))
+-- it is called. env gives the block what it uses from the rest of its script, such as another helper.
+function helpers.load(path, name, env)
+  local chunk = assert(load(helpers.text(path, name) .. "\nreturn " .. name, "=" .. path .. ":" .. name, "t",
+    env and setmetatable(env, { __index = _G }) or _G))
   return chunk()
 end
 
