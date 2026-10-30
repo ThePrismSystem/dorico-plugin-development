@@ -7,11 +7,12 @@
 -- Builds on: 04-read-the-saved-copy.lua and 08-text-lyrics-chords-dynamics.lua. Open Script > Show Script Console to
 -- read what it prints.
 --
--- Lua can't read a time signature or a key signature, so before the reader a script had to find bars through the
--- text export. The saved copy has every bar division (a time signature, or a barline with no new one) in the flow's
--- timebase stream, and the bars helper counts bars from them. Beats are quarter notes from the start of the bar,
--- counted from 1. Bar numbers here count every bar from 1; they don't follow a bar number change, and a pickup bar
--- counts as a whole bar, since none of the projects this was tried on had one to show how Dorico stores it.
+-- Lua can't read a time signature or a key signature, so before the reader a script had to find bars through the text
+-- export. The saved copy has every bar division (a time signature, or a barline with no new one) in the flow's timebase
+-- stream, and the bars helper counts bars from them. Beats are quarter notes from the start of the bar, counted from 1.
+-- Bar numbers here count every bar from 1 and don't follow a bar number change. None of the projects this was tried on
+-- had a pickup bar, so how Dorico stores one isn't known. If a pickup has no division of its own, it counts as a whole
+-- bar, and every barline after it comes out early by the beats the pickup lacks.
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. The read of app.currentScore goes
@@ -43,7 +44,8 @@ end
 -- Where bars start, from a flow's bar divisions, and the bar and beat of a position. Positions are quarter notes from
 -- the start of the flow. A bar is numerator * 4 / denominator quarter notes long ("3+2" counts as 5). A time
 -- signature partway through a bar starts a new bar there, and so does a barline-only division, keeping the time
--- signature. Music before the first time signature is one bar, and so is a flow with none.
+-- signature. Where there is no length to go by (before the first time signature, or an open meter with no beats), a
+-- bar runs to the next division. A flow with no time signature is one bar.
 --   bars.starts(divisions, endPos) -> {{bar, pos, length}}; divisions: {{pos, numerator, denominator}} in order,
 --     with no numerator for a barline-only division
 --   bars.at(starts, pos) -> bar, beat (from 1)
@@ -62,14 +64,19 @@ do
     local first = divisions[1] and divisions[1].pos or endPos
     if first > 0 then add(0, first) end
     for i, d in ipairs(divisions) do
-      if d.numerator then length = beats(d.numerator) * 4 / d.denominator end
+      if d.numerator then
+        local n = beats(d.numerator) * 4 / d.denominator
+        length = n > 0 and n or nil
+      end
       local stop = divisions[i + 1] and divisions[i + 1].pos or endPos
       local pos = d.pos
-      while length and length > 0 and pos < stop do
+      if not length and pos < stop then add(pos, stop - pos) end
+      while length and pos < stop do
         add(pos, math.min(length, stop - pos))
         pos = pos + length
       end
     end
+    if #out == 0 then add(0, endPos) end
     return out
   end
 
@@ -78,6 +85,7 @@ do
     for _, b in ipairs(starts) do
       if b.pos <= pos then found = b else break end
     end
+    if not found then return 1, pos + 1 end
     return found.bar, pos - found.pos + 1
   end
 end

@@ -322,6 +322,44 @@ return {
     t:eq(bar .. "/" .. beat, "1/1")
   end,
 
+  a_barline_only_division_at_the_start = function(t)
+    local bars = helpers.load(BARS, "bars")
+    local starts = bars.starts({ { pos = 0 } }, 8)
+    t:eq(#starts, 1, "one bar up to the end")
+    t:eq(starts[1].length, 8)
+    local bar, beat = bars.at(starts, 3)
+    t:eq(bar .. "/" .. beat, "1/4")
+  end,
+
+  a_barline_before_the_first_time_signature = function(t)
+    local bars = helpers.load(BARS, "bars")
+    local starts = bars.starts({ { pos = 2 }, { pos = 6, numerator = 4, denominator = 4 } }, 14)
+    local got = {}
+    for _, b in ipairs(starts) do got[#got + 1] = b.pos .. "+" .. b.length end
+    t:eq(table.concat(got, " "), "0+2 2+4 6+4 10+4")
+    local bar, beat = bars.at(starts, 3)
+    t:eq(bar .. "/" .. beat, "2/2")
+  end,
+
+  a_time_signature_with_no_length_is_one_bar_to_the_next_division = function(t)
+    local bars = helpers.load(BARS, "bars")
+    for _, numerator in ipairs({ "X", 0 }) do
+      local starts = bars.starts({ { pos = 0, numerator = numerator, denominator = 4 },
+        { pos = 10, numerator = 4, denominator = 4 } }, 18)
+      local got = {}
+      for _, b in ipairs(starts) do got[#got + 1] = b.pos .. "+" .. b.length end
+      t:eq(table.concat(got, " "), "0+10 10+4 14+4", "numerator " .. tostring(numerator))
+    end
+  end,
+
+  bars_of_an_empty_flow = function(t)
+    local bars = helpers.load(BARS, "bars")
+    local starts = bars.starts({}, 0)
+    t:eq(#starts, 1)
+    local bar, beat = bars.at(starts, 0)
+    t:eq(bar .. "/" .. beat, "1/1")
+  end,
+
   read_the_saved_copy_reports_a_save_that_fails = function(t)
     local app = { currentScore = {}, save = function() return false end }
     local printed = withDorico(app, function() dofile(ROOT .. SAVED_COPY) end)
