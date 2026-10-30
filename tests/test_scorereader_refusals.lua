@@ -55,6 +55,20 @@ local function firstEvent(t, definition)
   error("no " .. definition)
 end
 
+-- The first dynamic of a definition (ImmediateChangeDynamicDefinition and so on) in the first flow's dynamic groups.
+local function firstDynamic(t, definition)
+  for _, tb in ipairs(tree.children(t, tree.path(t, firstFlow(t), "elementTables/array"))) do
+    if tree.name(t, tb) == "DynamicGroupElementTableDefinition" then
+      for _, el in ipairs(tree.children(t, tree.child(t, tb, "array"))) do
+        for _, sub in ipairs(tree.children(t, tree.child(t, el, "subElements"))) do
+          if tree.name(t, sub) == definition then return sub end
+        end
+      end
+    end
+  end
+  error("no " .. definition)
+end
+
 -- The element of the first flow's tableName that the event points to by idField.
 local function elementOf(t, event, idField, tableName)
   local id = tree.value(t, tree.child(t, event, idField))
@@ -118,5 +132,86 @@ return {
       "instrument.none has no definition in the library", "an instrument")
     refused(t, errorWith(tree.child(tr, firstEvent(tr, "PlayingTechniqueEventDefinition"), "appearanceEntityID"), nil,
       "pta.none"), "pta.none has no definition in the library", "a playing technique")
+  end,
+  blocks_and_instances_that_dont_fit = function(t)
+    local tr = reading()
+    local instance = first(tr, firstFlow(tr), "blockInstances/array")
+    refused(t, errorWith(tree.child(tr, instance, "streamID"), nil, "99999"), "is in no stream the flow lists",
+      "an instance's stream")
+    refused(t, errorWith(tree.child(tr, instance, "blockID"), nil, "99999"), "block 99999 isn't in the flow",
+      "an instance's block")
+    refused(t, errorWith(tree.child(tr, instance, "position"), nil, "x"), "a block instance's position: ",
+      "an instance's position")
+  end,
+  numbers_and_positions_that_dont_parse = function(t)
+    local tr = reading()
+    local note = firstEvent(tr, "NoteEventDefinition")
+    local cases = {
+      { tree.child(tr, note, "eventID"), "not a whole number: eventID = x" },
+      { tree.child(tr, note, "position"), "a position: " },
+      { tree.child(tr, note, "duration"), "a duration: " },
+      { tree.child(tr, firstEvent(tr, "GraceNoteEventDefinition"), "notatedDuration"), "a notated duration: " },
+      { tree.child(tr, firstDynamic(tr, "ImmediateChangeDynamicDefinition"), "position"), "a dynamic's position: " },
+      { tree.child(tr, firstDynamic(tr, "GradualChangeDynamicDefinition"), "duration"), "a hairpin's duration: " },
+    }
+    for _, c in ipairs(cases) do refused(t, errorWith(c[1], nil, "x"), c[2], c[2]) end
+  end,
+  an_event_pointing_to_no_element = function(t)
+    local tr = reading()
+    local cases = {
+      { "DynamicGroupEventDefinition", "dynamicGroupID", "dynamic" },
+      { "BarDivisionEventDefinition", "barDivisionElementID", "bar division" },
+      { "TonalityDivisionEventDefinition", "tonalityDivisionElementID", "tonality division" },
+      { "LyricEventDefinition", "lyricElementID", "lyric" },
+    }
+    for _, c in ipairs(cases) do
+      local err = errorWith(tree.child(tr, firstEvent(tr, c[1]), c[2]), nil, "99999")
+      t:ok(err and err:find("^scorereader: " .. c[3] .. " %d+ points to no element 99999 %(fileVersion"),
+        c[3] .. ": " .. tostring(err))
+    end
+  end,
+  notes_the_reader_cant_spell = function(t)
+    local tr = reading()
+    local note = firstEvent(tr, "NoteEventDefinition")
+    local entry = first(tr, note, "propertyTable/entries")
+    refused(t, errorWith(tree.child(tr, entry, "propertyType"), nil, "kOther"), "has no spelling the reader knows",
+      "no kNoteSpelling")
+    refused(t, errorWith(tree.child(tr, entry, "value"), nil, 'string: "H"'), "has no spelling the reader knows",
+      "a letter that isn't one")
+    refused(t, errorWith(tree.child(tr, note, "pitch"), nil, "200"), "but sounds MIDI 200", "a pitch out of reach")
+  end,
+  values_the_readers_dont_know = function(t)
+    local tr = reading()
+    local key = elementOf(tr, firstEvent(tr, "TonalityDivisionEventDefinition"), "tonalityDivisionElementID",
+      "TonalityDivisionElementTableDefinition")
+    local lyric = elementOf(tr, firstEvent(tr, "LyricEventDefinition"), "lyricElementID", "LyricElementTableDefinition")
+    local immediate = tree.child(tr, firstDynamic(tr, "ImmediateChangeDynamicDefinition"), "intensity")
+    local cases = {
+      { tree.path(tr, key, "tonalityDivisionData/keySignature/root/tonalityType"), "kWeird",
+        "has a type the reader doesn't know: kWeird" },
+      { tree.child(tr, lyric, "syllableType"), "kWeird", "has a syllable type the reader doesn't know: kWeird" },
+      { tree.child(tr, lyric, "lineType"), "kWeird", "has a line type the reader doesn't know: kWeird" },
+      { immediate, "x", "a dynamic's intensity: " },
+      { immediate, "steamVariantList:list: {int: 5}, {}, {bool: false}, {int: 1}",
+        "a dynamic's intensity the reader can't read" },
+      { immediate, "steamVariantList:list: {int: 0}, {}, {bool: false}, {int: 0}",
+        "a dynamic's intensity the reader can't read" },
+      { tree.child(tr, firstDynamic(tr, "GradualChangeDynamicDefinition"), "type"), "kWeird",
+        "a gradual dynamic the reader can't read: kWeird" },
+      { tree.child(tr, firstDynamic(tr, "ForceDynamicDefinition"), "type"), "kWeird",
+        "a force dynamic the reader can't read: kWeird" },
+      { tree.child(tr, firstDynamic(tr, "CombinedDynamicDefinition"), "direction"), "kSideways",
+        "a combined dynamic the reader can't read: kSideways" },
+      { tree.child(tr, firstEvent(tr, "TupletEventDefinition"), "tupletDefinition"),
+        "steamVariantList:list: {bool: true}", "has a definition the reader can't read" },
+      { tree.path(tr, firstEvent(tr, "ChordSymbolEventDefinition"), "chordSymbolData/primaryChord/root/accidentalType"),
+        "kWeird", "has an accidental the reader doesn't know: kWeird" },
+    }
+    for _, c in ipairs(cases) do refused(t, errorWith(c[1], nil, c[2]), c[3], c[3]) end
+  end,
+  a_dynamic_of_a_kind_the_reader_doesnt_know = function(t)
+    local tr = reading()
+    refused(t, errorWith(firstDynamic(tr, "ForceDynamicDefinition"), "FooDynamicDefinition"),
+      "holds a FooDynamicDefinition, which the reader doesn't know", "a new dynamic")
   end,
 }
