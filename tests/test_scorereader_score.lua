@@ -299,6 +299,22 @@ return {
     t:eq(clarinet.range.standard, "D3-F6")
     t:eq(s.instruments[clarinet.id], clarinet)
   end,
+  each_voice_is_on_a_staff_of_its_instrument = function(t)
+    local s = load("6.2.30/reading.dorico")
+    local piano = find(s.players, function(p) return p.name == "Piano" end)
+    local staves = {}
+    for _, stream in ipairs(s.flows[1].streams) do
+      if stream.type == "voice" and stream.playerId == piano.id then staves[#staves + 1] = stream.staff end
+    end
+    t:eq(table.concat(staves, ","), "0,0,1", "two voices on the upper staff, one on the lower")
+    for _, entry in ipairs(readJson(fixtures .. "versions.json")) do
+      for _, flow in ipairs(load(entry.path).flows) do
+        for _, stream in ipairs(flow.streams) do
+          if stream.type == "voice" then t:eq(type(stream.staff), "number", entry.path .. " stream " .. stream.id) end
+        end
+      end
+    end
+  end,
   layouts_and_parts = function(t)
     local s = load("6.2.30/reading.dorico")
     t:eq(#s.layouts, 7)

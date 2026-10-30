@@ -1,0 +1,393 @@
+{
+ "players": [
+  "Flute",
+  "Violin",
+  "Piano"
+ ],
+ "notes": [
+  {
+   "player": "Flute",
+   "staff": 1,
+   "pos": 0,
+   "spelling": "F#5",
+   "quarters": 1
+  },
+  {
+   "player": "Flute",
+   "staff": 1,
+   "pos": 8,
+   "spelling": "F5",
+   "quarters": 1
+  },
+  {
+   "player": "Flute",
+   "staff": 1,
+   "pos": 16,
+   "spelling": "C#5",
+   "quarters": 1
+  },
+  {
+   "player": "Flute",
+   "staff": 1,
+   "pos": 32,
+   "spelling": "C5",
+   "quarters": 1
+  },
+  {
+   "player": "Flute",
+   "staff": 1,
+   "pos": 40,
+   "spelling": "G#4",
+   "quarters": 1
+  },
+  {
+   "player": "Flute",
+   "staff": 1,
+   "pos": 60,
+   "spelling": "G4",
+   "quarters": 1
+  },
+  {
+   "player": "Flute",
+   "staff": 1,
+   "pos": 68,
+   "spelling": "D#5",
+   "quarters": 10
+  },
+  {
+   "player": "Flute",
+   "staff": 1,
+   "pos": 78,
+   "spelling": "D5",
+   "quarters": 1
+  },
+  {
+   "player": "Flute",
+   "staff": 1,
+   "pos": 100,
+   "spelling": "B4",
+   "quarters": 1
+  },
+  {
+   "player": "Flute",
+   "staff": 1,
+   "pos": 108,
+   "spelling": "Eb5",
+   "quarters": 1
+  },
+  {
+   "player": "Flute",
+   "staff": 1,
+   "pos": 112,
+   "spelling": "E5",
+   "quarters": 1
+  },
+  {
+   "player": "Flute",
+   "staff": 1,
+   "pos": 116,
+   "spelling": "E5",
+   "quarters": 1
+  },
+  {
+   "player": "Flute",
+   "staff": 1,
+   "pos": 117,
+   "spelling": "B4",
+   "quarters": 1
+  },
+  {
+   "player": "Flute",
+   "staff": 1,
+   "pos": 124,
+   "spelling": "A4",
+   "quarters": 1
+  },
+  {
+   "player": "Flute",
+   "staff": 1,
+   "pos": 128,
+   "spelling": "Bb4",
+   "quarters": 1
+  },
+  {
+   "player": "Flute",
+   "staff": 1,
+   "pos": 132,
+   "spelling": "Ab4",
+   "quarters": 1
+  },
+  {
+   "player": "Flute",
+   "staff": 1,
+   "pos": 140,
+   "spelling": "G#4",
+   "quarters": 1
+  },
+  {
+   "player": "Flute",
+   "staff": 1,
+   "pos": 148,
+   "spelling": "G4",
+   "quarters": 1
+  },
+  {
+   "player": "Violin",
+   "staff": 1,
+   "pos": 96,
+   "spelling": "Bb4",
+   "quarters": 1
+  },
+  {
+   "player": "Piano",
+   "staff": 1,
+   "pos": 84,
+   "spelling": "A#4",
+   "quarters": 1
+  },
+  {
+   "player": "Piano",
+   "staff": 2,
+   "pos": 88,
+   "spelling": "A3",
+   "quarters": 1
+  }
+ ],
+ "keyChange": 120,
+ "findings": {
+  "default": [
+   {
+    "player": "Flute",
+    "bar": 3,
+    "beat": 1,
+    "spelling": "F5",
+    "after": "F#5 in bar 1"
+   },
+   {
+    "player": "Flute",
+    "bar": 9,
+    "beat": 1,
+    "spelling": "C5",
+    "after": "C#5 in bar 5"
+   },
+   {
+    "player": "Flute",
+    "bar": 20,
+    "beat": 3,
+    "spelling": "D5",
+    "after": "D#5 tied into the bar"
+   },
+   {
+    "player": "Piano",
+    "bar": 23,
+    "beat": 1,
+    "spelling": "A3",
+    "after": "A#4 on the other staff in bar 22"
+   },
+   {
+    "player": "Flute",
+    "bar": 34,
+    "beat": 1,
+    "spelling": "Ab4",
+    "after": "A4 in bar 32"
+   }
+  ],
+  "lookBack2": [
+   {
+    "player": "Flute",
+    "bar": 3,
+    "beat": 1,
+    "spelling": "F5",
+    "after": "F#5 in bar 1"
+   },
+   {
+    "player": "Flute",
+    "bar": 20,
+    "beat": 3,
+    "spelling": "D5",
+    "after": "D#5 tied into the bar"
+   },
+   {
+    "player": "Piano",
+    "bar": 23,
+    "beat": 1,
+    "spelling": "A3",
+    "after": "A#4 on the other staff in bar 22"
+   },
+   {
+    "player": "Flute",
+    "bar": 34,
+    "beat": 1,
+    "spelling": "Ab4",
+    "after": "A4 in bar 32"
+   }
+  ],
+  "noLimit": [
+   {
+    "player": "Flute",
+    "bar": 3,
+    "beat": 1,
+    "spelling": "F5",
+    "after": "F#5 in bar 1"
+   },
+   {
+    "player": "Flute",
+    "bar": 9,
+    "beat": 1,
+    "spelling": "C5",
+    "after": "C#5 in bar 5"
+   },
+   {
+    "player": "Flute",
+    "bar": 16,
+    "beat": 1,
+    "spelling": "G4",
+    "after": "G#4 in bar 11"
+   },
+   {
+    "player": "Flute",
+    "bar": 20,
+    "beat": 3,
+    "spelling": "D5",
+    "after": "D#5 tied into the bar"
+   },
+   {
+    "player": "Piano",
+    "bar": 23,
+    "beat": 1,
+    "spelling": "A3",
+    "after": "A#4 on the other staff in bar 22"
+   },
+   {
+    "player": "Flute",
+    "bar": 34,
+    "beat": 1,
+    "spelling": "Ab4",
+    "after": "A4 in bar 32"
+   }
+  ],
+  "restsDontCount": [
+   {
+    "player": "Flute",
+    "bar": 3,
+    "beat": 1,
+    "spelling": "F5",
+    "after": "F#5 in bar 1"
+   },
+   {
+    "player": "Flute",
+    "bar": 9,
+    "beat": 1,
+    "spelling": "C5",
+    "after": "C#5 in bar 5"
+   },
+   {
+    "player": "Flute",
+    "bar": 16,
+    "beat": 1,
+    "spelling": "G4",
+    "after": "G#4 in bar 11"
+   },
+   {
+    "player": "Flute",
+    "bar": 20,
+    "beat": 3,
+    "spelling": "D5",
+    "after": "D#5 tied into the bar"
+   },
+   {
+    "player": "Piano",
+    "bar": 23,
+    "beat": 1,
+    "spelling": "A3",
+    "after": "A#4 on the other staff in bar 22"
+   },
+   {
+    "player": "Flute",
+    "bar": 34,
+    "beat": 1,
+    "spelling": "Ab4",
+    "after": "A4 in bar 32"
+   }
+  ],
+  "noOtherStaves": [
+   {
+    "player": "Flute",
+    "bar": 3,
+    "beat": 1,
+    "spelling": "F5",
+    "after": "F#5 in bar 1"
+   },
+   {
+    "player": "Flute",
+    "bar": 9,
+    "beat": 1,
+    "spelling": "C5",
+    "after": "C#5 in bar 5"
+   },
+   {
+    "player": "Flute",
+    "bar": 20,
+    "beat": 3,
+    "spelling": "D5",
+    "after": "D#5 tied into the bar"
+   },
+   {
+    "player": "Flute",
+    "bar": 34,
+    "beat": 1,
+    "spelling": "Ab4",
+    "after": "A4 in bar 32"
+   }
+  ],
+  "otherInstruments": [
+   {
+    "player": "Flute",
+    "bar": 3,
+    "beat": 1,
+    "spelling": "F5",
+    "after": "F#5 in bar 1"
+   },
+   {
+    "player": "Flute",
+    "bar": 9,
+    "beat": 1,
+    "spelling": "C5",
+    "after": "C#5 in bar 5"
+   },
+   {
+    "player": "Flute",
+    "bar": 20,
+    "beat": 3,
+    "spelling": "D5",
+    "after": "D#5 tied into the bar"
+   },
+   {
+    "player": "Piano",
+    "bar": 23,
+    "beat": 1,
+    "spelling": "A3",
+    "after": "A#4 on the other staff in bar 22"
+   },
+   {
+    "player": "Flute",
+    "bar": 26,
+    "beat": 1,
+    "spelling": "B4",
+    "after": "Violin's Bb4 in bar 25"
+   },
+   {
+    "player": "Flute",
+    "bar": 34,
+    "beat": 1,
+    "spelling": "Ab4",
+    "after": "A4 in bar 32"
+   }
+  ]
+ },
+ "userBracket": {
+  "player": "Flute",
+  "pos": 148,
+  "value": "kRoundBrackets"
+ }
+}

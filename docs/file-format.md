@@ -154,7 +154,8 @@ block instances to their blocks. In the reading fixture and in a 6.2.20 project 
 A flow's `flowPlayers` says who owns what. Each `flowPlayer` names its `playerID` and its player stream
 (`eventStreamID`), and each of its `flowPlayerInstruments` names the `instrumentID` with its stave streams
 (`staveStreamInfos`: `staveStreamID`, `staveID`, `nthStaveInInstrument`) and voice streams (`voiceStreamInfos`:
-`voiceStreamID`, `instrumentID`). That's the same ownership Lua gives through `flow.instruments[i]`, which owns
+`voiceStreamID`, `instrumentID`, and `defaultLogicalStaveID`, the `staveID` of the stave the voice is on, which the
+reader gives as the voice's `staff`). That's the same ownership Lua gives through `flow.instruments[i]`, which owns
 `flow.voiceStreams[i]`.
 
 ### Events

@@ -175,6 +175,24 @@ row("note_names_undone", NAMES, project="reading", before=OPEN_FIRST, dialog=NAM
     after=[then_command("Edit.Undo"), then_check("note-names.none.lua")])
 row("note_names_cancelled", NAMES, project="reading", before=OPEN_FIRST, check=CHECKS + "note-names.none.lua",
     args={"cancelled": True}, dialog={"window": "Note names", "button": "Cancel"})
+CAUTIONARY = RECIPES + "cautionary-accidentals.lua"
+CAUTIONARY_OK = {"window": "Cautionary accidentals", "button": "OK", "fields": []}
+row("cautionary_accidentals", CAUTIONARY, project="cautionary", before=OPEN_FIRST, dialog=CAUTIONARY_OK,
+    after=[then_dialog("cautionary-accidentals.lua", CAUTIONARY, CAUTIONARY_OK, args={"kept": True}),
+           then_dialog("cautionary-accidentals.none.lua", CAUTIONARY,
+                       {"window": "Cautionary accidentals", "button": "OK", "fields": [("check", 3, True)]},
+                       args={"takenBack": 5})])
+# Square brackets (the second item of the second list) and other instruments find the flute's B after the violin's
+# B flat too; a run on the defaults then takes that one off and puts round brackets on the rest.
+row("cautionary_accidentals_square_and_other_instruments", CAUTIONARY, project="cautionary", before=OPEN_FIRST,
+    args={"findings": "otherInstruments", "value": "kSquareBrackets"},
+    dialog={"window": "Cautionary accidentals", "button": "OK", "fields": [("choice", 1, 1), ("check", 2, True)]},
+    after=[then_dialog("cautionary-accidentals.lua", CAUTIONARY, CAUTIONARY_OK, args={"takenBack": 1})])
+row("cautionary_accidentals_undone", CAUTIONARY, project="cautionary", before=OPEN_FIRST, dialog=CAUTIONARY_OK,
+    after=[then_command("Edit.Undo"), then_check("cautionary-accidentals.none.lua")])
+row("cautionary_accidentals_cancelled", CAUTIONARY, project="cautionary", before=OPEN_FIRST,
+    check=CHECKS + "cautionary-accidentals.none.lua", args={"cancelled": True},
+    dialog={"window": "Cautionary accidentals", "button": "Cancel"})
 
 class Examples(unittest.TestCase):
     pass

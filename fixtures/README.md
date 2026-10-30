@@ -16,7 +16,9 @@ tests can tell how Dorico stores each one.
 
 `6.2.30/parallels.dorico` is built by `build_parallels.py` from `make_parallels_xml.py`, and `parallels.expected.json`
 lists the findings the parallel fifths recipe should give, worked out by hand. `6.2.30/pickup.dorico` is an import of
-`pickup.musicxml`, a one-beat pickup in 4/4, made by `build_pickup.py`.
+`pickup.musicxml`, a one-beat pickup in 4/4, made by `build_pickup.py`. `6.2.30/cautionary.dorico` is built by
+`build_cautionary.py` from `make_cautionary_xml.py`, and `cautionary.expected.json` lists the notes the cautionary
+accidentals recipe should mark for each set of options, worked out by hand.
 
 ## From ancientgroove.co.uk
 

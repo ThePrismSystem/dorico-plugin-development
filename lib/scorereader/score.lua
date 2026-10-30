@@ -128,13 +128,19 @@ local function readFlow(ctx, flowNode)
     if ps then ps.playerId = playerId end
     for _, inst in ipairs(children(ctx, fp, "flowPlayerInstruments")) do
       local instrumentId = ctx.int(inst, "instrumentID")
+      local nth = {}
       for _, info in ipairs(children(ctx, inst, "staveStreamInfos")) do
         local s = flow.streamById[ctx.int(info, "staveStreamID")]
-        if s then s.playerId, s.instrumentId, s.staff = playerId, instrumentId, ctx.int(info, "nthStaveInInstrument") end
+        nth[ctx.int(info, "staveID")] = ctx.int(info, "nthStaveInInstrument")
+        if s then s.playerId, s.instrumentId, s.staff = playerId, instrumentId, nth[ctx.int(info, "staveID")] end
       end
+      -- A voice's staff is the stave its defaultLogicalStaveID names, counted from 0 at the top as for staves.
       for _, info in ipairs(children(ctx, inst, "voiceStreamInfos")) do
         local s = flow.streamById[ctx.int(info, "voiceStreamID")]
-        if s then s.playerId, s.instrumentId = playerId, ctx.int(info, "instrumentID") end
+        if s then
+          s.playerId, s.instrumentId = playerId, ctx.int(info, "instrumentID")
+          s.staff = nth[ctx.int(info, "defaultLogicalStaveID")]
+        end
       end
     end
   end
