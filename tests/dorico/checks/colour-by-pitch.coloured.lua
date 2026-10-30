@@ -8,15 +8,12 @@ local COLOURS = { [0] = "#ffe41a1c", "#fff4511e", "#ffff7f00", "#ffffb300", "#ff
 
 return function(p, run)
   local midi = checks.helper("examples/fundamentals/12-select-by-id.lua", { "midi" }, "midi")
-  local wrong, notes = {}, 0
-  for _, line in ipairs(run.printed) do
-    local f = checks.fields(line)
-    if #f == 6 and f[1] ~= "format" then
-      notes = notes + 1
-      local want = COLOURS[midi(f[4]) % 12]
-      if f[6] ~= want then wrong[#wrong + 1] = line .. " (want " .. want .. ")" end
-    end
+  local wrong = {}
+  local notes = checks.noteLines(run)
+  for _, note in ipairs(notes) do
+    local want = COLOURS[midi(note.spelling) % 12]
+    if note.colour ~= want then wrong[#wrong + 1] = note.line .. " (want " .. want .. ")" end
   end
-  p:check("04 read every note", notes > 80, notes)
+  p:check("04 read every note", #notes == #checks.noteKeys(), #notes)
   p:check("every note has its pitch class's colour", #wrong == 0, table.concat(wrong, " / "))
 end
