@@ -1,6 +1,8 @@
 -- Recipe: colour every note by its pitch class, one colour for each of the twelve, in rainbow order from C.
 -- What it does: colours every note and grace note in every flow by command, C red through B magenta, and prints how
--- many notes each pitch class has, with its colour. Change COLOURS below to use your own.
+-- many notes of each pitch class it tried to colour, with the colour, then the total. doCommand reports nothing, so
+-- a note the commands missed is still counted: 13-set-a-property-by-id.lua shows how to read the colours back and
+-- check. Change COLOURS below to use your own.
 -- Changes: the colour of every note, and the selection.
 -- Undo: Edit > Undo takes all the colours back in one step.
 -- Builds on: 03-read-notes.lua, 10-commands.lua and 12-select-by-id.lua. Open Script > Show Script Console to read
@@ -181,7 +183,7 @@ if not score then return end
 app:doCommand("NoteInput.Exit")
 app:doCommand(commands.build("Window.SwitchMode", { { "WindowMode", "kWriteMode" } }))
 
-local counts = {}
+local counts, tried = {}, 0
 for _, flow in ipairs(score.flows) do
   for _, stream in ipairs(flow.voiceStreams) do
     local parsed = dump.parse(stream:dump())
@@ -193,6 +195,7 @@ for _, flow in ipairs(score.flows) do
       app:doCommand(commands.build("UI.InvokePropertyChangeValue", { { "Type", "kEventColour" },
         { "Value", COLOURS[class] } }))
       counts[class] = (counts[class] or 0) + 1
+      tried = tried + 1
     end
   end
 end
@@ -201,3 +204,5 @@ app:doCommand("Edit.SelectNone")
 for class = 0, 11 do
   if counts[class] then print(string.format("%s: %d notes, %s", NAMES[class], counts[class], COLOURS[class])) end
 end
+print("Tried to colour " .. tried .. " notes. Dorico doesn't report which took; 13-set-a-property-by-id.lua shows"
+  .. " how to check.")
