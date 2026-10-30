@@ -41,7 +41,7 @@ class MusicXmlTests(unittest.TestCase):
                        "<words>dolce</words>", "<rehearsal>A</rehearsal>", "<metronome>", "<staccato/>",
                        "<accent/>", "<tenuto/>", "<string>", "<fret>", "<words>pizz.</words>",
                        "<fifths>1</fifths>", "<beats>3</beats>", "<staves>2</staves>", "<transpose>",
-                       'font-weight="bold"'):
+                       "<sfz/>"):
             self.assertIn(needle, text)
 
 
@@ -71,7 +71,9 @@ class ExpectedTests(unittest.TestCase):
         self.assertEqual([k["pos"] for k in e["keys"]], ["0", "16"])
         self.assertEqual([(t["pos"], t["beats"]) for t in e["times"]], [("0", 4), ("24", 3)])
         self.assertIn({"flow": 1, "player": "Flute", "pos": "0", "words": "dolce", "above": True}, e["texts"])
-        self.assertIn("very loud", [t["words"] for t in e["texts"]])
+        self.assertTrue(all(t["above"] for t in e["texts"]), "Dorico imports every text above the staff")
+        clarinet = [d["name"] for d in e["dynamics"] if d["player"] == m.player_name(m.CLARINET)]
+        self.assertEqual(clarinet, ["pp", "p", "mp", "mf", "f", "ff", "fp", "sfz"])
         self.assertEqual({(x["line"], x["syllable"]) for x in e["lyrics"]} >= {(1, "begin"), (1, "end"), (2, "single")},
                          True)
         self.assertEqual([c["pos"] for c in e["chords"]], ["0", "4", "8", "12", "16"])

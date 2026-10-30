@@ -650,13 +650,13 @@
    "player": "Flute",
    "pos": "8",
    "words": "espress.",
-   "above": false
+   "above": true
   },
   {
    "flow": 1,
    "player": "Flute",
    "pos": "20",
-   "words": "very loud",
+   "words": "con fuoco",
    "above": true
   }
  ],
@@ -796,6 +796,54 @@
    "player": "Flute",
    "pos": "14",
    "name": "f"
+  },
+  {
+   "flow": 1,
+   "player": "Clarinet (B{@flat@})",
+   "pos": "0",
+   "name": "pp"
+  },
+  {
+   "flow": 1,
+   "player": "Clarinet (B{@flat@})",
+   "pos": "4",
+   "name": "p"
+  },
+  {
+   "flow": 1,
+   "player": "Clarinet (B{@flat@})",
+   "pos": "8",
+   "name": "mp"
+  },
+  {
+   "flow": 1,
+   "player": "Clarinet (B{@flat@})",
+   "pos": "12",
+   "name": "mf"
+  },
+  {
+   "flow": 1,
+   "player": "Clarinet (B{@flat@})",
+   "pos": "16",
+   "name": "f"
+  },
+  {
+   "flow": 1,
+   "player": "Clarinet (B{@flat@})",
+   "pos": "20",
+   "name": "ff"
+  },
+  {
+   "flow": 1,
+   "player": "Clarinet (B{@flat@})",
+   "pos": "24",
+   "name": "fp"
+  },
+  {
+   "flow": 1,
+   "player": "Clarinet (B{@flat@})",
+   "pos": "27",
+   "name": "sfz"
   }
  ],
  "techniques": [

@@ -3,11 +3,14 @@
     python fixtures/make_reading_xml.py   ->  fixtures/build/reading.musicxml, fixtures/reading.expected.json
 
 The project holds one of each kind of item the reader reads: notes with articulations, a triplet, a grace note and a
-tie, a key change and a time change, staff text (one with a bold word), a tempo, a rehearsal mark, dynamics and a
-hairpin, chord symbols, two lines of lyrics with a melisma, string and fret numbers, and pizz. and arco. Positions and
+tie, a key change and a time change, staff text, a tempo, a rehearsal mark, a hairpin and one of each common dynamic,
+chord symbols, two lines of lyrics with a melisma, string and fret numbers, and pizz. and arco. Positions and
 durations in reading.expected.json are exact fractions of a quarter note from the start of the flow, as strings
 ("13/3"), and spellings are sounding pitch. "props" lists the note properties finish_reading.lua sets after the
 import, since MusicXML can't carry them.
+
+Dorico's MusicXML import puts every text above the staff, whatever its placement says, and keeps only the last
+<words> of a direction, so the texts here are single words above.
 """
 import json
 import os
@@ -49,7 +52,7 @@ def G(spelling):
 
 
 def D(kind, **opts):
-    """A direction at the next note: words (text or parts, placement), tempo, rehearsal, wedge, harmony."""
+    """A direction at the next note: words (text, placement), tempo, rehearsal, wedge, harmony."""
     return {"kind": kind, **opts}
 
 
@@ -61,11 +64,11 @@ FLUTE = {
                 N("F#5", 1)]},
         2: {1: [N("G5", F(1, 3), tuplet="start"), N("A5", F(1, 3)), N("B5", F(1, 3), tuplet="stop"), N("F5", 1),
                 G("E5"), N("G5", 2)]},
-        3: {1: [D("words", text="espress.", placement="below"), N("E5", 2), N("D5", 1), N("C5", 1, tie="start")]},
+        3: {1: [D("words", text="espress.", placement="above"), N("E5", 2), N("D5", 1), N("C5", 1, tie="start")]},
         4: {1: [D("wedge", type="crescendo"), N("C5", 2, tie="stop"), D("wedge", type="stop"),
                 N("D5", 2, dynamic="f")]},
         5: {1: [D("rehearsal", text="A"), N("G5", 4)]},
-        6: {1: [D("words", parts=[("very ", False), ("loud", True)], placement="above"), N("F#5", 2), N("E5", 2)]},
+        6: {1: [D("words", text="con fuoco", placement="above"), N("F#5", 2), N("E5", 2)]},
         7: {1: [N("D5", 3)]},
         8: {1: [N("G5", 3)]},
     },
@@ -77,14 +80,14 @@ CLARINET = {
     "name": "Clarinet", "player": "Clarinet (B{@flat@})", "sound": "wind.reed.clarinet.bflat", "staves": 1,
     "transpose": (-1, -2), "keyOffset": 2,
     "bars": {
-        1: {1: [N("E5", 4)]},
-        2: {1: [N("F#5", 2), N("G#5", 2)]},
-        3: {1: [N("A5", 4)]},
-        4: {1: [N("G5", 2), N("F#5", 2)]},
-        5: {1: [N("B5", 4)]},
-        6: {1: [N("C#6", 2), N("B5", 2)]},
-        7: {1: [N("A5", 3)]},
-        8: {1: [N("E5", 3)]},
+        1: {1: [N("E5", 4, dynamic="pp")]},
+        2: {1: [N("F#5", 2, dynamic="p"), N("G#5", 2)]},
+        3: {1: [N("A5", 4, dynamic="mp")]},
+        4: {1: [N("G5", 2, dynamic="mf"), N("F#5", 2)]},
+        5: {1: [N("B5", 4, dynamic="f")]},
+        6: {1: [N("C#6", 2, dynamic="ff"), N("B5", 2)]},
+        7: {1: [N("A5", 3, dynamic="fp")]},
+        8: {1: [N("E5", 3, dynamic="sfz")]},
     },
 }
 
@@ -204,11 +207,7 @@ def _direction_xml(item, staff):
     if kind == "harmony":
         return f'<harmony><root><root-step>{item["root"]}</root-step></root><kind>{item["chord"]}</kind></harmony>'
     if kind == "words":
-        if "parts" in item:
-            body = "".join(f'<words font-weight="bold">{escape(t)}</words>' if bold else f"<words>{escape(t)}</words>"
-                           for t, bold in item["parts"])
-        else:
-            body = f"<words>{escape(item['text'])}</words>"
+        body = f"<words>{escape(item['text'])}</words>"
         return f'<direction placement="{item["placement"]}"><direction-type>{body}</direction-type>{staff}</direction>'
     if kind == "tempo":
         return (f'<direction placement="above"><direction-type><words>{escape(item["text"])}</words></direction-type>'
@@ -365,7 +364,7 @@ def expected():
             p = str(pos)
             kind = item["kind"]
             if kind == "words":
-                words = item.get("text") or "".join(t for t, _ in item["parts"])
+                words = item["text"]
                 if words in TECHNIQUES:
                     techniques.append({"flow": 1, "player": name, "pos": p, "name": words})
                 else:
