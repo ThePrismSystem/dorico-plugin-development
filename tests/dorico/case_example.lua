@@ -2,7 +2,7 @@
 -- Scratch copy only (the probe confirms it).
 --   args.example, args.check: paths from the repository root (with no example, only the check runs)
 --   args.twice: run the example a second time first, as a user might, in Dorico's one Lua state
--- A check file returns function(p, run, args), where run = {printed, ok, err, second}.
+-- A check file returns function(p, run, args), where run = {printed, ok, err, first}.
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
 local repo = here .. "../../"
 local mine = here .. "lib/?.lua;" .. repo .. "spikes/lib/?.lua;" .. repo .. "fixtures/?.lua"
@@ -44,4 +44,4 @@ probe.run("case_example", function(p)
   end
   local check = assert(loadfile(repo .. p.args.check))()
   check(p, run, p.args)
-end)
+end, { scratchOnly = true })

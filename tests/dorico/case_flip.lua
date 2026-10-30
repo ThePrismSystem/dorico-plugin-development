@@ -35,4 +35,4 @@ probe.run("case_flip", function(p)
   local flipped = after.events[e.id]
   p:check("the flip is the full score's", flipped and score.above(after, flipped, score.fullScoreOf(after).id) == false,
     flipped and tostring(score.above(after, flipped, score.fullScoreOf(after).id)))
-end)
+end, { scratchOnly = true })

@@ -20,7 +20,6 @@ import make_reading_xml  # noqa: E402
 import run_lua  # noqa: E402
 
 BUILT = HERE / "build" / "reading.dorico"
-IMPORTED = {"expectScratch": {"path": ""}}  # an imported copy has no file of its own yet
 
 
 def show(client, score_id, layout_id):
@@ -47,8 +46,10 @@ def main():
         print("players:", result["facts"].get("players"))
         for item in result["facts"].get("deferred") or []:
             show(client, scratch, item["layoutId"])
+            # The import has no file of its own yet, like any project never saved, so its id goes with it.
+            expect = {"expectScratch": {"path": "", "openScoreID": scratch}}
             code, part_result, _ = run_lua.run(HERE / "colour_in_part.lua", on_active=True,
-                                               extra_args={**IMPORTED, **item}, client=client, timeout=120)
+                                               extra_args={**expect, **item}, client=client, timeout=120)
             build_sample.report("colour_in_part", code, part_result)
             show(client, scratch, 0)
             if code != 0:

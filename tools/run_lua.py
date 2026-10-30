@@ -269,8 +269,10 @@ def run(script: Path, open_file=None, keep_open=False, extra_args=None, timeout=
     try:
         if open_file:
             scratch_id, scratch = open_scratch(client, Path(open_file))
-            # a .dorico copy is identified by its path; a MusicXML import is untitled (empty path)
-            args["expectScratch"] = {"path": fwd(scratch) if scratch.suffix.lower() == ".dorico" else ""}
+            # A .dorico copy is identified by its path. A MusicXML import has an empty path, as has any project never
+            # saved, the user's own included, so the probe also wants the id the copy opened as.
+            args["expectScratch"] = {"path": fwd(scratch) if scratch.suffix.lower() == ".dorico" else "",
+                                     "openScoreID": scratch_id}
         launcher = write_launcher(Path(script).resolve(), args, run_id)
         client.command(f"Script.RunScript?ScriptPath={fwd(launcher)}&ShowConsole=false")
         problems = []

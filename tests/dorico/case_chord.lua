@@ -36,4 +36,4 @@ probe.run("case_chord", function(p)
     end
   end
   p:check("a piano note at 0", false)
-end)
+end, { scratchOnly = true })

@@ -49,9 +49,12 @@ local function normalise(path)
   return (path or ""):gsub("\\", "/"):lower()
 end
 
--- expected: args.expectScratch from the runner ({path = "<scratch .dorico>"} or {path = ""} for an import).
-function probe.isExpectedScratch(expected, actualPath)
-  return normalise(expected.path) == normalise(actualPath)
+-- expected: args.expectScratch from the runner: {path = "<scratch .dorico>"} or {path = ""} for an import, with the
+-- openScoreID the runner saw the copy open as. An import's empty path is every unsaved project's, so it needs the id.
+function probe.isExpectedScratch(expected, actualPath, actualScoreID)
+  if normalise(expected.path) ~= normalise(actualPath) then return false end
+  if expected.openScoreID ~= nil then return expected.openScoreID == actualScoreID end
+  return normalise(expected.path) ~= ""
 end
 
 -- The active project's file path from the text export's first data row; "" if it was never saved.
@@ -85,21 +88,28 @@ local function traceback(err)
   return debug.traceback(err, 2)
 end
 
-function probe.run(name, body)
+-- opts.scratchOnly: refuse to run unless the runner named a scratch copy, for a script that changes the project.
+function probe.run(name, body, opts)
   local p = setmetatable({ args = probe.readArgs(), checks = {}, facts = {}, lines = {}, ok = true }, P)
   local ok, err = xpcall(function()
     local expected = p.args.expectScratch
     if expected then
       -- the runner opened a scratch copy: refuse to touch anything unless it is the active project
-      local actual = probe.projectPath(DoApp.DoApp())
+      local app = DoApp.DoApp()
+      local actual = probe.projectPath(app)
+      local id = app.currentScore.openScoreID
       p.facts.activeProjectPath = actual
-      if not probe.isExpectedScratch(expected, actual) then
+      if not probe.isExpectedScratch(expected, actual, id) then
         p.facts.scratchVerified = false
-        error("refusing to run: the active project is '" .. actual .. "', not the scratch copy '" .. expected.path .. "'")
+        error("refusing to run: the active project is '" .. actual .. "' (OpenScoreID " .. tostring(id)
+          .. "), not the scratch copy '" .. expected.path .. "' (OpenScoreID " .. tostring(expected.openScoreID) .. ")")
       end
       p.facts.scratchVerified = true
       -- the runner closes exactly this project afterwards
-      p.facts.scratchScoreID = DoApp.DoApp().currentScore.openScoreID
+      p.facts.scratchScoreID = id
+    elseif opts and opts.scratchOnly then
+      p.facts.scratchVerified = false
+      error("refusing to run: no scratch copy was named; run this through tools/run_lua.py --open")
     end
     body(p)
   end, traceback)

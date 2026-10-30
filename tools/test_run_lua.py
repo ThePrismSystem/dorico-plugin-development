@@ -62,6 +62,12 @@ class ScriptHeaderTests(unittest.TestCase):
                         bare.append(f"{path.relative_to(run_lua.REPO)}:{n}")
         self.assertEqual(bare, [])
 
+    def test_the_cases_run_only_on_a_scratch_copy(self):
+        # Run from Script > Run Script, or with --on-active, a case would change the user's own project.
+        loose = [path.name for path in sorted((run_lua.REPO / "tests" / "dorico").glob("case_*.lua"))
+                 if "{ scratchOnly = true })" not in path.read_text(encoding="utf-8")]
+        self.assertEqual(loose, [])
+
 
 class FakeClient:
     """Stands in for DoricoClient: records commands, simulates an open and a script run."""
@@ -206,6 +212,21 @@ class RunTests(unittest.TestCase):
 
         run_lua.run(self.script, open_file=self.source, client=FakeClient(self.run_dir, capture))
         self.assertTrue(seen["expectScratch"]["path"].endswith("/scratch.dorico"))
+        self.assertEqual(seen["expectScratch"]["openScoreID"], 7)
+
+    def test_an_import_is_named_by_the_id_it_opened_as(self):
+        # An import has no path yet, like any project never saved, so the probe needs the id to tell it from the
+        # user's own.
+        seen = {}
+
+        def capture(args):
+            seen.update(args)
+            return {"runId": args["runId"], "ok": True, "checks": [], "facts": {"scratchVerified": True}}
+
+        source = Path(self.tmp.name) / "fixture.musicxml"
+        source.write_text("<score-partwise/>")
+        run_lua.run(self.script, open_file=source, client=FakeClient(self.run_dir, capture))
+        self.assertEqual(seen["expectScratch"], {"path": "", "openScoreID": 7})
 
     def test_timeout_returns_2_and_does_not_close(self):
         client = FakeClient(self.run_dir, result_for=None)

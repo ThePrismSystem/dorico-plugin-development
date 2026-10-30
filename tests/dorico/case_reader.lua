@@ -58,4 +58,4 @@ probe.run("case_reader", function(p)
     p:check("a colour set by id reads back", got == p.args.colour, tostring(got))
   end
   p:fact("log", log)
-end)
+end, { scratchOnly = true })
