@@ -209,7 +209,9 @@ Dorico keeps its `aboveOrBelow` and gains a `kTextEventAboveOrBelow` property fo
 
 `chordSymbolData/primaryChord` has a `root` (`noteName` `G`, `accidentalType` `kNatural`) and a
 `definition` with a `quality` (`kMajor`, `kMinor`), an `interval` (`kNone`, `k7`) and `alterations`. The dump names
-the same chords `C`, `G7`, `Am`, `F` and `G`.
+the same chords `C`, `G7`, `Am`, `F` and `G`. The reader names only these shapes, major, minor and the dominant seventh
+(`kMajor` with `k7`), and only when nothing else is set: no alterations, custom name or custom intervals, no played
+pitches, and no node it hasn't seen. Any other chord keeps its root, quality and interval but has no name.
 
 #### Dynamics
 
@@ -296,6 +298,11 @@ applies only somewhere, a `context`. A context names the layout in `layoutIDWith
 `blockInstanceID`, and sometimes a `propertyOffset` and `assignedStaveType`. A layout of -1 means every layout and a
 block instance of -1 means any.
 
+A `propertyOffset` of `0:<num>:<den>:0` puts a value partway through a note, `<num>/<den>` quarter notes from its
+start. In Fauré's *Dolly* a note crosses a barline with `kNoteSpelling` `E` at `0:0:1:0` and `F` at `0:1:1:0`, so it
+is written E sharp before the barline and F after it. The dump and the reader give the spelling at 0. Offsets starting
+with 1, 2 or 3 appear on lines, slurs, pauses and divisi labels, and the reader doesn't interpret them.
+
 How a value was set decides its context. The reading fixture's notes were set each way, then saved and decoded:
 
 | Set by | Context stored |
@@ -304,7 +311,7 @@ How a value was set decides its context. The reading fixture's notes were set ea
 | `EventEdit.ChangeProperty` with the event's ids | none |
 | `Edit.SetNoteheadSetOverride` on a selection | layout -1 and the note's own block instance |
 | `UI.InvokePropertyChangeValue` with a part on screen | that part's layout |
-| `Edit.ShowAccidentalInBrackets` on a selection | layout 0, the full score |
+| `Edit.ShowAccidentalInBrackets` on a selection | the layout on screen: layout 0 with the full score showing, the part's layout with a part showing |
 
 Other note properties the fixture holds: `kArticulationDuration` (`kStaccato`, `kTenuto`) and `kArticulationForce`
 (`kAccent`) for articulations, `kNoteStringIndex` (`int: 4` for a guitar's fifth string; the fret follows from the
@@ -339,9 +346,10 @@ an older project, at least for that step. The handbells plug-in found the same f
 When a new Dorico comes out, `python tools/resave_fixtures.py` saves the fixtures in its format and runs the tests
 ([fixtures/README.md](../fixtures/README.md)).
 
-- If every test passes, nothing the reader relies on changed. Commit the new fixtures folder and add the new
-  `fileVersion` to the version table above and to the `dorico6` profile's list in
-  [`lib/scorereader/format.lua`](../lib/scorereader/format.lua), so the reader reports the number as known.
+- One test always fails on a new version's files: `every_fixture_is_a_known_format`, because the new `fileVersion`
+  isn't in the `dorico6` profile's list yet. If that's the only failure, nothing the reader relies on changed. Add the
+  number to the profile's list in [`lib/scorereader/format.lua`](../lib/scorereader/format.lua) and to the version
+  table above, and commit the new fixtures folder.
 - If a test fails, its message names the node, the value and the format. `spikes/f1_changes.lua`, run over the old
   and new fixtures, lists the paths that appeared or went, and `spikes/tree_dump.lua` shows any part of a tree.
 - To teach the reader the change, add a profile to `format.PROFILES` with the new `fileVersion` and checks for the

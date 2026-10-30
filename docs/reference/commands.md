@@ -30,7 +30,7 @@ Remote Control API's `getcommands` lists them all.
 | `Edit.RemoveRests` | | verified | On the selection. Leaves no trace in the dump. |
 | `Edit.HideAccidental` | | verified | On the selected note (the handbells plug-in). |
 | `EventEdit.ChangeProperty` | `FlowID`, `EventID`, `EventBlockID`, `Type`, `Value` | verified | Sets a property on one event by its ids, with nothing selected, stored for every layout; it joins the run's one undo step. With no `Value` it takes the property off. It stores any name and value without checking: an unknown accidental visibility becomes `kHide` (W5, `spikes/w5_accidentals.lua`). |
-| `Edit.ShowAccidentalInParentheses`, `Edit.ShowAccidentalInBrackets` | | verified | On the selected notes; stored for layout 0, the full score, only (W5). |
+| `Edit.ShowAccidentalInParentheses`, `Edit.ShowAccidentalInBrackets` | | verified | On the selected notes; stored only for the layout on screen, layout 0 when the full score is showing (W5). |
 | `Edit.SetNoteheadSetOverride` | `NoteheadSetEntityID` | verified | On the selected notes; stored for every layout and the note's block instance (F3). |
 | `Edit.FlipItem` | | verified | Flips the selected text above or below, stored as `kTextEventAboveOrBelow` for the layout on screen (W1). |
 | `Edit.ChangeStaffTextToSystemText` | | verified | Makes the selected staff text a system text: a new event in the timebase stream (W1). |

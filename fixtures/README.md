@@ -34,6 +34,7 @@ its Dorico version wrote.
 
 Start it with Remote Control on and run `python tools/resave_fixtures.py`. It saves the fixtures built here into a
 folder for the new version, adds them to `versions.json`, saves copies of Steinberg's examples into the run folder,
-and runs the tests. `python tools/run_tests.py --inputs` reads those copies again later. If the tests fail, the new
-version changed something the reader relies on; [docs/file-format.md](../docs/file-format.md) says how to teach the
-reader a new format.
+and runs the tests. `python tools/run_tests.py --inputs` reads those copies again later. One test,
+`every_fixture_is_a_known_format`, fails until the new `fileVersion` is added to the reader's list of known numbers.
+If any other test fails, the new version changed something the reader relies on.
+[docs/file-format.md](../docs/file-format.md) says how to do both.

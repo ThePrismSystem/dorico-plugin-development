@@ -289,7 +289,7 @@ beside the decoded file). Run on `fixtures/6.2.30/reading.dorico`, whose source 
   every property with its context. [file-format.md](file-format.md) has the details.
 - Contexts (F3): a value set through Lua's property table or by `EventEdit.ChangeProperty` has no context;
   `Edit.SetNoteheadSetOverride` stores layout -1 with the note's block instance; the Properties panel with a part on
-  screen stores that part's layout; `Edit.ShowAccidentalInBrackets` stores layout 0.
+  screen stores that part's layout; `Edit.ShowAccidentalInBrackets` stores the layout on screen, as the panel does.
 - Ownership (F4): each flow's `flowPlayers` lists every player's instruments and their stave and voice streams, the same
   ownership as `flow.instruments`. Instruments' transpositions and ranges are in their library definitions.
 - Options (F5): every flow carries a full set of notation options, including the accidental duration rule and every
@@ -325,15 +325,16 @@ its events with the reader, acts on them by the ids the file gives, and reads th
 - W5, accidentals. `EventEdit.ChangeProperty` with `kNoteAccidentalVisibility_v3` takes `kRoundBrackets`,
   `kSquareBrackets`, `kShow` and `kHide`, writing the older `kNoteAccidentalVisibility` beside each (`kParenthesise`
   for both bracket kinds); it stores `kDefault`, or any other value, as `kHide`. The command with no `Value`, and the
-  Properties panel's enable switch on a selection, both take the property off. The panel's route on a selection with
-  the full score on screen stores layout 0, as the menu commands do, so a value set by id (no context) is told apart
-  from one set by hand. One `Edit.Undo` from outside took back a run's `ChangeProperty` and its `createText`
+  Properties panel's enable switch on a selection, both take the property off. The panel's route on a selection stores
+  the layout on screen, layout 0 for the full score, and so do the menu commands: with the flute part on screen,
+  `Edit.ShowAccidentalInBrackets` stored the part's layout (`w5_menu_in_part.py`). A value set by id has no context,
+  so it can be told apart from one set by hand. One `Edit.Undo` from outside took back a run's `ChangeProperty` and its `createText`
   together: the property joins the run's one undo step.
 - W6, showing a problem. A colour set by `ChangeProperty` holds in every layout and reads back
   (`tests/dorico/case_reader.lua`). The only command found that creates a comment, `NoteInput.ShowCommentDialog`, opens
   a dialog.
 - W7, the selection. Marking the selection with `UI.InvokePropertyChangeValue?Type=kEventColour` and reading a saved
-  copy finds every selected event, texts included: their colour is stored for layout 0. The enable switch takes the
+  copy finds every selected event, texts included: their colour is stored for the layout on screen. The enable switch takes the
   marks off again, leaving nothing behind. It would also take off a colour a selected item already had, so a plug-in
   notes those from a saved copy first and puts them back by the same route. The panel ignores a property Dorico
   doesn't know, so a private marker isn't possible. `EventEdit.Select` replaces the selection; the probe's attempt to
