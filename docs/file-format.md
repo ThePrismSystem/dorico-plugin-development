@@ -43,7 +43,8 @@ u32 nodeCount, then one record per node, node 0 the root:
   when the tag's 2 bit is set: child count, then that many child node ids
 ```
 
-The tag's 1 bit marks a node whose children are a list. Each distinct value is stored once and shared. Stock Lua
+The tag's 1 bit marks a node whose children are a list. Saved files use every value in the tag's other six bits,
+and what they mean isn't known, so the reader ignores them. Each distinct value is stored once and shared. Stock Lua
 decodes a 2.5 MB `score.dtn` in about 0.1 s, and every binary file from 6.0.22 to 6.2.30 starts with the same `4, 1`
 header.
 

@@ -1,6 +1,7 @@
 -- The binary tree a saved project keeps its score in (score.dtn inside the .dorico zip). Steinberg doesn't document
--- it. The layout below comes from files saved by Dorico 6.0 to 6.2 (docs/file-format.md), so the decoder refuses
--- anything that doesn't fit it exactly.
+-- it. The layout below comes from files saved by Dorico 6.0 to 6.2 (docs/file-format.md). The decoder refuses a file
+-- whose header, name or value indexes, child ids or length don't fit it. It reads only the tag's two low bits: saved
+-- files use every value in the other six, and what they mean isn't known.
 --
 --   u32 4, u32 1, u32 nameCount, nameCount NUL-terminated element names
 --   u32 valueCount, valueCount NUL-terminated values (value 0 is "")
