@@ -2,6 +2,7 @@
 heading (#anchor) matches a heading in its file, by GitHub's rule for heading anchors."""
 import re
 import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -12,11 +13,14 @@ HEADING = re.compile(r"^#+\s+(.*)$", re.M)
 
 
 def docs(root):
-    """README.md and the Markdown under docs/, leaving out docs/superpowers (working notes, kept out of git)."""
+    """README.md and the Markdown under docs/, leaving out any git ignores (local notes)."""
     root = Path(root)
+    out = subprocess.run(["git", "ls-files", "--others", "--ignored", "--exclude-standard", "--", "docs"], cwd=root,
+                         capture_output=True, text=True)
+    ignored = set(out.stdout.splitlines()) if out.returncode == 0 else set()
     found = [root / "README.md"] if (root / "README.md").exists() else []
     for path in sorted((root / "docs").rglob("*.md")) if (root / "docs").exists() else []:
-        if "superpowers" not in path.relative_to(root).parts:
+        if path.relative_to(root).as_posix() not in ignored:
             found.append(path)
     return found
 
@@ -96,6 +100,14 @@ class RuleTests(unittest.TestCase):
 
     def test_links_in_code_are_left_alone(self):
         self.write("`[x](nowhere.md)`\n\n```\n[y](nowhere.md)\n```\n")
+        self.assertEqual(broken(self.root), [])
+
+    def test_docs_git_ignores_are_left_alone(self):
+        subprocess.run(["git", "init", "-q", str(self.root)], check=True)
+        (self.root / ".git" / "info" / "exclude").write_text("docs/notes/\n", encoding="utf-8")
+        (self.root / "docs" / "notes").mkdir()
+        (self.root / "docs" / "notes" / "draft.md").write_text("[gone](gone.md)\n", encoding="utf-8")
+        self.write("[o](docs/other.md)\n")
         self.assertEqual(broken(self.root), [])
 
     def test_a_numbered_label_names_its_target(self):
