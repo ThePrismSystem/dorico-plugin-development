@@ -2,7 +2,7 @@
 -- (through its property table), and adds a second flow with four flute notes, since MusicXML holds one flow.
 -- fixtures/build_sample.py runs it.
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
-local mine = here .. "?.lua;" .. here .. "../spikes/lib/?.lua"
+local mine = here .. "?.lua;" .. here .. "../spikes/lib/?.lua;" .. here .. "../lib/?.lua"
 for name in pairs(package.loaded) do
   if package.searchpath(name, mine) then package.loaded[name] = nil end
 end
@@ -13,6 +13,7 @@ local SECOND_FLOW = "Second movement"
 local SECOND_FLOW_FLUTE = { "C5", "D5", "E5", "F5" }
 
 probe.run("finish_sample", function(p)
+  local commands = require("scorereader.dorico.commands")
   local app = DoApp.DoApp()
   local score = app.currentScore
   -- the trumpet is the second player; its voice stream holds only notes, so stream.events lists them
@@ -38,7 +39,7 @@ probe.run("finish_sample", function(p)
     if not before[f.id] then second = f end
   end
   if not p:check("a second flow was added", second ~= nil) then return end
-  app:doCommand(string.format("Project.Flow.Rename?FlowID=%d&Name=%s", second.id, SECOND_FLOW))
+  app:doCommand(commands.build("Project.Flow.Rename", { { "FlowID", second.id }, { "Name", SECOND_FLOW } }))
   local fluteId = app.currentScore.players[1].instruments[1].id
   local flute
   for i, s in ipairs(second.voiceStreams) do

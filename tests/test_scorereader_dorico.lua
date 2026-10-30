@@ -125,6 +125,31 @@ return {
     t:eq(rest.instance, 8, "the next block instance")
     t:eq(text.text, "dolce", "no carriage return from a CRLF dump")
   end,
+  lines_from_real_dumps = function(t)
+    local ev = dump.parse(table.concat({
+      "Start block id: 1061 position: 0",
+      "0 (0) dur: 1: kNoteEvent (id:7932) at 0, duration 1  E5 (ends 1)",
+      "0 (0) dur: 1: kRestEvent (id:216) at 0, duration 1  ",
+      "8 (8): kGraceNoteEvent (id:200) at 8  secondary pos -1/2 (-0.5), notated duration: 1/2 (0.5), B6 ",
+      "1.5 (3/2 (1.5)) dur: 1/2 (0.5): kNoteEvent (id:2884) at 3/2 (1.5), duration 1/2 (0.5)  Eb4 (ends 2)",
+      "0 (0): kTextEvent (id:2740) at 0 : CANTOR",
+      "0 (0): kLyricEvent (id:3) at 0  element ID = 0,  duration 0",
+    }, "\n") .. "\n").events
+    t:eq(ev[1].kind, "note")
+    t:eq(ev[1].spelling, "E5")
+    t:eq(ev[1].pos, 0)
+    t:eq(ev[1].duration, 1)
+    t:eq(ev[1].instance, 1061)
+    t:eq(ev[2].kind, "rest")
+    t:eq(ev[3].kind, "grace")
+    t:eq(ev[3].spelling, "B6")
+    t:eq(ev[3].pos, 8)
+    t:eq(ev[4].pos, 1.5)
+    t:eq(ev[4].duration, 0.5)
+    t:eq(ev[4].spelling, "Eb4")
+    t:eq(ev[5].text, "CANTOR")
+    t:eq(ev[6].kind, "other")
+  end,
   the_block_id_of_an_event_in_a_lua_stream = function(t)
     local parsed = dump.parse("Start block id: 1014 position: 0\n"
       .. "4 (4): kNoteEvent (id:276) at 4, duration 1  G5 (ends 5)")

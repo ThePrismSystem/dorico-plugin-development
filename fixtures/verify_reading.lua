@@ -2,7 +2,7 @@
 -- notes in every flow, by sounding spelling, position and duration, with players matched by their place in the
 -- score. It reports the players' names as Dorico gives them. Read-only.
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
-local mine = here .. "?.lua;" .. here .. "../spikes/lib/?.lua"
+local mine = here .. "?.lua;" .. here .. "../spikes/lib/?.lua;" .. here .. "../lib/?.lua"
 for name in pairs(package.loaded) do
   if package.searchpath(name, mine) then package.loaded[name] = nil end
 end
@@ -22,7 +22,7 @@ local function key(spelling, pos, duration, grace)
 end
 
 probe.run("verify_reading", function(p)
-  local dumpparse = require("dumpparse")
+  local dump = require("scorereader.dorico.dump")
   local json = require("json")
   local f = assert(io.open(here .. "reading.expected.json", "rb"))
   local expected = json.decode(f:read("*a"))
@@ -42,7 +42,7 @@ probe.run("verify_reading", function(p)
         local got = {}
         for j, s in ipairs(flow.voiceStreams) do
           if flow.instruments[j].id == owner then
-            for _, ev in ipairs(dumpparse.parse(s:dump()).events) do
+            for _, ev in ipairs(dump.parse(s:dump()).events) do
               if ev.kind == "note" or ev.kind == "grace" then
                 got[#got + 1] = key(ev.spelling, ev.pos, ev.duration, ev.kind == "grace")
               end

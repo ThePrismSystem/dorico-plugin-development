@@ -2,7 +2,7 @@
 -- Variant (and the property table's entries) offer? Colours the trumpet's first note by command, then reads it
 -- every way it can find. Scratch copy only.
 local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
-local mine = here .. "?.lua;" .. here .. "lib/?.lua;" .. here .. "../fixtures/?.lua"
+local mine = here .. "?.lua;" .. here .. "lib/?.lua;" .. here .. "../fixtures/?.lua;" .. here .. "../lib/?.lua"
 for name in pairs(package.loaded) do
   if package.searchpath(name, mine) then package.loaded[name] = nil end
 end
@@ -18,6 +18,8 @@ local function try(fn)
 end
 
 probe.run("s8_colour_read", function(p)
+  local dump = require("scorereader.dorico.dump")
+  local edit = require("scorereader.dorico.edit")
   local dumpparse = require("dumpparse")
   local app = DoApp.DoApp()
   local score = app.currentScore
@@ -31,10 +33,10 @@ probe.run("s8_colour_read", function(p)
   for _, e in ipairs(trumpet.events) do
     if not note and tostring(e):match("^kNoteEvent") then note = e end
   end
-  local parsed = dumpparse.parse(trumpet:dump())
+  local parsed = dump.parse(trumpet:dump())
   app:doCommand("Edit.SelectNone")
   app:doCommand(string.format("EventEdit.Select?FlowID=%d&EventID=%d&EventBlockID=%d", flow.id, note.id,
-    dumpparse.blockIdOf(trumpet, note.id, parsed)))
+    edit.blockIdOf(trumpet, note.id, parsed)))
   app:doCommand("UI.InvokePropertyChangeValue?Type=kEventColour&Value=#ffff0000")
   app:doCommand("Edit.SelectNone")
   for _, e in ipairs(trumpet.events) do
