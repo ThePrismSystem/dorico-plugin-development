@@ -44,8 +44,16 @@ def then_command(command):
     return {"command": command}
 
 
+def request(client, command):
+    """Dorico's reply to a command. Notices it pushes on its own (selectionchanged and the like) can come first, and
+    the reply to an earlier command can still be queued, so the queue is read until it is quiet, and the reply is the
+    next "response"."""
+    client.settle(quiet=0.5, limit=10)
+    return client.request({"message": "command", "command": command}, expect="response")
+
+
 def send(test, client, command):
-    reply = client.command(command)
+    reply = request(client, command)
     test.assertEqual(reply.get("code"), "kOK", f"{command}: {reply}")
 
 
@@ -61,8 +69,10 @@ def then_rerun_last():
     def step(test, client, printed):
         result = harness.run_lua.RUN_DIR / "result.json"
         before = result.stat().st_mtime_ns if result.exists() else 0
-        send(test, client, "Script.RunLastScript")
+        reply = request(client, "Script.RunLastScript")
         rewritten = harness.run_lua.wait_for(lambda: result.exists() and result.stat().st_mtime_ns != before, 30)
+        # Checked after the wait: a failure closes the copy, and closing it under a rerun still to come crashed Dorico.
+        test.assertEqual(reply.get("code"), "kOK", f"Script.RunLastScript: {reply}")
         test.assertTrue(rewritten, "Run Last Script wrote no result")
         harness.check(test, json.loads(result.read_text(encoding="utf-8")), "the rerun")
     return then_python(step)
