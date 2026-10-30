@@ -7,7 +7,12 @@ decode every listed project, so when a Dorico version changes the format, the te
 ## Built here
 
 `6.2.30/sample.dorico` is built by `build_sample.py` from `sample_data.py`, and `expected.json` records what it
-holds.
+holds. The examples run on it.
+
+`6.2.30/reading.dorico` is built by `build_reading.py` from `make_reading_xml.py`, and `reading.expected.json` records
+what it holds. It has one of each kind of item the reader reads, and note properties set five different ways
+(through Lua, by command on a selection, by event id, by a menu command, and with a part on screen), so the reader's
+tests can tell how Dorico stores each one.
 
 ## From ancientgroove.co.uk
 
