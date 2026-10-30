@@ -103,7 +103,9 @@ do
       add(string.format("$label.SetBounds(12, %d, 200, 24)", y + 3))
       add("$form.Controls.Add($label)")
       if f.kind == "check" then
+        -- Windows draws a System-style tick box itself, so another program can read and set its state.
         add("$c = New-Object System.Windows.Forms.CheckBox")
+        add("$c.FlatStyle = 'System'")
         add("$c.Checked = $" .. tostring(f.default == true))
       elseif f.kind == "choice" then
         local items = {}
