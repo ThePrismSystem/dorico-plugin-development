@@ -237,8 +237,9 @@ What it gives:
 
 Ids in the copy are the ids Lua uses: flow, stream, event and instrument ids, and the block and block instance ids
 `EventEdit.Select` needs. So anything found in the copy can be selected or changed by its id, with no matching by
-position ([06-match-by-event-id.lua](../examples/fundamentals/06-match-by-event-id.lua)). A read takes 0.8 to 1.7 s on
-the fixtures, the save included; decoding Holst's *The Planets*, 122,366 events, takes 7.5 s.
+position ([06-match-by-event-id.lua](../examples/fundamentals/06-match-by-event-id.lua)). A read takes 0.8 to 1.6 s on
+the fixtures, the save included; decoding Holst's *The Planets*, 122,366 events, takes 6.7 s ([Reading
+speed](spikes.md#reading-speed)).
 
 The reader works out the format from the file's structure. A `fileVersion` it hasn't seen is reported in `s.format` and
 read if the structure fits a known one; a structure it doesn't know stops the read with an error that names the node and
@@ -256,10 +257,10 @@ instrument transposes.
 
 ### `stream.events` fails on real music
 
-`stream.events` gives event objects, but it raises an error on any stream that holds a kind of event with no Lua class:
-lyrics, slurs, hairpins, playing techniques. Most real music has at least one of those. On the sample's flute voice,
-which holds a slur, it raised nothing, but the list stopped just before the slur, so a script can't count on either an
-error or every event.
+`stream.events` gives event objects, but it raises an error on a stream that holds a kind of event with no Lua class,
+such as lyrics, hairpins and playing techniques. A slur raises nothing: on the sample's flute voice the list just
+stopped before the slur. Most real music has one or the other, so a script can count on neither an error nor every
+event.
 
 ### `stream:dump()` always works
 
@@ -272,9 +273,9 @@ Start block id: 1061 position: 0
 ```
 
 Each event line ends in what `tostring(event)` gives. The `dump` helper parses it into tables
-([03-read-notes.lua](../examples/fundamentals/03-read-notes.lua)), and every example that reads notes carries a copy.
-The `Start block id` is, despite its name, a block instance id, and the events after it belong to that instance;
-selecting an event needs it (section 5).
+([03-read-notes.lua](../examples/fundamentals/03-read-notes.lua)), and the examples that read notes from Lua rather than
+a saved copy carry a copy of it. The `Start block id` is, despite its name, a block instance id, and the events after it
+belong to that instance; selecting an event needs it (section 5).
 
 What the dump shows and doesn't:
 
@@ -302,7 +303,7 @@ How a property was set decides where it applies, and the saved copy keeps that
 | ------ | ---------- |
 | `propertyTable:set` from Lua, or `EventEdit.ChangeProperty` by id | every layout and block instance |
 | `Edit.SetNoteheadSetOverride` on a selection | every layout, the note's own block instance |
-| The Properties panel (`UI.InvokePropertyChangeValue`) or an Edit menu command | the layout on screen |
+| The Properties panel (`UI.InvokePropertyChangeValue`), `Edit.ShowAccidentalInBrackets` or `Edit.ShowAccidentalInParentheses` | the layout on screen |
 
 `score.value(s, e, property, layoutId)` gives the value a layout shows, and prefers one stored for that layout to one
 with no context: once a command has recoloured a note, the full score shows the command's colour. `score.entries(s, e)`

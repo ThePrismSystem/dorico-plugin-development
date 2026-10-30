@@ -1,5 +1,5 @@
 -- colour-by-pitch.lua counted the sample's notes by pitch class and named each class's colour. Whether the notes
--- have their colours is colour-by-pitch.coloured.lua's question (it reads them through 04's paste, in a later run).
+-- have their colours is colour-by-pitch.coloured.lua's question (it runs 04 afterwards, which reads them from a saved copy).
 local checks = require("checks")
 
 local NAMES = { [0] = "C", "C#/Db", "D", "D#/Eb", "E", "F", "F#/Gb", "G", "G#/Ab", "A", "A#/Bb", "B" }

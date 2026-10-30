@@ -131,14 +131,14 @@ Probes: `s8_properties.lua`, `s8_colour_read.lua`.
 - `UI.InvokePropertyChangeValue?Type=kNoteheadSetOverride&Value=string: "noteheadset.diamondNoteheads"` changed
   nothing.
 
+The route fundamental 04 (`04-noteheads-and-colours.lua`, replaced by the reader in commit 93e7005) took before the
+reader: add a flow with `Project.Flow.New` and remove the players the music flow lacks; select the music flow's whole
+range (`EventEdit.Select` its first note, `Edit.SelectToStartOfFlow`, `Edit.SelectAtEndOfFlow`, and
+`EventEdit.NavigateDownExtend` once per further staff); `Filter.NotesAndChords` and `Edit.Copy`; paste onto a temporary
+note in the new flow's first voice; delete the slurs and other lines the filter keeps; read `stream.events` and
+`propertyTable:get`; and take the flow away with one `Edit.Undo`. It merged unisons in two voices, listed chord notes in
+a different order each time, replaced the clipboard and the selection, and still couldn't read a colour set by command.
 
-The route fundamental 04 took before the reader: add a flow with `Project.Flow.New` and remove the players the music
-flow lacks; select the music flow's whole range (`EventEdit.Select` its first note, `Edit.SelectToStartOfFlow`,
-`Edit.SelectAtEndOfFlow`, and `EventEdit.NavigateDownExtend` once per further staff); `Filter.NotesAndChords` and
-`Edit.Copy`; paste onto a temporary note in the new flow's first voice; delete the slurs and other lines the filter
-keeps; read `stream.events` and `propertyTable:get`; and take the flow away with one `Edit.Undo`. It merged unisons in
-two voices, listed chord notes in a different order each time, replaced the clipboard and the selection, and still
-couldn't read a colour set by command.
 ## S1: reading the selection
 
 Probes: `s1_read_selection.lua`, driven by `s1_selection.py`; `select_note.lua` makes the selections.
@@ -318,6 +318,13 @@ beside the decoded file). Run on `fixtures/6.2.30/reading.dorico`, whose source 
 The reading fixture also showed what Dorico 6.2.30's MusicXML import does with text: every `<words>` direction lands
 above the staff whatever its `placement`, a direction with two `<words>` keeps only the last, and `font-weight` is
 dropped. `pizz.` and `arco` arrive as playing techniques, not text.
+
+## Reading speed
+
+Measured on 30 October 2026 on Windows 11 with Dorico 6.2.30. `tests/dorico/test_reader.py` read each fixture inside
+Dorico in 0.8 to 1.6 s, `app:save` included: 0.8 s for the smallest (1,281 events), 1.6 s for Figaro (13,420). In
+stock Lua 5.2, `score.readFile` decoded the sample in 0.5 s and Holst's *The Planets* from ancientgroove.co.uk
+(122,366 events) in 6.7 s.
 
 ## W1 to W7: changing what the reader found
 

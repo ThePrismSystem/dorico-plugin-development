@@ -62,8 +62,8 @@ for _, e in ipairs(score.eventsOf(s, s.flows[1], s.players[1])) do
 end
 ```
 
-A read of the fixtures takes 0.8 to 1.7 s, `app:save` included. Large scores take longer: decoding Holst's *The
-Planets* (122,366 events) takes 7.5 s in stock Lua.
+A read of the fixtures takes 0.8 to 1.6 s in Dorico, `app:save` included. Large scores take longer: decoding Holst's
+*The Planets* (122,366 events) takes 6.7 s in stock Lua ([Reading speed](docs/spikes.md#reading-speed)).
 
 ## Requirements
 
@@ -147,10 +147,10 @@ and Lua 5.2 (`lua52` on the path, or `C:/ProgramData/chocolatey/lib/lua52/tools/
 python tools/run_tests.py --dorico
 ```
 
-That also runs every example in Dorico and checks what it did, which takes ten minutes or so. It needs Dorico 6
-running with Remote Control turned on in its preferences. The first time, Dorico asks you to allow the test client,
-and the session token is kept in `.dorico-token`. To use a client name Dorico already allows, set
-`DORICO_CLIENT_NAME` or put the name in `.dorico-client-name`.
+That also runs every example in Dorico and checks what it did, which takes a while. It needs Dorico 6 running with
+Remote Control turned on in its preferences. The first time, Dorico asks you to allow the test client, and the session
+token is kept in `.dorico-token`. To use a client name Dorico already allows, set `DORICO_CLIENT_NAME` or put the name
+in `.dorico-client-name`.
 
 The tests never touch your own projects. Each copies a fixture from the newest version's folder (now
 `fixtures/6.2.30`) into a scratch folder, `%TEMP%\dorico-examples-run`: `reading.dorico` for 07 to 09 and

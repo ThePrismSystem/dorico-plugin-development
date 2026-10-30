@@ -4,15 +4,15 @@
 -- the value the full score shows and the value the player's part shows. A "-" means none.
 -- Changes: nothing (read-only).
 -- Undo: nothing to undo.
--- Builds on: 04-read-the-saved-copy.lua. Try it on a project where you've changed a note in a part, or with Edit
--- menu commands. Open Script > Show Script Console to read what it prints.
+-- Builds on: 04-read-the-saved-copy.lua. Try it on a project where you've changed a note in a part, or put an
+-- accidental in brackets. Open Script > Show Script Console to read what it prints.
 --
--- How a value was set decides where it applies. Set through Lua's property table or by EventEdit.ChangeProperty, it
--- has no context and holds in every layout. Edit.SetNoteheadSetOverride on a selection stores it for every layout
--- but only the note's own block instance. The Properties panel and the Edit menu's commands store it for the layout
--- on screen: set in a part, it shows only in that part, and set with the full score open, only in the full score.
--- score.value(s, e, property, layoutId) picks the value a layout shows, preferring one stored for that layout.
--- A value can also start partway through a note, such as the second half of a tied note.
+-- How a value was set decides where it applies. Set through Lua's property table or by EventEdit.ChangeProperty, it has
+-- no context and holds in every layout. Edit.SetNoteheadSetOverride on a selection stores it for every layout but only
+-- the note's own block instance. The Properties panel and Edit.ShowAccidentalInBrackets (or InParentheses) store it for
+-- the layout on screen: set in a part, it shows only in that part, and set with the full score open, only in the full
+-- score. score.value(s, e, property, layoutId) picks the value a layout shows, preferring one stored for that layout. A
+-- value can also start partway through a note, such as the second half of a tied note.
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. The read of app.currentScore goes

@@ -1,4 +1,4 @@
-"""Each example, run in Dorico on a scratch copy of the sample, then checked.
+"""Each example, run in Dorico on a scratch copy of the sample or the reading fixture, then checked.
 
     python tests/dorico/test_examples.py              every example
     python tests/dorico/test_examples.py -k colour    those whose name matches

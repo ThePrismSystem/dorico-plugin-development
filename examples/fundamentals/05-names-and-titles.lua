@@ -1,5 +1,5 @@
--- Names and titles Lua can't read directly, from a saved copy: the project's title and composer, flow titles,
--- players, instruments and layouts.
+-- Names and titles from a saved copy, most of which Lua can't read directly: the project's title and composer, flow
+-- titles, players, instruments and layouts.
 -- What it does: prints "project: <title>", "composer: <composer>", a "flow <n>: <title>" line per flow, a
 -- "player <n>: <name>" line per player, an "instrument <n>: ..." line per instrument with its id in Dorico's
 -- instrument library and how it transposes, and a "layout <id>: <name> (<type>)" line per layout.
@@ -7,12 +7,11 @@
 -- Undo: nothing to undo.
 -- Builds on: 04-read-the-saved-copy.lua. Open Script > Show Script Console to read what it prints.
 --
--- Lua gives a flow no title, an instrument no name and the project no title. The saved copy has them all: the
--- project info in s.info, each flow's title, and each player with its instruments. A player's name has the
--- transposition Dorico adds ("Trumpet Zoë (B{@flat@})", with the flat as a token), and its instrument's name doesn't.
--- An instrument's transposition is how far its written notes sit above the sounding ones, in steps and semitones:
--- a B-flat trumpet's is 1 step and 2 semitones, a major second. The copy doesn't know where the project is saved;
--- the text export does (docs/guide.md, section 4).
+-- Lua gives a flow no title and an instrument no name. The saved copy has them all: the project info in s.info, each
+-- flow's title, and each player with its instruments. A player's name has the transposition Dorico adds ("Trumpet Zoë
+-- (B{@flat@})", with the flat as a token), and its instrument's name doesn't. An instrument's transposition is how far
+-- its written notes sit above the sounding ones, in steps and semitones: a B-flat trumpet's is 1 step and 2 semitones,
+-- a major second. The copy doesn't know where the project is saved; the text export does (docs/guide.md, section 4).
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. The read of app.currentScore goes
