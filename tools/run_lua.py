@@ -11,8 +11,8 @@ project is that copy before doing anything (probe.lua, args.expectScratch), and 
 afterwards only when the probe confirmed it (unless --keep-open). Without --open the script runs on whatever project
 is active, which needs an explicit --on-active.
 
-Exit codes: 0 ok, 1 checks failed, 2 timeout, refusal or connection failure, 3 bad --args or an error in the runner
-itself.
+Exit codes: 0 ok, 1 checks failed, 2 timeout, refusal, connection failure or a copy that can't be seen to close, 3 bad
+--args or an error in the runner itself.
 """
 import argparse
 import json
@@ -94,11 +94,19 @@ def syntax_error(script: Path):
     return None
 
 
+class WindowListError(OSError):
+    """capture.ps1 couldn't list Dorico's windows: no Dorico6 process, or none of its windows visible."""
+
+
 def window_titles():
-    """The titles of Dorico's visible windows (capture.ps1 -All lists one per line: path, size, title)."""
-    out = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(PRESS.parent / "capture.ps1"),
-                          "-All", "-Out", str(RUN_DIR / "windows.png")], capture_output=True, text=True).stdout
-    return [line.split("\t")[2] for line in out.splitlines() if line.count("\t") >= 2]
+    """The titles of Dorico's visible windows (capture.ps1 -All lists one per line: path, size, title). A failed
+    listing raises WindowListError, since an empty list would say no scratch copy is open."""
+    proc = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(PRESS.parent / "capture.ps1"),
+                           "-All", "-Out", str(RUN_DIR / "windows.png")], capture_output=True, text=True)
+    if proc.returncode != 0:
+        said = (proc.stderr or proc.stdout).strip().splitlines()
+        raise WindowListError(f"capture.ps1 could not list Dorico's windows: {said[0] if said else proc.returncode}")
+    return [line.split("\t")[2] for line in proc.stdout.splitlines() if line.count("\t") >= 2]
 
 
 def open_windows(process=None):
@@ -181,12 +189,16 @@ def scratch_open():
 
 def close_scratch(client, score_id: int, attempts=5):
     """Close without saving, and confirm the copy's window has gone: Dorico can ignore a close that arrives
-    while it is still finishing the script run."""
+    while it is still finishing the script run. False when the close isn't confirmed."""
     for _ in range(attempts):
         client.command(f"File.CloseProject?OpenScoreID={score_id}&Save=false")
         time.sleep(1)
-        if not scratch_open():
-            return True
+        try:
+            if not scratch_open():
+                return True
+        except WindowListError as e:
+            print(f"{e}; if the scratch copy is still open, close it in Dorico without saving", file=sys.stderr)
+            return False
         time.sleep(2)
     print("the scratch copy could not be closed; close it in Dorico without saving", file=sys.stderr)
     return False
@@ -254,7 +266,6 @@ def run(script: Path, open_file=None, keep_open=False, extra_args=None, timeout=
         client = dws.DoricoClient()
         client.connect()
     scratch_id = None
-    verified = False
     try:
         if open_file:
             scratch_id, scratch = open_scratch(client, Path(open_file))
@@ -280,10 +291,12 @@ def run(script: Path, open_file=None, keep_open=False, extra_args=None, timeout=
         if scratch_id is not None and not verified:
             print("the active project could not be confirmed as the scratch copy; nothing was closed", file=sys.stderr)
             return 2, result, scratch_id
-        return (0 if result.get("ok") else 1), result, scratch_id
+        code = 0 if result.get("ok") else 1
+        # a copy left open blocks the next run, which refuses to open another
+        if scratch_id is not None and not keep_open and not close_scratch(client, scratch_id):
+            code = 2
+        return code, result, scratch_id
     finally:
-        if scratch_id is not None and verified and not keep_open:
-            close_scratch(client, scratch_id)
         if own_client:
             client.close()
 

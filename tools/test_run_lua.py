@@ -143,6 +143,45 @@ class RunTests(unittest.TestCase):
             run_lua.run(self.script, open_file=self.source, client=client)
         self.assertEqual(len(client.closes()), 2)
 
+    def test_a_copy_that_stays_open_exits_2(self):
+        titles = iter([[]] + [["Song in scratch*"]] * 5)
+        with mock.patch.object(run_lua, "window_titles", side_effect=lambda: next(titles)), \
+                mock.patch.object(run_lua.time, "sleep", return_value=None), \
+                mock.patch.object(sys, "stderr", io.StringIO()):
+            client = FakeClient(self.run_dir, self.ok_result(True))
+            code, result, _ = run_lua.run(self.script, open_file=self.source, client=client)
+        self.assertEqual(code, 2)
+        self.assertTrue(result["ok"], "the result is still handed back")
+        self.assertEqual(len(client.closes()), 5)
+
+    def test_a_close_that_cant_be_confirmed_exits_2(self):
+        # With no Dorico6 process (a later Dorico) capture.ps1 fails, and an empty list would read as a closed copy.
+        listed = iter([[]])
+
+        def titles():
+            try:
+                return next(listed)
+            except StopIteration:
+                raise run_lua.WindowListError("no Dorico6") from None
+
+        err = io.StringIO()
+        with mock.patch.object(run_lua, "window_titles", side_effect=titles), \
+                mock.patch.object(run_lua.time, "sleep", return_value=None), \
+                mock.patch.object(sys, "stderr", err):
+            client = FakeClient(self.run_dir, self.ok_result(True))
+            code, _, _ = run_lua.run(self.script, open_file=self.source, client=client)
+        self.assertEqual(code, 2)
+        self.assertEqual(len(client.closes()), 1, "a failed listing isn't retried")
+        self.assertIn("no Dorico6", err.getvalue())
+
+    def test_refuses_to_open_when_the_windows_cant_be_listed(self):
+        with mock.patch.object(run_lua, "window_titles", side_effect=run_lua.WindowListError("no Dorico6")), \
+                mock.patch.object(sys, "stderr", io.StringIO()) as err, \
+                mock.patch.object(run_lua.dws, "DoricoClient") as connect:
+            self.assertEqual(run_lua.main([str(self.script), "--open", str(self.source)]), 2)
+        connect.assert_not_called()
+        self.assertIn("no Dorico6", err.getvalue())
+
     def test_refuses_while_a_scratch_copy_is_still_open(self):
         # Copying over scratch.dorico under an open copy makes Dorico ask about a file modified on disk.
         with mock.patch.object(run_lua, "window_titles", return_value=["Song in scratch*", "Fugue in Bach"]):
@@ -246,6 +285,21 @@ class RunTests(unittest.TestCase):
         code, result, sid = run_lua.run(self.script, client=client)
         self.assertEqual(code, 2)
         self.assertFalse(any(c.startswith("Script.RunScript") for c in client.commands))
+
+
+class WindowTitleTests(unittest.TestCase):
+    def test_a_failed_listing_is_an_error_not_an_empty_list(self):
+        failed = subprocess.CompletedProcess([], 1, stdout="",
+                                             stderr="Get-Process : Cannot find a process with the name \"Dorico6\".\n")
+        with mock.patch.object(run_lua.subprocess, "run", return_value=failed), \
+                self.assertRaises(run_lua.WindowListError) as raised:
+            run_lua.window_titles()
+        self.assertIn("Dorico6", str(raised.exception))
+
+    def test_lists_the_titles(self):
+        listed = subprocess.CompletedProcess([], 0, stdout="w-0.png\t800 x 600\tSong in scratch*\n", stderr="")
+        with mock.patch.object(run_lua.subprocess, "run", return_value=listed):
+            self.assertEqual(run_lua.window_titles(), ["Song in scratch*"])
 
 
 class PromptTests(unittest.TestCase):
