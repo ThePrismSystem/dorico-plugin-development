@@ -98,13 +98,13 @@ load the reader from `lib/`, so copy the `lib` folder into Script Plug-ins besid
 | [19-key-command](examples/fundamentals/19-key-command.lua) | Counts its own runs, as a script on a key would; says how to bind a key. | No |
 | [colour-by-pitch](examples/recipes/colour-by-pitch.lua) | Colours every note by pitch class, C red through B magenta. | Yes; one Edit > Undo |
 | [label-notes](examples/recipes/label-notes.lua) | Writes trumpet valve numbers (or note names) above one player's notes. | Yes; one Edit > Undo |
-| [proofread](examples/recipes/proofread.lua) | Reports notes out of range and parallel fifths and octaves, by bar and beat. | No |
+| [proofread](examples/recipes/proofread.lua) | Reports notes outside their instrument's ranges, by bar and beat. | No |
 | [chord-symbols](examples/recipes/chord-symbols.lua) | Names the piano's chords bar by bar and writes them in as chord symbols. | Yes; three Edit > Undo presses per chord symbol |
 | [instrument-report](examples/recipes/instrument-report.lua) | Lists each flow's players, instruments, note counts and the most playing at once. | No |
 | [hotkey-colour-cycle](examples/recipes/hotkey-colour-cycle.lua) | Colours the selection, moving to the next colour on each quick rerun. | Yes; one Edit > Undo per run |
 
-A script that makes and deletes marker texts (proofread, instrument-report) leaves the project as it was, but the
-markers still make an undo step, so one Edit > Undo straight afterwards changes nothing you can see.
+A script that makes and deletes marker texts (instrument-report) leaves the project as it was, but the markers still
+make an undo step, so one Edit > Undo straight afterwards changes nothing you can see.
 
 ## What the probes changed
 
@@ -113,9 +113,6 @@ Some examples are smaller than planned, or work differently, because a probe sho
 
 - The proofreading recipe has no check for incomplete bars. Rests removed with Edit > Remove Rests leave no trace a
   script can see.
-- Lua can't read time signatures, so the chord-symbols recipe names a chord wherever three or more pitch classes sound,
-  not bar by bar, and the proofreading recipe finds bar numbers through the text export. A saved copy has time
-  signatures ([09](examples/fundamentals/09-bars-keys-and-times.lua)); those two recipes still use the older routes.
 - A colour set by command, or in the Properties panel, can't be read back from Lua, because Dorico stores it for the
   layout on screen. A saved copy reads it, and the colour recipes' tests check the exact colour through fundamental 04.
 - Edits made through the object model are undoable, against what the handbells plug-in's guide says. So 11 finds

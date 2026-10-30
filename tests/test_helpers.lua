@@ -14,6 +14,7 @@ local ASK = "examples/fundamentals/17-ask-and-report.lua"
 local TMP = (os.getenv("TEMP") or os.getenv("TMPDIR") or "/tmp"):gsub("\\", "/")
 local CHORDS = "examples/recipes/chord-symbols.lua"
 local PROOFREAD = "examples/recipes/proofread.lua"
+local EXPORT = "examples/fundamentals/15-layout-and-notation-options.lua"
 
 local function parse(lines)
   return helpers.load(READ_NOTES, "dump").parse(table.concat(lines, "\n") .. "\n")
@@ -23,7 +24,7 @@ local HEADER = '"Path","ID","FlowNumber","FlowName","Instrument","Page","Bar","T
 local PATH = '"C:/Users/calli/AppData/Local/Temp/dorico-examples-run/scratch.dorico"'
 
 local function records(rows)
-  return helpers.load(PROOFREAD, "export").parse(table.concat(rows, "\r\n") .. "\r\n")
+  return helpers.load(EXPORT, "export").parse(table.concat(rows, "\r\n") .. "\r\n")
 end
 
 -- Runs fn with DoApp standing in for Dorico's and print recorded; gives back what was printed.
@@ -121,7 +122,7 @@ return {
   end,
 
   csv_skips_a_byte_order_mark = function(t)
-    local rec = helpers.load(PROOFREAD, "export").parse("\239\187\191" .. HEADER .. "\n" .. PATH
+    local rec = helpers.load(EXPORT, "export").parse("\239\187\191" .. HEADER .. "\n" .. PATH
       .. ',"","","","","","","Project Info (Title)","Sample","N"\n')
     t:eq(rec[1].Path, "C:/Users/calli/AppData/Local/Temp/dorico-examples-run/scratch.dorico")
     t:eq(rec[1].Type, "Project Info (Title)")
@@ -254,28 +255,25 @@ return {
     t:eq(chords.name({ "C4", "D4", "E4" }), nil, "a cluster no template fits")
   end,
 
-  bars_find_a_bar_that_starts_between_quarter_notes = function(t)
-    local bars = helpers.load(PROOFREAD, "markedBars")
-    -- What the text export would say: the bar at each position, given where bars start.
-    local function barOf(starts)
-      return function(q)
-        local bar = 0
-        for i, s in ipairs(starts) do
-          if q >= s then bar = i end
-        end
-        return bar
-      end
+  out_of_range_against_the_instruments_own_ranges = function(t)
+    local outofrange, midi = helpers.load(PROOFREAD, "outofrange"), helpers.load(BY_ID, "midi")
+    local flute = { standard = "C4-A6", advanced = "B3-D7" }
+    local function brief(pitch, range)
+      local out = outofrange.check(pitch, range, midi)
+      return out and table.concat({ out.side, out.which, out.from, out.to }, " ") or "in range"
     end
-    local function startOf(pos, bar)
-      local at = { [pos] = bar(pos) }
-      for _, q in ipairs(bars.coarse(pos)) do at[q] = bar(q) end
-      for _, q in ipairs(bars.fine(bars.start(pos, at))) do at[q] = bar(q) end
-      return bars.start(pos, at)
-    end
-    t:eq(startOf(6, barOf({ 0, 4, 8 })), 4, "4/4")
-    t:eq(startOf(6, barOf({ 0, 0.5, 4.5, 8.5 })), 4.5, "4/4 after an eighth-note pickup")
-    t:eq(startOf(5, barOf({ 0, 1.5, 3, 4.5, 6 })), 4.5, "3/8")
-    t:eq(startOf(0, barOf({ 0, 4 })), 0, "the first bar")
+    t:eq(brief(57, flute), "below advanced B3 D7", "A3 is past even the advanced range")
+    t:eq(brief(59, flute), "below standard C4 A6", "B3 is past only the standard range")
+    t:eq(brief(60, flute), "in range")
+    t:eq(brief(93, flute), "in range", "A6, the top of the standard range")
+    t:eq(brief(95, flute), "above standard C4 A6")
+    t:eq(brief(99, flute), "above advanced B3 D7")
+    local bassoon = { standard = "A#1-A4", advanced = "A1-E5" }
+    t:eq(brief(33, bassoon), "below standard A#1 A4", "A1, under a range that starts on a sharp")
+    t:eq(brief(32, bassoon), "below advanced A1 E5")
+    t:eq(brief(10, { standard = "A0-C8" }), "below standard A0 C8", "only a standard range")
+    t:eq(brief(10, {}), "in range", "no range, as for unpitched percussion")
+    t:eq(brief(10, nil), "in range")
   end,
 
   guard_returns_the_open_project = function(t)

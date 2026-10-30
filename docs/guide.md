@@ -346,12 +346,11 @@ place of `.txt`). Its columns are `Path, ID, FlowNumber, FlowName, Instrument, P
 Titles and instrument names come from a saved copy now (section 3). The export still gives:
 
 - The project's file path: every row's `Path`, empty until the project is saved. A saved copy doesn't know it.
-- Which instrument a text is on, in its `Instrument` column. [proofread.lua](../examples/recipes/proofread.lua) still
-  finds instrument names this way, with marker texts made by `stream:createText` and deleted again. The `ID` column is
-  `<flow>-<stream>-<event>`, counting flows from 0.
-- Bar numbers. Every row has its `Bar`. A marker at a position tells you the bar it's in, and markers at the quarter
-  notes before it tell you where that bar starts, so a script can report "bar 2, beat 3" without reading a time
-  signature ([proofread.lua](../examples/recipes/proofread.lua)).
+- Which instrument a text is on, in its `Instrument` column. The `ID` column is `<flow>-<stream>-<event>`, counting
+  flows from 0.
+- Bar numbers: every row has its `Bar`. A marker text made with `stream:createText` at a position, exported and
+  deleted again, gives the bar there. A saved copy's time signatures give bars directly, through the bars helper
+  ([09](../examples/fundamentals/09-bars-keys-and-times.lua)).
 - Layout options, indirectly. A flow heading is a `Text Frame` row, there only while headings show, so comparing
   exports shows whether a change took ([15-layout-and-notation-options.lua](../examples/fundamentals/15-layout-and-notation-options.lua)).
   To learn an option's value, export again under each candidate and see which matches. With a single flow, two of
@@ -773,8 +772,8 @@ tests decode every fixture, one folder per Dorico version, in stock Lua.
 | A script for a key, state between runs | [19-key-command.lua](../examples/fundamentals/19-key-command.lua) |
 | Colouring every note | [colour-by-pitch.lua](../examples/recipes/colour-by-pitch.lua) |
 | Labels at each note | [label-notes.lua](../examples/recipes/label-notes.lua) |
-| Ranges, parallels, bar numbers from the export | [proofread.lua](../examples/recipes/proofread.lua) |
-| Naming chords, chord symbols by command | [chord-symbols.lua](../examples/recipes/chord-symbols.lua) |
+| Each instrument's ranges, the bar and beat of a note | [proofread.lua](../examples/recipes/proofread.lua) |
+| Naming chords bar by bar, chord symbols by command | [chord-symbols.lua](../examples/recipes/chord-symbols.lua) |
 | A report on players and instruments | [instrument-report.lua](../examples/recipes/instrument-report.lua) |
 | A key that cycles colours | [hotkey-colour-cycle.lua](../examples/recipes/hotkey-colour-cycle.lua) |
 | A complete plug-in with a dialog and tests | [Handbells Used Chart](https://github.com/ThePrismSystem/handbells-used-chart-dorico-plugin) |
