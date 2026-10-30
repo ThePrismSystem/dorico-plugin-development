@@ -86,6 +86,7 @@ row("walk_the_score", FUNDAMENTALS + "02-walk-the-score.lua", twice=True)
 row("read_notes", FUNDAMENTALS + "03-read-notes.lua", twice=True)
 row("read_the_saved_copy", READ_COLOURS, twice=True)
 row("names_and_titles", FUNDAMENTALS + "05-names-and-titles.lua", twice=True)
+row("match_by_event_id", FUNDAMENTALS + "06-match-by-event-id.lua", twice=True)
 row("commands", FUNDAMENTALS + "10-commands.lua",
     after=[then_command("Edit.Undo"), then_check("10-commands.undone.lua")])
 row("act_on_the_selection", FUNDAMENTALS + "11-act-on-the-selection.lua",
