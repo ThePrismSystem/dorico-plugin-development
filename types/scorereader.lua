@@ -287,7 +287,7 @@
 ---@class scorereader.dorico.dump
 ---@field event fun(text: string|nil, instance: integer|nil): scorereader.dorico.DumpEvent|nil
 ---@field parse fun(text: string|nil): scorereader.dorico.Dump
----@field notes fun(parsed: scorereader.dorico.Dump): scorereader.dorico.DumpEvent[]
+---@field notes fun(parsed: scorereader.dorico.Dump): scorereader.dorico.DumpEvent[], integer
 
 ---@class scorereader.dorico.Match
 ---@field byId table<integer, {file: scorereader.Event, lua: scorereader.dorico.DumpEvent}>

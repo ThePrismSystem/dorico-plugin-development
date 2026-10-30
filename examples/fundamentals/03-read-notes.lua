@@ -1,7 +1,8 @@
 -- Read every note in the project, through stream:dump(), which works on any music.
 -- What it does: prints one line per note and grace note, with tabs between the columns: flow number, player, voice
 -- (counted within the player), position and duration in quarter notes from the start of the flow, and the spelling
--- at sounding pitch. A grace note's duration reads "grace".
+-- at sounding pitch. A grace note's duration reads "grace". The last line counts the notes, and any it left out
+-- because the dump gave no spelling for them.
 -- Changes: nothing (read-only).
 -- Undo: nothing to undo.
 -- Builds on: 02-walk-the-score.lua, for which player owns each voice. Open Script > Show Script Console to read what
@@ -32,7 +33,8 @@ end
 -- starts each block instance; the events after it belong to that instance (EventEdit.Select needs it).
 --   dump.parse(text) -> {events = {{kind, id, pos, duration, spelling, grace, instance, raw}}}
 --   dump.event(text, instance) -> one event from tostring(event), or nil
---   dump.notes(parsed) -> the notes and grace notes, {{id, spelling, pos, duration, grace, instance}}
+--   dump.notes(parsed) -> the notes and grace notes, {{id, spelling, pos, duration, grace, instance}}, and how
+--     many it left out because their lines have no spelling it reads
 --   dump.owners(score, flow) -> {[voice stream id] = player name}
 -- Kinds are "note", "grace", "rest", "text" and "other". Positions and durations are quarter notes.
 local dump = {}
@@ -85,14 +87,16 @@ do
   end
 
   function dump.notes(parsed)
-    local notes = {}
+    local notes, unread = {}, 0
     for _, ev in ipairs(parsed.events) do
       if (ev.kind == "note" or ev.kind == "grace") and ev.spelling then
         notes[#notes + 1] = { id = ev.id, spelling = ev.spelling, pos = ev.pos, duration = ev.duration,
           grace = ev.grace, instance = ev.instance }
+      elseif ev.kind == "note" or ev.kind == "grace" then
+        unread = unread + 1
       end
     end
-    return notes
+    return notes, unread
   end
 
   -- flow.instruments[i] owns flow.voiceStreams[i], and tostring(player) is the player's name.
@@ -111,18 +115,20 @@ end
 local _, score = guard()
 if not score then return end
 
-local count = 0
+local count, unread = 0, 0
 for n, flow in ipairs(score.flows) do
   local owners = dump.owners(score, flow)
   local voices = {}
   for _, stream in ipairs(flow.voiceStreams) do
     local player = owners[stream.id] or "?"
     voices[player] = (voices[player] or 0) + 1
-    for _, note in ipairs(dump.notes(dump.parse(stream:dump()))) do
+    local notes, left = dump.notes(dump.parse(stream:dump()))
+    unread = unread + left
+    for _, note in ipairs(notes) do
       print(table.concat({ n, player, voices[player], note.pos, note.grace and "grace" or note.duration,
         note.spelling }, "\t"))
       count = count + 1
     end
   end
 end
-print(count .. " notes")
+print(count .. " notes" .. (unread > 0 and (", and " .. unread .. " left out with no spelling in the dump") or ""))

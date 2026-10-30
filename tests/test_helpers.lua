@@ -126,6 +126,17 @@ return {
     t:eq(notes[3].spelling, "Eb4")
   end,
 
+  dump_counts_notes_it_has_no_spelling_for = function(t)
+    local notes, unread = helpers.load(READ_NOTES, "dump").notes(parse({
+      "0 (0) dur: 1: kNoteEvent (id:1) at 0, duration 1  E5 (ends 1)",
+      "1 (1) dur: 1: kNoteEvent (id:2) at 1, duration 1  ? (ends 2)",
+      "2 (2): kGraceNoteEvent (id:3) at 2  secondary pos -1/2 (-0.5), notated duration: 1/2 (0.5), ? ",
+      "2 (2) dur: 1: kRestEvent (id:4) at 2, duration 1  ",
+    }))
+    t:eq(#notes, 1)
+    t:eq(unread, 2, "a note and a grace note with no spelling, and not the rest")
+  end,
+
   dump_keeps_each_events_instance = function(t)
     local ev = parse({
       "Start block id: 1061 position: 0",

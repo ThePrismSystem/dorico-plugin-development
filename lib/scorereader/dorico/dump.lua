@@ -54,13 +54,17 @@ function dump.parse(text)
   return out
 end
 
--- The notes and grace notes of a parsed dump.
+-- The notes and grace notes of a parsed dump, and how many it left out because their lines have no spelling it reads.
 function dump.notes(parsed)
-  local notes = {}
+  local notes, unread = {}, 0
   for _, ev in ipairs(parsed.events) do
-    if (ev.kind == "note" or ev.kind == "grace") and ev.spelling then notes[#notes + 1] = ev end
+    if (ev.kind == "note" or ev.kind == "grace") and ev.spelling then
+      notes[#notes + 1] = ev
+    elseif ev.kind == "note" or ev.kind == "grace" then
+      unread = unread + 1
+    end
   end
-  return notes
+  return notes, unread
 end
 
 return dump

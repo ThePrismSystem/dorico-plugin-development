@@ -101,6 +101,16 @@ return {
     t:eq(parsed.events[4].kind, "other")
     t:eq(#dump.notes(parsed), 2)
   end,
+  the_dump_parser_counts_notes_with_no_spelling = function(t)
+    local notes, unread = dump.notes(dump.parse(table.concat({
+      "0 (0) dur: 1: kNoteEvent (id:1) at 0, duration 1  E5 (ends 1)",
+      "1 (1) dur: 1: kNoteEvent (id:2) at 1, duration 1  ? (ends 2)",
+      "2 (2): kGraceNoteEvent (id:3) at 2  secondary pos -1/2 (-0.5), notated duration: 1/2 (0.5), ? ",
+      "2 (2) dur: 1: kRestEvent (id:4) at 2, duration 1  ",
+    }, "\n")))
+    t:eq(#notes, 1)
+    t:eq(unread, 2, "a note and a grace note with no spelling, and not the rest")
+  end,
   the_dump_parser_reads_positions_and_durations = function(t)
     local parsed = dump.parse(table.concat({
       "Start block id: 7 position: 0",

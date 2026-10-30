@@ -36,7 +36,8 @@ end
 -- starts each block instance; the events after it belong to that instance (EventEdit.Select needs it).
 --   dump.parse(text) -> {events = {{kind, id, pos, duration, spelling, grace, instance, raw}}}
 --   dump.event(text, instance) -> one event from tostring(event), or nil
---   dump.notes(parsed) -> the notes and grace notes, {{id, spelling, pos, duration, grace, instance}}
+--   dump.notes(parsed) -> the notes and grace notes, {{id, spelling, pos, duration, grace, instance}}, and how
+--     many it left out because their lines have no spelling it reads
 --   dump.owners(score, flow) -> {[voice stream id] = player name}
 -- Kinds are "note", "grace", "rest", "text" and "other". Positions and durations are quarter notes.
 local dump = {}
@@ -89,14 +90,16 @@ do
   end
 
   function dump.notes(parsed)
-    local notes = {}
+    local notes, unread = {}, 0
     for _, ev in ipairs(parsed.events) do
       if (ev.kind == "note" or ev.kind == "grace") and ev.spelling then
         notes[#notes + 1] = { id = ev.id, spelling = ev.spelling, pos = ev.pos, duration = ev.duration,
           grace = ev.grace, instance = ev.instance }
+      elseif ev.kind == "note" or ev.kind == "grace" then
+        unread = unread + 1
       end
     end
-    return notes
+    return notes, unread
   end
 
   -- flow.instruments[i] owns flow.voiceStreams[i], and tostring(player) is the player's name.
