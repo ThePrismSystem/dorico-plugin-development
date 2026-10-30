@@ -767,7 +767,7 @@ tests decode every fixture, one folder per Dorico version, in stock Lua.
 | Writing notes, rests and text | [14-add-notes-rests-text.lua](../examples/fundamentals/14-add-notes-rests-text.lua) |
 | Layout and notation options | [15-layout-and-notation-options.lua](../examples/fundamentals/15-layout-and-notation-options.lua) |
 | Adding flows and players, player ids | [16-flows-and-players.lua](../examples/fundamentals/16-flows-and-players.lua) |
-| A box asking the user | [17-ask-and-report.lua](../examples/fundamentals/17-ask-and-report.lua) |
+| A box asking the user, with text boxes, tick boxes and lists (the form helper) | [17-ask-and-report.lua](../examples/fundamentals/17-ask-and-report.lua) |
 | What undo does | [18-undo.lua](../examples/fundamentals/18-undo.lua) |
 | A script for a key, state between runs | [19-key-command.lua](../examples/fundamentals/19-key-command.lua) |
 | Colouring every note | [colour-by-pitch.lua](../examples/recipes/colour-by-pitch.lua) |
@@ -776,4 +776,8 @@ tests decode every fixture, one folder per Dorico version, in stock Lua.
 | Naming chords bar by bar, chord symbols by command | [chord-symbols.lua](../examples/recipes/chord-symbols.lua) |
 | A report on players and instruments | [instrument-report.lua](../examples/recipes/instrument-report.lua) |
 | A key that cycles colours | [hotkey-colour-cycle.lua](../examples/recipes/hotkey-colour-cycle.lua) |
+| Comparing every pair of parts, a mark a later run can take back | [parallel-fifths.lua](../examples/recipes/parallel-fifths.lua) |
+| Note names as text, written pitch from the transposition | [note-names.lua](../examples/recipes/note-names.lua) |
+| The flow's notation options, accidentals set by id | [cautionary-accidentals.lua](../examples/recipes/cautionary-accidentals.lua) |
+| Rebuilding texts, lyrics and chord symbols with new words | [find-and-replace.lua](../examples/recipes/find-and-replace.lua) |
 | A complete plug-in with a dialog and tests | [Handbells Used Chart](https://github.com/ThePrismSystem/handbells-used-chart-dorico-plugin) |
