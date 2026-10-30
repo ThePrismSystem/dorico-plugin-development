@@ -167,9 +167,8 @@ python tools/lint.py
 ```
 
 That runs the linters and security scanners CI runs over every file git tracks, and says how to install any tool it
-can't find. The first two lines install ruff, zizmor, typos and markdownlint; luacheck, lua-language-server,
-PSScriptAnalyzer, actionlint and gitleaks come from their own releases. [SECURITY.md](SECURITY.md) lists every check,
-and what each example runs and writes.
+can't find. The first two lines install ruff, zizmor, typos and markdownlint, and `lint.py` says where to get the
+others. [SECURITY.md](SECURITY.md) lists every check, and what each example runs and writes.
 
 ## Credits
 
