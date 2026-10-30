@@ -17,9 +17,9 @@ a bad call can crash Dorico.
 | `__tostring` | operator | not tried |  |
 | `currentLayoutID` | property | verified | The id of the layout in view (`spikes/players_and_options.lua`). |
 | `currentScore` | property | verified | The open project, nil or an error with none open ([01-hello](../../examples/fundamentals/01-hello.lua)). |
-| `doCommand` | method | verified | `app:doCommand(text)` runs a command and returns nothing ([06-commands](../../examples/fundamentals/06-commands.lua)). |
+| `doCommand` | method | verified | `app:doCommand(text)` runs a command and returns nothing ([10-commands](../../examples/fundamentals/10-commands.lua)). |
 | `open` | method | not tried |  |
-| `save` | method | not tried |  |
+| `save` | method | verified | `save(score, path)` writes a copy of the project, unsaved edits included, and returns `true`. The project keeps its file, its path, its unsaved mark and its undo history ([04-read-the-saved-copy](../../examples/fundamentals/04-read-the-saved-copy.lua)). |
 | `versionString` | property | verified | Such as `6.2.30b6245` ([01-hello](../../examples/fundamentals/01-hello.lua)). |
 
 ## `DoUI.DoUI`

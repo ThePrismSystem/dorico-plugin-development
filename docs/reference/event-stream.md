@@ -16,7 +16,7 @@ a bad call can crash Dorico.
 | `__len` | operator | not tried |  |
 | `__tostring` | operator | not tried |  |
 | `addBlockInstance` | member | not tried |  |
-| `blockInstances` | property | verified | The stream's block instances; `EventEdit.Select` needs one's `block.id` ([08-select-by-id](../../examples/fundamentals/08-select-by-id.lua)). |
+| `blockInstances` | property | verified | The stream's block instances; `EventEdit.Select` needs one's `block.id` ([12-select-by-id](../../examples/fundamentals/12-select-by-id.lua)). |
 | `copyRange` | method | fails | Copies nothing, within a flow or across flows. |
 | `copyRangeLinked` | member | not tried |  |
 | `createBarDivision` | member | not tried |  |
@@ -25,18 +25,18 @@ a bad call can crash Dorico.
 | `createDynamicGroup` | member | not tried |  |
 | `createFrameBreak` | member | not tried |  |
 | `createGraceNote` | member | not tried |  |
-| `createNote` | method | verified | `createNote(position, duration, pitch)`, with RhythmicLength values and a MIDIPitchWithSpelling ([09-add-notes-rests-text](../../examples/fundamentals/09-add-notes-rests-text.lua)). |
+| `createNote` | method | verified | `createNote(position, duration, pitch)`, with RhythmicLength values and a MIDIPitchWithSpelling ([14-add-notes-rests-text](../../examples/fundamentals/14-add-notes-rests-text.lua)). |
 | `createOttavaLine` | member | not tried |  |
-| `createRest` | method | verified | `createRest(position, duration)` ([09-add-notes-rests-text](../../examples/fundamentals/09-add-notes-rests-text.lua)). |
+| `createRest` | method | verified | `createRest(position, duration)` ([14-add-notes-rests-text](../../examples/fundamentals/14-add-notes-rests-text.lua)). |
 | `createSystemBreak` | method | fails | Makes a break event that doesn't take effect; use `Edit.CreateSystemBreak`. |
-| `createText` | method | verified | `createText(position, duration, text)`: a staff text above the staff ([09-add-notes-rests-text](../../examples/fundamentals/09-add-notes-rests-text.lua)). |
+| `createText` | method | verified | `createText(position, duration, text)`: a staff text above the staff, returned as a `TextEvent` ([14-add-notes-rests-text](../../examples/fundamentals/14-add-notes-rests-text.lua), [text_event.lua](../spikes.md#texteventtext)). |
 | `createTonalityDivision` | member | not tried |  |
 | `createTransposingClef` | member | not tried |  |
 | `createTuplet` | member | not tried |  |
-| `delete` | method | verified | `delete(event)` removes an event ([05-names-from-the-text-export](../../examples/fundamentals/05-names-from-the-text-export.lua)). |
+| `delete` | method | verified | `delete(event)` removes an event ([proofread](../../examples/recipes/proofread.lua)). |
 | `deleteEventsInRange` | method | verified | `deleteEventsInRange(from, to)` clears a range (the handbells plug-in). |
 | `dump` | method | verified | Text, one line per event, on any stream ([03-read-notes](../../examples/fundamentals/03-read-notes.lua)). |
-| `events` | property | verified | Event objects, but raises an error on a stream holding lyrics, slurs or other kinds with no Lua class ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `events` | property | verified | Event objects. A stream holding lyrics or another kind with no Lua class raises an error; on a voice holding a slur, the list stopped just before the slur with no error ([S8](../spikes.md#s8-reading-and-setting-note-properties), [text_event.lua](../spikes.md#texteventtext)). |
 | `findBlockInstanceAtPoint` | member | not tried |  |
 | `id` | property | verified | The stream's id. |
 | `joinBlocks` | member | not tried |  |

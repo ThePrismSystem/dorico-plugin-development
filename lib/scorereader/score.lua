@@ -228,6 +228,13 @@ function score.partOf(s, player)
   end
 end
 
+-- The full score layout, or nil when the project has none: it is the one Dorico makes, and it can be deleted.
+function score.fullScoreOf(s)
+  for _, l in ipairs(s.layouts) do
+    if l.type == "kFullScoreLayout" then return l end
+  end
+end
+
 -- An event's property entries (scorereader.props), read once.
 function score.entries(s, e)
   return s.cache[e] or newContext(s).entries(e)

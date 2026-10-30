@@ -17,7 +17,7 @@ a bad call can crash Dorico.
 | `__tostring` | operator | not tried |  |
 | `addFlow` | member | not tried |  |
 | `addPlayer` | method | verified | Adds a player to the layout (the handbells plug-in). |
-| `id` | property | verified | What `LayoutIDArray` takes; layout 0 is the full score in a fresh project ([10-layout-and-notation-options](../../examples/fundamentals/10-layout-and-notation-options.lua)). |
-| `players` | property | verified | The players in the layout ([10-layout-and-notation-options](../../examples/fundamentals/10-layout-and-notation-options.lua)). |
+| `id` | property | verified | What `LayoutIDArray` takes; layout 0 is the full score in a fresh project ([15-layout-and-notation-options](../../examples/fundamentals/15-layout-and-notation-options.lua)). |
+| `players` | property | verified | The players in the layout ([15-layout-and-notation-options](../../examples/fundamentals/15-layout-and-notation-options.lua)). |
 | `removeFlow` | method | verified | Leaves a flow out of the layout (the handbells plug-in), so an empty flow doesn't print "Tacet". |
 | `removePlayer` | member | not tried |  |

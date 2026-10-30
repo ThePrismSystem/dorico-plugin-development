@@ -62,7 +62,7 @@ Probes: `players_and_options.lua` with its driver `players_and_options.py`, and 
   for it. The instrument ids are the `entityID` values in `instruments.xml` in Dorico's program folder.
 - After a run that added a player, renamed players, took the new player out of a flow and added a flow, one
   Edit > Undo took all of it back.
-- Options are in the run's undo step too. After fundamental 10 set a layout option and a notation option, one
+- Options are in the run's undo step too. After fundamental 15 set a layout option and a notation option, one
   Edit > Undo took both back in five runs out of five, with both read back 0.3 seconds after the undo. Read through
   the Remote API straight after the undo, the layout option can still show the new value, or a reply can leave an
   option out, because Dorico is still applying the undo. Earlier runs that read at once had read too early, which
@@ -121,15 +121,23 @@ Probes: `s8_properties.lua`, `s8_colour_read.lua`.
   `propertyTable:set("kEventColour", DoCore.Variant.createString("#ff8000ff"), ctx)`. Edit > Undo takes it back
   like any other edit (see Undo, below). It needs the event object, which a stream holding lyrics or slurs can't
   give.
-- A colour set by command can't be read back. The property is listed, but its Variant has `type` -1 and `valid`
-  false, and `tostring` gives "". A colour set from Lua reads back as the string it was set to, and still does after
-  the project is saved and reopened and in a pasted copy (fundamental 04 reads the sample's). So a script can tell
+- A colour set by command can't be read back. The property is listed, but its Variant has `type` -1 and `valid` false,
+  and `tostring` gives "". A colour set from Lua reads back as the string it was set to, and still does after the
+  project is saved and reopened and in a pasted copy (the old fundamental 04 read the sample's). So a script can tell
   that a note has a colour, but not which one, unless a script set it.
 - A property-table read can lag the page. The sample's first trumpet note has a colour set through its property
   table. After the colour-by-pitch recipe coloured it by command, the page showed the new colour, but Lua still
   read the old one.
 - `UI.InvokePropertyChangeValue?Type=kNoteheadSetOverride&Value=string: "noteheadset.diamondNoteheads"` changed
   nothing.
+
+The route fundamental 04 (`04-noteheads-and-colours.lua`, replaced by the reader in commit 93e7005) took before the
+reader: add a flow with `Project.Flow.New` and remove the players the music flow lacks; select the music flow's whole
+range (`EventEdit.Select` its first note, `Edit.SelectToStartOfFlow`, `Edit.SelectAtEndOfFlow`, and
+`EventEdit.NavigateDownExtend` once per further staff); `Filter.NotesAndChords` and `Edit.Copy`; paste onto a temporary
+note in the new flow's first voice; delete the slurs and other lines the filter keeps; read `stream.events` and
+`propertyTable:get`; and take the flow away with one `Edit.Undo`. It merged unisons in two voices, listed chord notes in
+a different order each time, replaced the clipboard and the selection, and still couldn't read a colour set by command.
 
 ## S1: reading the selection
 
@@ -152,9 +160,18 @@ put the semitone back. The Remote API's status (`hasSelection`, `selectedEventTy
 
 A later probe (`pitch_up_down.lua`) found a route with no undo. `NoteEdit.PitchUpOctave` then
 `NoteEdit.PitchDownOctave` gave every note back its exact spelling, Fb4, E#4, Ebb4 and Dx4 included, where a semitone
-up and down respelled them (G#4 came back as Ab4, E#4 as F4). Fundamental 07 uses the octave route, so the run has
+up and down respelled them (G#4 came back as Ab4, E#4 as F4). Fundamental 11 uses the octave route, so the run has
 no undo and its later edits stay in its own undo step. Moving a chord's C4 up an octave onto the chord's own C5 left
 two C5s, not one merged note, and moving it back down restored both (`tuplet_and_unison.lua`).
+
+## TextEvent.text
+
+Probe: `text_event.lua`, on a scratch copy of the sample. `stream:createText` returns the new `TextEvent`, whose
+`tostring` is `TextEvent ID: 326 kTextEvent (id:326) at 0 : <words>` with the paragraph style on a second line.
+`text.text` reads the words as a string, a comma and an ampersand included, and setting it raises "property 'text' is
+read only", which leaves the words as they were. The probe's voice, the sample flute's, holds a slur, yet
+`stream.events` raised no error there: `ipairs` over it stopped after the first note, just before the slur, so the text
+came from `createText`'s return value.
 
 ## S4: creating items
 
@@ -191,7 +208,7 @@ says object-model edits never enter the undo history, but on Dorico 6.2.30 they 
   included.
 - After an `Edit.Undo` inside a run, a text the run made next joined the user's previous undo step: one Edit > Undo
   afterwards took back that text and the user's own earlier rename together.
-- Two undos in one run take back the user's own edit at the second. Fundamental 13 run twice in one script run
+- Two undos in one run take back the user's own edit at the second. Fundamental 18 run twice in one script run
   (a test tried it) undid an earlier rename of the second flow.
 - A run that made a text and deleted it again still left an undo step. Edit > Undo afterwards used it up and left the
   user's earlier edit in place.
@@ -302,6 +319,13 @@ The reading fixture also showed what Dorico 6.2.30's MusicXML import does with t
 above the staff whatever its `placement`, a direction with two `<words>` keeps only the last, and `font-weight` is
 dropped. `pizz.` and `arco` arrive as playing techniques, not text.
 
+## Reading speed
+
+Measured on 30 October 2026 on Windows 11 with Dorico 6.2.30. `tests/dorico/test_reader.py` read each fixture inside
+Dorico in 0.8 to 1.6 s, `app:save` included: 0.8 s for the smallest (1,281 events), 1.6 s for Figaro (13,420). In
+stock Lua 5.2, `score.readFile` decoded the sample in 0.5 s and Holst's *The Planets* from ancientgroove.co.uk
+(122,366 events) in 6.7 s.
+
 ## W1 to W7: changing what the reader found
 
 Probes: `w1_text_rebuild.lua`, `w2_lyrics.lua`, `w3_chord_replace.lua`, `w4_bulk_text.lua`, `w5_accidentals.lua` with
@@ -324,19 +348,19 @@ its events with the reader, acts on them by the ids the file gives, and reads th
 - W4, many texts. 300 `createText` calls took 18.7 s, about 62 ms each, and all 300 read back. Reading the copy took
   1.3 s.
 - W5, accidentals. `EventEdit.ChangeProperty` with `kNoteAccidentalVisibility_v3` takes `kRoundBrackets`,
-  `kSquareBrackets`, `kShow` and `kHide`, writing the older `kNoteAccidentalVisibility` beside each (`kParenthesise`
-  for both bracket kinds); it stores `kDefault`, or any other value, as `kHide`. The command with no `Value`, and the
+  `kSquareBrackets`, `kShow` and `kHide`, writing the older `kNoteAccidentalVisibility` beside each (`kParenthesise` for
+  both bracket kinds); it stores `kDefault`, or any other value, as `kHide`. The command with no `Value`, and the
   Properties panel's enable switch on a selection, both take the property off. The panel's route on a selection stores
   the layout on screen, layout 0 for the full score, and so do the menu commands: with the flute part on screen,
-  `Edit.ShowAccidentalInBrackets` stored the part's layout (`w5_menu_in_part.py`). A value set by id has no context,
-  so it can be told apart from one set by hand. One `Edit.Undo` from outside took back a run's `ChangeProperty` and its `createText`
-  together: the property joins the run's one undo step.
+  `Edit.ShowAccidentalInBrackets` stored the part's layout (`w5_menu_in_part.py`). A value set by id has no context, so
+  it can be told apart from one set by hand. One `Edit.Undo` from outside took back a run's `ChangeProperty` and its
+  `createText` together: the property joins the run's one undo step.
 - W6, showing a problem. A colour set by `ChangeProperty` holds in every layout and reads back
   (`tests/dorico/case_reader.lua`). The only command found that creates a comment, `NoteInput.ShowCommentDialog`, opens
   a dialog.
 - W7, the selection. Marking the selection with `UI.InvokePropertyChangeValue?Type=kEventColour` and reading a saved
-  copy finds every selected event, texts included: their colour is stored for the layout on screen. The enable switch takes the
-  marks off again, leaving nothing behind. It would also take off a colour a selected item already had, so a plug-in
-  notes those from a saved copy first and puts them back by the same route. The panel ignores a property Dorico
+  copy finds every selected event, texts included: their colour is stored for the layout on screen. The enable switch
+  takes the marks off again, leaving nothing behind. It would also take off a colour a selected item already had, so a
+  plug-in notes those from a saved copy first and puts them back by the same route. The panel ignores a property Dorico
   doesn't know, so a private marker isn't possible. `EventEdit.Select` replaces the selection; the probe's attempt to
   add to it with an `Add` parameter did nothing.

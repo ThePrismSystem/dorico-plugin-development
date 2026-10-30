@@ -8,7 +8,7 @@
 -- Undo: Edit > Undo takes the chord symbols back one at a time, three presses each: the chord symbol popover's
 -- commands make undo steps of their own, unlike the rest of a run (the sample's four took eleven presses). To
 -- remove them all at once, select the passage, filter the selection to chord symbols, and press Delete.
--- Builds on: 03-read-notes.lua, 06-commands.lua and 08-select-by-id.lua. Open Script > Show Script Console to read
+-- Builds on: 03-read-notes.lua, 10-commands.lua and 12-select-by-id.lua. Open Script > Show Script Console to read
 -- what it prints.
 --
 -- It names a chord wherever three or more pitch classes sound, from a short list of types (major, minor, diminished,

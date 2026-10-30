@@ -4,11 +4,11 @@
 -- first. It prints "colour <n> of <count>: <colour>".
 -- Changes: the colour of the selection.
 -- Undo: each run is one undo step, so Edit > Undo takes back one press at a time.
--- Builds on: 08-select-by-id.lua (colouring by command) and 14-key-command.lua (running from a key, and keeping state
+-- Builds on: 12-select-by-id.lua (colouring by command) and 19-key-command.lua (running from a key, and keeping state
 -- in a global). Open Script > Show Script Console to read what it prints.
 --
 -- To use it from a key: select some notes, run it once with Script > Run Script, then press Ctrl+Shift+Alt+R (Run
--- Last Script) to run it again. 14-key-command.lua says how to give it a key of its own.
+-- Last Script) to run it again. 19-key-command.lua says how to give it a key of its own.
 --
 -- It remembers the last colour and when it ran in a global table, which lasts as long as Dorico's one Lua state. Lua's
 -- os.time counts whole seconds, so "within 2 seconds" means within two or three.

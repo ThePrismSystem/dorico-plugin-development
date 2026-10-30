@@ -14,7 +14,7 @@ a bad call can crash Dorico.
 | ------ | ---- | ------ | ----- |
 | `__len` | operator | not tried |  |
 | `__tostring` | operator | not tried |  |
-| `get` | method | verified | `get(name, context)` returns a Variant; `""` when unset ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `get` | method | verified | `get(name, context)` returns a Variant; `""` when unset ([S8](../spikes.md#s8-reading-and-setting-note-properties)). |
 | `getPropertyNames` | method | verified | The properties the event has, not every one it could have. |
 | `set` | method | verified | `set(name, variant, context)` returns true when Dorico took the value; undoable like any edit. |
 

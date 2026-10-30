@@ -3,11 +3,14 @@
 local helpers = require("helpers")
 
 local READ_NOTES = "examples/fundamentals/03-read-notes.lua"
-local NAMES = "examples/fundamentals/05-names-from-the-text-export.lua"
 local HELLO = "examples/fundamentals/01-hello.lua"
-local COMMANDS = "examples/fundamentals/06-commands.lua"
-local SELECTION = "examples/fundamentals/07-act-on-the-selection.lua"
-local BY_ID = "examples/fundamentals/08-select-by-id.lua"
+local SAVED_COPY = "examples/fundamentals/04-read-the-saved-copy.lua"
+local ROOT = (arg and arg[0] or ""):match("^(.*[/\\])tests[/\\]") or "./"
+local COMMANDS = "examples/fundamentals/10-commands.lua"
+local SELECTION = "examples/fundamentals/11-act-on-the-selection.lua"
+local BY_ID = "examples/fundamentals/12-select-by-id.lua"
+local BARS = "examples/fundamentals/09-bars-keys-and-times.lua"
+local LAYOUTS = "examples/fundamentals/07-values-per-layout.lua"
 local CHORDS = "examples/recipes/chord-symbols.lua"
 local PROOFREAD = "examples/recipes/proofread.lua"
 
@@ -19,7 +22,14 @@ local HEADER = '"Path","ID","FlowNumber","FlowName","Instrument","Page","Bar","T
 local PATH = '"C:/Users/calli/AppData/Local/Temp/dorico-examples-run/scratch.dorico"'
 
 local function records(rows)
-  return helpers.load(NAMES, "export").parse(table.concat(rows, "\r\n") .. "\r\n")
+  return helpers.load(PROOFREAD, "export").parse(table.concat(rows, "\r\n") .. "\r\n")
+end
+
+-- Where each bar from the bars helper starts and how long it is, as "<pos>+<length>".
+local function spans(starts)
+  local out = {}
+  for _, b in ipairs(starts) do out[#out + 1] = b.pos .. "+" .. b.length end
+  return table.concat(out, " ")
 end
 
 -- Runs fn with DoApp standing in for Dorico's and print recorded; gives back what was printed.
@@ -117,7 +127,7 @@ return {
   end,
 
   csv_skips_a_byte_order_mark = function(t)
-    local rec = helpers.load(NAMES, "export").parse("\239\187\191" .. HEADER .. "\n" .. PATH
+    local rec = helpers.load(PROOFREAD, "export").parse("\239\187\191" .. HEADER .. "\n" .. PATH
       .. ',"","","","","","","Project Info (Title)","Sample","N"\n')
     t:eq(rec[1].Path, "C:/Users/calli/AppData/Local/Temp/dorico-examples-run/scratch.dorico")
     t:eq(rec[1].Type, "Project Info (Title)")
@@ -229,7 +239,7 @@ return {
   end,
 
   bars_find_a_bar_that_starts_between_quarter_notes = function(t)
-    local bars = helpers.load(PROOFREAD, "bars")
+    local bars = helpers.load(PROOFREAD, "markedBars")
     -- What the text export would say: the bar at each position, given where bars start.
     local function barOf(starts)
       return function(q)
@@ -259,5 +269,121 @@ return {
     local printed = withDorico({ currentScore = project }, function() app, score = guard() end)
     t:eq(score, project)
     t:eq(#printed, 0, "nothing printed")
+  end,
+
+  read_copy_puts_its_lib_folders_first_once = function(t)
+    local dir = "C:/plugins/examples/fundamentals/"
+    local mine = dir .. "../../lib/?.lua;" .. dir .. "lib/?.lua;"
+    local other = "C:/other/lib/?.lua;"
+    local readCopy = assert(load(helpers.text(SAVED_COPY, "readCopy") .. "\nreturn readCopy", "@" .. dir .. "x.lua"))()
+    local before = package.path
+    package.path = other .. mine .. before
+    package.loaded["scorereader.fake"] = true
+    local printed = withDorico({}, function() readCopy({ currentScore = {}, save = function() return false end }) end)
+    local after = package.path
+    package.path = before
+    t:eq(after:sub(1, #mine + #other), mine .. other, "ahead of another copy of the library")
+    t:eq(select(2, after:gsub("C:/plugins/", "")), 2, "each folder once")
+    t:eq(package.loaded["scorereader.fake"], nil, "an earlier run's module is cleared")
+    t:eq(printed[1], "The reader couldn't read this project: "
+      .. "scorereader: Dorico could not save a copy of the project to read")
+  end,
+
+  bars_from_time_signatures = function(t)
+    local starts = helpers.load(BARS, "bars").starts({ { pos = 0, numerator = 4, denominator = 4 },
+      { pos = 8, numerator = 3, denominator = 4 } }, 14)
+    local got = {}
+    for _, b in ipairs(starts) do got[#got + 1] = b.bar .. "@" .. b.pos .. "+" .. b.length end
+    t:eq(table.concat(got, " "), "1@0+4 2@4+4 3@8+3 4@11+3")
+  end,
+
+  a_time_signature_partway_through_a_bar_cuts_it_short = function(t)
+    local starts = helpers.load(BARS, "bars").starts({ { pos = 0, numerator = 4, denominator = 4 },
+      { pos = 6, numerator = 2, denominator = 4 } }, 10)
+    t:eq(spans(starts), "0+4 4+2 6+2 8+2")
+  end,
+
+  an_additive_time_signature_and_a_barline_only_division = function(t)
+    local bars = helpers.load(BARS, "bars")
+    t:eq(bars.starts({ { pos = 0, numerator = "3+2", denominator = 8 } }, 5)[1].length, 2.5, "3+2/8")
+    t:eq(spans(bars.starts({ { pos = 0, numerator = 4, denominator = 4 }, { pos = 6 } }, 14)), "0+4 4+2 6+4 10+4",
+      "a barline starts a bar and keeps the signature")
+  end,
+
+  a_flow_with_no_time_signature_is_one_bar = function(t)
+    local bars = helpers.load(BARS, "bars")
+    local starts = bars.starts({}, 10)
+    t:eq(#starts, 1)
+    t:eq(starts[1].length, 10)
+    local bar, beat = bars.at(starts, 7)
+    t:eq(bar, 1)
+    t:eq(beat, 8)
+    t:eq(bars.starts({ { pos = 2, numerator = 4, denominator = 4 } }, 10)[1].length, 2, "music before the first one")
+  end,
+
+  bar_and_beat_of_a_position = function(t)
+    local bars = helpers.load(BARS, "bars")
+    local starts = bars.starts({ { pos = 0, numerator = 4, denominator = 4 },
+      { pos = 8, numerator = 3, denominator = 4 } }, 14)
+    local bar, beat = bars.at(starts, 9.5)
+    t:eq(bar, 3)
+    t:eq(beat, 2.5)
+    bar, beat = bars.at(starts, 0)
+    t:eq(bar .. "/" .. beat, "1/1")
+  end,
+
+  a_barline_only_division_at_the_start = function(t)
+    local bars = helpers.load(BARS, "bars")
+    local starts = bars.starts({ { pos = 0 } }, 8)
+    t:eq(#starts, 1, "one bar up to the end")
+    t:eq(starts[1].length, 8)
+    local bar, beat = bars.at(starts, 3)
+    t:eq(bar .. "/" .. beat, "1/4")
+  end,
+
+  a_barline_before_the_first_time_signature = function(t)
+    local bars = helpers.load(BARS, "bars")
+    local starts = bars.starts({ { pos = 2 }, { pos = 6, numerator = 4, denominator = 4 } }, 14)
+    t:eq(spans(starts), "0+2 2+4 6+4 10+4")
+    local bar, beat = bars.at(starts, 3)
+    t:eq(bar .. "/" .. beat, "2/2")
+  end,
+
+  a_time_signature_with_no_length_is_one_bar_to_the_next_division = function(t)
+    local bars = helpers.load(BARS, "bars")
+    for _, numerator in ipairs({ "X", 0 }) do
+      local starts = bars.starts({ { pos = 0, numerator = numerator, denominator = 4 },
+        { pos = 10, numerator = 4, denominator = 4 } }, 18)
+      t:eq(spans(starts), "0+10 10+4 14+4", "numerator " .. tostring(numerator))
+    end
+  end,
+
+  bars_of_an_empty_flow = function(t)
+    local bars = helpers.load(BARS, "bars")
+    local starts = bars.starts({}, 0)
+    t:eq(#starts, 1)
+    local bar, beat = bars.at(starts, 0)
+    t:eq(bar .. "/" .. beat, "1/1")
+  end,
+
+  where_names_an_entry_s_context = function(t)
+    local where = helpers.load(LAYOUTS, "where")
+    local names = { [0] = "Full score", [5] = "Flute" }
+    t:eq(where({ layout = -1, instance = -1, frameChain = -1 }, names), "every layout")
+    t:eq(where({ layout = 0, instance = -1, frameChain = -1, offset = "" }, names), "layout Full score")
+    t:eq(where({ layout = -1, instance = 1014, frameChain = -1, offset = "0:0:1:0" }, names),
+      "every layout, block instance 1014", "an offset of 0 is the note's start")
+    t:eq(where({ layout = 5, instance = 12, frameChain = 3, staveType = "kCondensed", offset = "0:1:2:0" }, names),
+      "layout Flute, block instance 12, frame chain 3, condensed staves, 1/2 quarter notes into the note")
+    t:eq(where({ layout = 9, instance = -1, frameChain = -1, staveType = "kNormal" }, names), "layout 9",
+      "a layout with no name, on normal staves")
+  end,
+
+  read_the_saved_copy_reports_a_save_that_fails = function(t)
+    local app = { currentScore = {}, save = function() return false end }
+    local printed = withDorico(app, function() dofile(ROOT .. SAVED_COPY) end)
+    t:eq(#printed, 1, table.concat(printed, " / "))
+    t:eq(printed[1], "The reader couldn't read this project: "
+      .. "scorereader: Dorico could not save a copy of the project to read")
   end,
 }

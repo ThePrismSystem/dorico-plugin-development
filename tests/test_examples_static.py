@@ -1,5 +1,6 @@
 """Rules every example follows, checked without Dorico: each guards for no project, selects by block ids from
-stream.blockInstances, says in its header what it changes and how to undo it, and keeps copied helpers identical."""
+stream.blockInstances, says in its header what it changes and how to undo it, names only examples that exist, loads
+the reader through the readCopy helper, and keeps copied helpers identical."""
 import re
 import shutil
 import tempfile
@@ -8,6 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 HEADER_LINES = ("What it does:", "Changes:", "Undo:", "Builds on:")
+NUMBERED = re.compile(r"\b\d\d-[\w-]+\.lua\b")
 BLOCK = re.compile(r"^-- helper: (\w+)\n(.*?)^-- end helper: \1$", re.M | re.S)
 
 
@@ -38,6 +40,7 @@ def blocks(text):
 def problems(root):
     """Every rule an example breaks, as "<file>: <rule>"."""
     found, copies = [], {}
+    existing = {path.name for path in examples(root)}
     for path in examples(root):
         text = path.read_text(encoding="utf-8")
         name = path.relative_to(root).as_posix()
@@ -45,12 +48,17 @@ def problems(root):
         if "guard" not in own:
             found.append(f"{name}: no guard helper (the no-project check)")
         code = code_only(text)
+        if 'require("scorereader' in code and "readCopy" not in own:
+            found.append(f"{name}: requires the reader without the readCopy helper")
         if "EventEdit.Select" in code and ("blockIdOf" not in own or re.search(r"-\s*1000\b", code)):
             found.append(f"{name}: selects without the blockIdOf helper")
         head = header(text)
         for line in HEADER_LINES:
             if line not in head:
                 found.append(f"{name}: header has no '{line}' line")
+        for named in NUMBERED.findall(head):
+            if named not in existing:
+                found.append(f"{name}: names {named}, which doesn't exist")
         for helper, body in own.items():
             copies.setdefault(helper, {}).setdefault(body, []).append(name)
     for helper, versions in copies.items():
@@ -101,6 +109,15 @@ class RuleTests(unittest.TestCase):
     def test_changing_examples_say_how_to_undo(self):
         self.write("bad.lua", GOOD.replace("-- Undo: nothing to undo.\n", ""))
         self.assertEqual(problems(self.root), ["examples/bad.lua: header has no 'Undo:' line"])
+
+    def test_a_reader_example_carries_the_read_copy_helper(self):
+        self.write("bad.lua", GOOD + 'local score = require("scorereader.score")\n')
+        self.assertEqual(problems(self.root), ["examples/bad.lua: requires the reader without the readCopy helper"])
+
+    def test_a_header_names_only_examples_that_exist(self):
+        self.write("bad.lua", GOOD.replace("-- Builds on: nothing.", "-- Builds on: 01-good.lua and\n-- 99-gone.lua."))
+        (self.root / "examples" / "01-good.lua").write_text(GOOD, encoding="utf-8")
+        self.assertEqual(problems(self.root), ["examples/bad.lua: names 99-gone.lua, which doesn't exist"])
 
     def test_helper_copies_are_identical(self):
         self.write("a.lua", GOOD)

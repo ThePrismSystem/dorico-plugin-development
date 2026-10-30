@@ -4,7 +4,7 @@ A field guide to the parts of Dorico 6's Lua scripting that Steinberg doesn't do
 music, changes the score, asks the user something and is tested from outside Dorico, and the workarounds and gotchas
 found along the way. Each technique points at the example in this repository that shows it working.
 
-It began as the guide to the [Handbells Used Chart plug-in](https://github.com/ThePrismSystem/handbells-used-chart-dorico),
+It began as the guide to the [Handbells Used Chart plug-in](https://github.com/ThePrismSystem/handbells-used-chart-dorico-plugin),
 which is still the full-sized example: a plug-in with a dialog, a pure-Lua core with unit tests, and an in-Dorico
 test suite. This copy is general, and adds what this repository's probes found. Their evidence is in
 [spikes.md](spikes.md), and the probes themselves are in `spikes/`.
@@ -47,10 +47,12 @@ local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
 local root = here .. "My Plug-in/"
 ```
 
-The examples here are single files with no modules, so any of them runs from Script > Run Script as it is. DoricoUse
-found a second kind of plug-in in Dorico's binary, a folder holding an `Info.lua` with `MenuCommands`; it's
-described in [spikes.md](spikes.md) (S7) and wasn't tried here. Whether Dorico notices a new plug-in of either kind
-without a restart wasn't checked either, so restart to be sure.
+Most examples are single files with no modules, so they run from Script > Run Script as they are. Fundamentals 04 to 09
+and 13 read a saved copy and load the reader from `lib/`: run from this repository they find it two folders up, and in
+Script Plug-ins they need the `lib` folder copied beside them. DoricoUse found a second kind of plug-in in Dorico's
+binary, a folder holding an `Info.lua` with `MenuCommands`; it's described in [spikes.md](spikes.md) (S7) and wasn't
+tried here. Whether Dorico notices a new plug-in of either kind without a restart wasn't checked either, so restart to
+be sure.
 
 ### Where print goes
 
@@ -65,12 +67,14 @@ Dorico keeps a single Lua state from launch to quit. Globals and `package.loaded
 next. Three things follow:
 
 - Make everything `local`. A global set by one run is still there for the next, which is how
-  [14-key-command.lua](../examples/fundamentals/14-key-command.lua) counts its runs and
+  [19-key-command.lua](../examples/fundamentals/19-key-command.lua) counts its runs and
   [hotkey-colour-cycle.lua](../examples/recipes/hotkey-colour-cycle.lua) remembers its colour, and a trap for
   anything else. Give a global you mean to keep a name no other script would choose.
 - A plug-in with modules should clear them from `package.loaded` at the start of every run. Otherwise `require`
   hands back the version loaded by an earlier run, and an edited module doesn't take effect until Dorico restarts.
-- Add to `package.path` only once. Prepending a folder on every run makes the path grow without end.
+- Put a folder on `package.path` once. Prepending it on every run makes the path grow without end. To keep it first,
+  ahead of a folder another script added since, take the earlier copy out before prepending it again, as the
+  examples' `readCopy` helper does.
 
 ```lua
 for name in pairs(package.loaded) do
@@ -148,14 +152,16 @@ What Lua can't read, and the way round it:
 
 | Missing | Workaround |
 | ------- | ---------- |
-| A flow's title, an instrument's name, the project's file path | The text export (section 4, [05-names-from-the-text-export.lua](../examples/fundamentals/05-names-from-the-text-export.lua)) |
-| A player's id, which commands need | Rename candidates to a unique token and see which player takes it ([11-flows-and-players.lua](../examples/fundamentals/11-flows-and-players.lua)) |
+| A flow's title, an instrument's name and transposition | A saved copy ([05-names-and-titles.lua](../examples/fundamentals/05-names-and-titles.lua)) |
+| The project's file path | The text export (section 4) |
+| A player's id, which commands need | Rename candidates to a unique token and see which player takes it ([16-flows-and-players.lua](../examples/fundamentals/16-flows-and-players.lua)) |
 | Which player a voice belongs to | `flow.instruments[i]` owns `flow.voiceStreams[i]` ([02-walk-the-score.lua](../examples/fundamentals/02-walk-the-score.lua)) |
-| The selection | Move it by command and see what moved (section 3) |
-| An event looked up by id | Keep the ids from `dump()` and select them by command (section 5) |
-| Layout and notation options | Set them by command; learn a value from the text export (section 5) |
-| Time signatures, key signatures, bar numbers | Bar numbers from the text export (section 4); the others not at all |
-| An instrument's transposition | Ask the user, or set it in the script ([label-notes.lua](../examples/recipes/label-notes.lua)) |
+| The selection | Mark it with a colour and read a saved copy, or move it by command and see what moved (section 3) |
+| An event looked up by id | `s.events[id]` in a saved copy ([06-match-by-event-id.lua](../examples/fundamentals/06-match-by-event-id.lua)) |
+| A value set by command or in the Properties panel | A saved copy ([07-values-per-layout.lua](../examples/fundamentals/07-values-per-layout.lua)) |
+| Layout and notation options | Set them by command. A saved copy holds them all, but the reader doesn't decode them yet; the text export can show a value indirectly (section 4) |
+| Time signatures, key signatures, bar numbers | A saved copy ([09-bars-keys-and-times.lua](../examples/fundamentals/09-bars-keys-and-times.lua)) |
+| Texts, lyrics, chord symbols, dynamics | A saved copy ([08-text-lyrics-chords-dynamics.lua](../examples/fundamentals/08-text-lyrics-chords-dynamics.lua)) |
 
 ### Ids and identity
 
@@ -170,7 +176,7 @@ What Lua can't read, and the way round it:
 - Stream `type` is 0 for the timebase stream, 1 for a stave, 2 for a voice and 3 for a player.
 - Layout and flow ids are the same ids the Remote Control API takes. In a fresh project, layout 0 is the full score.
   To find the full score in general, take the layout that holds every player with the lowest id
-  ([10-layout-and-notation-options.lua](../examples/fundamentals/10-layout-and-notation-options.lua)).
+  ([15-layout-and-notation-options.lua](../examples/fundamentals/15-layout-and-notation-options.lua)).
 - `tostring(player)` is the name the Setup panel shows, except that music symbols come out as tokens: a B-flat
   trumpet is `Trumpet (B{@flat@})`. The text export names the same player's instrument `Trumpet`, without the
   transposition.
@@ -188,11 +194,58 @@ note.propertyTable:set("kNoteHideStem", DoCore.Variant.createString("true"), ctx
 - `get` returns a Variant, and `tostring(variant)` gives its value. An unset property reads as `""`.
 - `getPropertyNames()` lists only the properties an event has.
 - `set` returns `true` when Dorico took the value, which doesn't always mean anything changed (section 5).
-- A colour set by command (or in the Properties panel) is listed but reads as `""`: its Variant has `valid` false.
-  A colour set through the property table reads back as the string it was set to, after a save and reopen too. But
-  once a command recolours that note, the page shows the new colour and Lua still reads the old string.
+- A colour set by command (or in the Properties panel) is listed but reads as `""`: its Variant has `valid` false. A
+  colour set through the property table reads back as the string it was set to, after a save and reopen too. But once a
+  command recolours that note, the page shows the new colour and Lua still reads the old string. The reason is the
+  context: a command stores its value for the layout on screen, and `get` asks only for the value with no context, which
+  `PropertyContext()` can't change since it takes no arguments. A saved copy has every value with its context (section
+  3).
 
 ## 3. Reading the music
+
+### The saved copy
+
+`app:save(score, path)` writes a copy of the open project, unsaved edits included, and returns `true`. The project keeps
+its own file, its path and its unsaved mark, and nothing goes on the undo history. The reader library in
+`lib/scorereader` saves one to the temp folder, decodes it in pure Lua, and deletes it
+([04-read-the-saved-copy.lua](../examples/fundamentals/04-read-the-saved-copy.lua)):
+
+```lua
+local savedcopy = require("scorereader.dorico.savedcopy")
+local score = require("scorereader.score")
+local s = savedcopy.read(DoApp.DoApp())
+local fullScore = score.fullScoreOf(s)
+for _, e in ipairs(score.eventsOf(s, s.flows[1], s.players[1])) do
+  print(e.kind, e.id, e.spelling, fullScore and score.value(s, e, "kEventColour", fullScore.id))
+end
+```
+
+`score.fullScoreOf` gives nil for a project whose full score layout was deleted, so check it before asking for a
+value in it.
+
+What it gives:
+
+- Players with their instruments' names, library ids, ranges and transpositions; flows with their titles; layouts with
+  their names and the players and flows they hold; the project info
+  ([05](../examples/fundamentals/05-names-and-titles.lua)).
+- Every event of every flow, with its kind: notes and grace notes with their spelling and MIDI pitch, rests, tuplets,
+  texts with their paragraphs and styles, lyrics with syllables and lines, chord symbols, dynamics and hairpins, time
+  and key signatures, tempos, rehearsal marks, playing techniques and clefs
+  ([08](../examples/fundamentals/08-text-lyrics-chords-dynamics.lua),
+  [09](../examples/fundamentals/09-bars-keys-and-times.lua)).
+- Every property an event has, with the layout and block instance it applies to (below).
+
+Ids in the copy are the ids Lua uses: flow, stream, event and instrument ids, and the block and block instance ids
+`EventEdit.Select` needs. So anything found in the copy can be selected or changed by its id, with no matching by
+position ([06-match-by-event-id.lua](../examples/fundamentals/06-match-by-event-id.lua)). A read takes 0.8 to 1.6 s on
+the fixtures, the save included; decoding Holst's *The Planets*, 122,366 events, takes 6.7 s ([Reading
+speed](spikes.md#reading-speed)).
+
+The reader works out the format from the file's structure. A `fileVersion` it hasn't seen is reported in `s.format` and
+read if the structure fits a known one; a structure it doesn't know stops the read with an error that names the node and
+the format. Call it through `pcall` and tell the user. `app:save` takes its path in UTF-8 and `io.open` in the code
+page, so a temp folder with non-ASCII characters in its path breaks the read; `savedcopy.read` takes another folder as
+`opts.dir`. [file-format.md](file-format.md) describes the format.
 
 ### `tostring(event)` and pitch
 
@@ -204,8 +257,10 @@ instrument transposes.
 
 ### `stream.events` fails on real music
 
-`stream.events` gives event objects, but it raises an error on any stream that holds a kind of event with no Lua
-class: lyrics, slurs, hairpins, playing techniques. Most real music has at least one of those.
+`stream.events` gives event objects, but it raises an error on a stream that holds a kind of event with no Lua class,
+such as lyrics, hairpins and playing techniques. A slur raises nothing: on the sample's flute voice the list just
+stopped before the slur. Most real music has one or the other, so a script can count on neither an error nor every
+event.
 
 ### `stream:dump()` always works
 
@@ -218,9 +273,9 @@ Start block id: 1061 position: 0
 ```
 
 Each event line ends in what `tostring(event)` gives. The `dump` helper parses it into tables
-([03-read-notes.lua](../examples/fundamentals/03-read-notes.lua)), and every example that reads notes carries a copy.
-The `Start block id` is, despite its name, a block instance id, and the events after it belong to that instance;
-selecting an event needs it (section 5).
+([03-read-notes.lua](../examples/fundamentals/03-read-notes.lua)), and the examples that read notes from Lua rather than
+a saved copy carry a copy of it. The `Start block id` is, despite its name, a block instance id, and the events after it
+belong to that instance; selecting an event needs it (section 5).
 
 What the dump shows and doesn't:
 
@@ -231,39 +286,45 @@ What the dump shows and doesn't:
 - Ties aren't events: a tied note is one note with the whole length.
 - Implicit rests aren't listed, and rests removed with Edit > Remove Rests leave no trace, so a script can't find
   an incomplete bar.
-- No properties: no notehead, no colour.
+- No properties: no notehead, no colour. A saved copy has them (above).
 
 `flow.elementTables` reaches a little further. Dynamics can be read there (each sub-element has
 `kDynamicImmediateChangeBasicType` and `kDynamicImmediateChangeIsMezzo`). Time signatures can't
 (`kBarDivisionTimeSignatures` fails with "Invalid conversion"), and key signatures can't either
-(`tonalityDivisions` raises "Trying to use unregistered class").
+(`tonalityDivisions` raises "Trying to use unregistered class"). A saved copy has both
+([09-bars-keys-and-times.lua](../examples/fundamentals/09-bars-keys-and-times.lua)).
 
-### Noteheads and colours: read a pasted copy
+### Values per layout
 
-To read properties from a stream that `stream.events` refuses, copy the music into a temporary flow that holds only
-notes, read that, and take it away again ([04-noteheads-and-colours.lua](../examples/fundamentals/04-noteheads-and-colours.lua)):
+How a property was set decides where it applies, and the saved copy keeps that
+([07-values-per-layout.lua](../examples/fundamentals/07-values-per-layout.lua)):
 
-1. `Project.Flow.New` adds a flow at the end. It holds every player, so remove the players the music flow doesn't
-   have with `flow:removePlayer`.
-2. Select the music flow's whole range: `EventEdit.Select` its first note, then `Edit.SelectToStartOfFlow`,
-   `Edit.SelectAtEndOfFlow`, and `EventEdit.NavigateDownExtend` once for each staff after the first.
-3. `Filter.NotesAndChords`, then `Edit.Copy`.
-4. In the new flow, create a temporary note at position 0 in the voice of the instrument the copied range starts
-   with, `EventEdit.Select` it, and `Edit.Paste`. That's the first voice unless the flow's first players are tacet;
-   pasting onto the first voice then puts every staff's notes one player too high, with no error.
-5. The filter keeps note-attached lines such as slurs, and those still stop `stream.events`. Delete each event in
-   the copy whose kind has no Lua class: select it by id, then `Edit.Delete`.
-6. Now `stream.events` and `propertyTable:get` work. Skip the temporary note by its id.
-7. Take the temporary flow away with one `Edit.Undo` (section 7 says why exactly one).
+| Set by | Stored for |
+| ------ | ---------- |
+| `propertyTable:set` from Lua, or `EventEdit.ChangeProperty` by id | every layout and block instance |
+| `Edit.SetNoteheadSetOverride` on a selection | every layout, the note's own block instance |
+| The Properties panel (`UI.InvokePropertyChangeValue`), `Edit.ShowAccidentalInBrackets` or `Edit.ShowAccidentalInParentheses` | the layout on screen |
 
-Try `stream.events` first and copy only the flows where it fails. The paste merges unisons in two voices on one
-staff and lists a chord's notes in a different order each time, so sort them. It also replaces the clipboard and the
-selection, which users should be told.
+`score.value(s, e, property, layoutId)` gives the value a layout shows, and prefers one stored for that layout to one
+with no context: once a command has recoloured a note, the full score shows the command's colour. `score.entries(s, e)`
+lists every stored value with its context. A value can also start partway through a note: a tied note respelled after a
+barline has a second `kNoteSpelling` with an offset, and the note's own spelling is the one at the start.
+
+Lua's `propertyTable:get` asks only for the value with no context, so it can't see the last row's values, and the copy
+is the only way to read them. The route fundamental 04 used before the reader, pasting each flow into a temporary flow,
+is recorded in [spikes.md](spikes.md#s8-reading-and-setting-note-properties).
 
 ### The selection
 
-Lua can't ask what's selected, but the selected notes are the ones a command moves
-([07-act-on-the-selection.lua](../examples/fundamentals/07-act-on-the-selection.lua)):
+Lua can't ask what's selected. Two routes find it.
+
+Mark it and read a saved copy. `UI.InvokePropertyChangeValue?Type=kEventColour&Value=<colour>` colours every selected
+item, texts included, and a saved copy then shows those items with the colour stored for the layout on screen.
+`UI.InvokePropertyEnableSwitch?Type=kEventColour&Value=false` takes the marks off again and leaves nothing behind. It
+also takes off a colour an item already had, so note those from a copy first and put them back the same way. The panel
+ignores a property Dorico doesn't know, so the mark has to be a real property.
+
+Or move it and see what moved ([11-act-on-the-selection.lua](../examples/fundamentals/11-act-on-the-selection.lua)):
 
 1. Dump every voice.
 2. `NoteEdit.PitchUpOctave`, then dump again. The notes whose spelling changed are the selection.
@@ -284,19 +345,18 @@ app:doCommand("File.Export.Text?File=C:/temp/out.txt&Show=false")   -- writes C:
 
 `File.Export.Text` writes a CSV of every text in the project, silently, beside the name it's given (with `.csv` in
 place of `.txt`). Its columns are `Path, ID, FlowNumber, FlowName, Instrument, Page, Bar, Type, Text, Hidden`. The
-`export` helper runs it and reads the rows ([05-names-from-the-text-export.lua](../examples/fundamentals/05-names-from-the-text-export.lua)).
-It's the window onto several things Lua can't read:
+`export` helper runs it and reads the rows ([15-layout-and-notation-options.lua](../examples/fundamentals/15-layout-and-notation-options.lua)).
+Titles and instrument names come from a saved copy now (section 3). The export still gives:
 
-- The project's file path: every row's `Path`, empty until the project is saved.
-- The project's title: the `Project Info (Title)` row. Flow titles: the `Flow Info (Title)` rows, by `FlowNumber`.
-- Instrument names. An instrument appears only in the rows of texts on its staff, so put a marker text in a voice
-  of each instrument with `stream:createText`, export, read each marker's `Instrument`, and delete the markers with
-  `stream:delete`. The `ID` column is `<flow>-<stream>-<event>`, counting flows from 0.
+- The project's file path: every row's `Path`, empty until the project is saved. A saved copy doesn't know it.
+- Which instrument a text is on, in its `Instrument` column. [proofread.lua](../examples/recipes/proofread.lua) still
+  finds instrument names this way, with marker texts made by `stream:createText` and deleted again. The `ID` column is
+  `<flow>-<stream>-<event>`, counting flows from 0.
 - Bar numbers. Every row has its `Bar`. A marker at a position tells you the bar it's in, and markers at the quarter
   notes before it tell you where that bar starts, so a script can report "bar 2, beat 3" without reading a time
   signature ([proofread.lua](../examples/recipes/proofread.lua)).
 - Layout options, indirectly. A flow heading is a `Text Frame` row, there only while headings show, so comparing
-  exports shows whether a change took ([10-layout-and-notation-options.lua](../examples/fundamentals/10-layout-and-notation-options.lua)).
+  exports shows whether a change took ([15-layout-and-notation-options.lua](../examples/fundamentals/15-layout-and-notation-options.lua)).
   To learn an option's value, export again under each candidate and see which matches. With a single flow, two of
   `flowHeadingBehaviour`'s three values look the same.
 
@@ -321,7 +381,7 @@ voice:createText(RL(0), RL(1), "label")   -- staff text above the staff
 
 - `RhythmicLength(n)` keeps only the whole part of n: `RL(0.5)` is 0. A fraction goes in as
   `RhythmicLength(numerator, denominator)`, so 1.5 quarter notes is `RL(3, 2)` and 7/3 is `RL(7, 3)`. The `length`
-  helper turns a number of quarter notes into one ([09-add-notes-rests-text.lua](../examples/fundamentals/09-add-notes-rests-text.lua)).
+  helper turns a number of quarter notes into one ([14-add-notes-rests-text.lua](../examples/fundamentals/14-add-notes-rests-text.lua)).
 - `fromString` takes a sounding spelling, `<letter><accidentals><octave>`, and the note keeps exactly that spelling.
 - A constructor given bad arguments can crash Dorico. Never pass `fromString` a pitch above MIDI 127, or anything
   you haven't checked parses.
@@ -352,16 +412,18 @@ A command changes the selected items, through the Properties panel's own route:
 UI.InvokePropertyChangeValue?Type=kEventColour&Value=#ffff0000
 ```
 
-That colours the selection ([08-select-by-id.lua](../examples/fundamentals/08-select-by-id.lua),
+That colours the selection ([12-select-by-id.lua](../examples/fundamentals/12-select-by-id.lua),
 [colour-by-pitch.lua](../examples/recipes/colour-by-pitch.lua)). The same command with `kNoteheadSetOverride` changed
-nothing.
+nothing. Dorico stores a value set this way for the layout on screen, so it shows only there. `EventEdit.ChangeProperty`
+(below) sets one for every layout.
 
 ### Properties that don't work
 
 - `kEventHide` hides neither texts nor rests. Use `kTextHide` for texts. For rests, don't create them; remove them
   by command.
-- Naturals can't be hidden by property: `kNoteAccidentalVisibility` takes the value and nothing changes. Select the
-  note and run `Edit.HideAccidental`, once per note.
+- Naturals can't be hidden through the property table: `kNoteAccidentalVisibility` takes the value and nothing changes.
+  Select the note and run `Edit.HideAccidental`, once per note. `EventEdit.ChangeProperty` with
+  `kNoteAccidentalVisibility_v3` stores `kHide` (W5), but whether that hides a natural on the page hasn't been checked.
 
 ### Selecting an event for a command
 
@@ -371,7 +433,7 @@ EventEdit.Select?FlowID=<flow.id>&EventID=<event id>&EventBlockID=<block id>
 
 The block id is the id of the block holding the event. Find the event's instance (the `Start block id` above it in
 the dump) in `stream.blockInstances`, and take that instance's `block.id`. The `blockIdOf` helper does this
-([08-select-by-id.lua](../examples/fundamentals/08-select-by-id.lua)).
+([12-select-by-id.lua](../examples/fundamentals/12-select-by-id.lua)).
 
 - In many projects the block id happens to be the instance id minus 1000, but in a downloaded arrangement instance
   1061 held block 36, so look it up every time. A select given the wrong block id selects nothing and reports
@@ -380,6 +442,36 @@ the dump) in `stream.blockInstances`, and take that instance's `block.id`. The `
   select the first and extend with `EventEdit.NavigateRightExtend`.
 - Leave note input (`NoteInput.Exit`) and switch to Write mode (`Window.SwitchMode?WindowMode=kWriteMode`) before
   selecting. `Edit.SelectNone` clears the selection.
+
+### Writing by id
+
+`EventEdit.ChangeProperty` sets one property on one event without selecting it
+([13-set-a-property-by-id.lua](../examples/fundamentals/13-set-a-property-by-id.lua)):
+
+```
+EventEdit.ChangeProperty?FlowID=<flow id>&EventID=<event id>&EventBlockID=<block id>&Type=kEventColour&Value=#ff1f78b4
+```
+
+- The value has no context, so it holds in every layout, and it joins the run's one undo step.
+- The command reports nothing back. To see that a value took, read a second copy and look at the event's entries, as
+  13 does.
+- Without `Value`, the command takes the property off.
+- Dorico stores any property name it's given, without checking, and an accidental value it doesn't know becomes `kHide`.
+- `scorereader.dorico.edit` builds the commands from an event the reader found: `edit.setProperty(app, e, property,
+  value)` and `edit.removeProperty(app, e, property)`, and `edit.select(app, e)` and `edit.delete(app, e)` for the rest.
+
+What the W spikes found for other changes ([spikes.md](spikes.md#w1-to-w7-changing-what-the-reader-found)):
+
+- A text's words can't be changed in place. Delete it by its ids and `createText` a new one in the same stream at the
+  same position. A text in another paragraph style, or with formatting inside it, comes back plain.
+- `Edit.FlipItem` on a selected text stores `kTextEventAboveOrBelow` for the layout on screen; set by `ChangeProperty`,
+  it holds in every layout. `Edit.ChangeStaffTextToSystemText` makes the selected text a system text.
+- A lyric is replaced by deleting it and entering a word on the selected note with `NoteInput.StartLyricInput`, then
+  `NoteInput.AcceptCurrentLyricInput?LyricsEntryAdvanceType=kEndInput&LyricText=<word>`. That makes a whole word on line
+  1, and a hyphen stays in the text, so syllables need another route.
+- A chord symbol is replaced by deleting it and entering the new one with the chord-symbol commands (below) on a note at
+  the same position.
+- 300 `createText` calls take about 19 s.
 
 ### Chord symbols and dynamics
 
@@ -401,7 +493,7 @@ it's open Dorico runs no scripts at all. Escape doesn't close it; clicking empty
 ### Flows
 
 - `Project.Flow.New` adds a flow at the end, holding every player. It doesn't say which flow it made, so look for
-  the id that wasn't there before ([09-add-notes-rests-text.lua](../examples/fundamentals/09-add-notes-rests-text.lua)).
+  the id that wasn't there before ([14-add-notes-rests-text.lua](../examples/fundamentals/14-add-notes-rests-text.lua)).
 - `Project.Flow.Rename?FlowID=<id>&Name=<name>` renames it.
 - `Project.Flows.MoveToStart?FlowIDArray=<id>`: a single id is the whole array.
 - `flow:removePlayer(player)` takes a player out of one flow.
@@ -415,7 +507,7 @@ it's open Dorico runs no scripts at all. Escape doesn't close it; clicking empty
 ### Players
 
 - `score:addPlayer("instrument.strings.violin", false, 1)` adds a player and returns it
-  ([11-flows-and-players.lua](../examples/fundamentals/11-flows-and-players.lua)). The instrument ids are the
+  ([16-flows-and-players.lua](../examples/fundamentals/16-flows-and-players.lua)). The instrument ids are the
   `entityID` values in `instruments.xml` in Dorico's program folder; pass only ids listed there. The player joins
   every flow, and Dorico makes a part layout for it.
 - Finding a player's id: rename a candidate id to a unique token with `Project.Player.Rename?PlayerID=<id>&Name=<token>`,
@@ -432,7 +524,7 @@ it's open Dorico runs no scripts at all. Escape doesn't close it; clicking empty
 ### Layout and notation options
 
 Options are set by command, in the form Dorico logs for the Remote Control API's `setoptions`
-([10-layout-and-notation-options.lua](../examples/fundamentals/10-layout-and-notation-options.lua)):
+([15-layout-and-notation-options.lua](../examples/fundamentals/15-layout-and-notation-options.lua)):
 
 ```
 Project.Layout.SetOptions?Dictionary=list: {string: "flowHeadingBehaviour"}\, {string: "kNoFlowHeadings"}&OpenScoreID=<score.openScoreID>&LayoutIDArray=<layout id>
@@ -467,7 +559,6 @@ Project.Flow.SetNotationOptions?Dictionary=list: {string: "barlineOptions.finalB
 
 - `copyRange` copies nothing, within a flow or across flows.
 - There's no silent MusicXML export: `File.Export` and `File.Export.SpecificFlowsAndParts` open dialogs.
-- A saved project is binary inside (`score.dtn`), so reading the project file isn't an option.
 
 ## 6. Commands
 
@@ -475,7 +566,7 @@ Project.Flow.SetNotationOptions?Dictionary=list: {string: "barlineOptions.finalB
 - Dorico reads a backslash in a value as an escape, and a bare `&` or `,` ends the value: `Name=A, B` names a
   player `A`. Write `\&` for an ampersand, `\,` for a comma and `\\` for a backslash. `=` and any other character,
   accented letters included, go through as they are. Build every command with one function that does this, as the
-  `commands` helper does ([06-commands.lua](../examples/fundamentals/06-commands.lua)), so a name like
+  `commands` helper does ([10-commands.lua](../examples/fundamentals/10-commands.lua)), so a name like
   "Violin, solo & tutti" arrives whole.
 - `doCommand` returns nothing, for a command that worked and for one Dorico has never heard of alike. Check what you
   send: `tostring` turns a missing value into the word `nil`, and a wrong id selects, renames or deletes the wrong
@@ -487,7 +578,7 @@ Project.Flow.SetNotationOptions?Dictionary=list: {string: "barlineOptions.finalB
 
 The handbells plug-in's guide says that edits made through the object model never enter the undo history. On
 Dorico 6.2.30 they do ([spikes.md](spikes.md#undo)). This is what was seen;
-[13-undo.lua](../examples/fundamentals/13-undo.lua) shows the second point.
+[18-undo.lua](../examples/fundamentals/18-undo.lua) shows the second point.
 
 - Everything a script run changes is one undo step, whether by command or through the object model (`createNote`,
   `createText`, `stream:delete`, `propertyTable:set`). Edit > Undo afterwards takes the whole run back. Options set
@@ -504,8 +595,7 @@ Dorico 6.2.30 they do ([spikes.md](spikes.md#undo)). This is what was seen;
 
 What a script should do with that:
 
-1. If it must read through a temporary copy (section 3), do all of that first and take it away with exactly one
-   `Edit.Undo`, before changing anything, and change nothing after it unless a joined undo step is acceptable.
+1. Read through a saved copy (section 3). It adds no undo step and changes nothing on the page.
 2. Prefer routes with no undo at all, such as moving the selection an octave and back (section 3).
 3. For a big change, save first (`File.Save`), so that File > Revert takes the run back cleanly.
 
@@ -523,7 +613,7 @@ option still shows its new value, or a reply leaves an option out. Read again a 
 ## 8. Asking the user
 
 Lua in Dorico has no windows, but it can start a program and wait for it
-([12-ask-and-report.lua](../examples/fundamentals/12-ask-and-report.lua)). The script writes a small script for the
+([17-ask-and-report.lua](../examples/fundamentals/17-ask-and-report.lua)). The script writes a small script for the
 other program, runs it with `os.execute` (on a Mac, `io.popen` to read its output), and reads the answer back from
 a file. Dorico waits, frozen, while the box is open.
 
@@ -569,7 +659,7 @@ also not yet run on a Mac.
 ## 9. Running a script from a key
 
 - With no setup: run a script once with Script > Run Script, and Ctrl+Shift+Alt+R (Script > Run Last Script) runs
-  it again ([14-key-command.lua](../examples/fundamentals/14-key-command.lua)). A global keeps state between
+  it again ([19-key-command.lua](../examples/fundamentals/19-key-command.lua)). A global keeps state between
   presses, as [hotkey-colour-cycle.lua](../examples/recipes/hotkey-colour-cycle.lua) does to step through colours.
 - A key of its own: the user's key commands are in `keycommands_en.json` (one file per language) in
   `%APPDATA%\Steinberg\Dorico 6`, which appears once any key command has been changed. An entry in the `kGlobal`
@@ -631,16 +721,18 @@ With Remote Control enabled in Dorico's preferences, a WebSocket at `ws://127.0.
 
 Keep pure logic (parsers, chord naming, ranges) in code that doesn't name `DoApp` or `DoCore`, and test it with
 stock Lua 5.2. The examples' helper blocks are tested this way: `tests/lib/helpers.lua` loads a block out of an
-example by its `-- helper:` markers, and `tests/test_helpers.lua` tests it.
+example by its `-- helper:` markers, and `tests/test_helpers.lua` tests it. The reader is pure Lua too, and its
+tests decode every fixture, one folder per Dorico version, in stock Lua.
 
 ## 12. Gotchas, in one list
 
 - One Lua state for the session: keep everything local, clear your modules, guard `package.path`.
 - Syntax errors are skipped silently. Runtime errors end the script.
 - `Script.ShowConsole` toggles the console.
-- `stream.events` raises an error on most real music. `stream:dump()` always works but has no properties.
-- Every pitch is sounding, and nothing says how an instrument transposes.
-- Time and key signatures can't be read. Bar numbers come from the text export.
+- `stream.events` raises an error on most real music. `stream:dump()` always works but has no properties; a saved copy
+  has them.
+- Every pitch is sounding. A saved copy has each instrument's transposition.
+- Lua can't read time or key signatures; a saved copy can.
 - Players have no id and no `==`. Player ids aren't instrument ids.
 - `flow.instruments[i].id` owns `flow.voiceStreams[i]`; `flow.instruments[i].streams` is broken.
 - `RhythmicLength(0.5)` is 0. Fractions go in as `RhythmicLength(n, d)`.
@@ -648,14 +740,18 @@ example by its `-- helper:` markers, and `tests/test_helpers.lua` tests it.
 - `EventEdit.Select` needs the event's block id from `stream.blockInstances`, and replaces the selection.
 - `doCommand` returns nothing and reports nothing. Command values escape `\`, `&` and `,`.
 - `NoteInput.CreateText` blocks Dorico until someone clicks the page.
-- A colour set by command can't be read back, and a property-table read can lag the page.
+- A value set by command or in the Properties panel is stored for the layout on screen. Lua can't read it back; a saved
+  copy can.
 - `kEventHide` hides neither texts nor rests. Naturals hide only by command.
-- Layout options can be set, never read. `setoptions` with `flowIDs` changes flow 0.
+- Lua can't read layout options. A saved copy holds them, but the reader doesn't decode them yet. `setoptions` with
+  `flowIDs` changes flow 0.
 - A script can't delete a player. `Project.Flow.New` adds every player to the new flow.
 - Every edit a run makes, object-model edits included, is one undo step. Only the first `Edit.Undo` in a run is
   safe. Chord symbols by popover make three undo steps each.
 - `os.execute` freezes Dorico until it returns.
 - The text export may have no flow numbers and no hidden texts.
+- A text's words can't be changed in place: delete it and create it again.
+- `app:save` takes its path in UTF-8 and `io.open` in the code page, so keep the saved copy's folder ASCII.
 
 ## 13. Which example shows what
 
@@ -664,21 +760,26 @@ example by its `-- helper:` markers, and `tests/test_helpers.lua` tests it.
 | The no-project guard, print, one Lua state | [01-hello.lua](../examples/fundamentals/01-hello.lua) |
 | Players, flows, which player owns a voice | [02-walk-the-score.lua](../examples/fundamentals/02-walk-the-score.lua) |
 | Reading notes from the dump | [03-read-notes.lua](../examples/fundamentals/03-read-notes.lua) |
-| Noteheads and colours through a pasted copy | [04-noteheads-and-colours.lua](../examples/fundamentals/04-noteheads-and-colours.lua) |
-| The text export: titles, path, instrument names | [05-names-from-the-text-export.lua](../examples/fundamentals/05-names-from-the-text-export.lua) |
-| Building and escaping commands | [06-commands.lua](../examples/fundamentals/06-commands.lua) |
-| Finding the selection, acting on it | [07-act-on-the-selection.lua](../examples/fundamentals/07-act-on-the-selection.lua) |
-| Selecting by id, colouring by command | [08-select-by-id.lua](../examples/fundamentals/08-select-by-id.lua) |
-| Writing notes, rests and text | [09-add-notes-rests-text.lua](../examples/fundamentals/09-add-notes-rests-text.lua) |
-| Layout and notation options | [10-layout-and-notation-options.lua](../examples/fundamentals/10-layout-and-notation-options.lua) |
-| Adding flows and players, player ids | [11-flows-and-players.lua](../examples/fundamentals/11-flows-and-players.lua) |
-| A box asking the user | [12-ask-and-report.lua](../examples/fundamentals/12-ask-and-report.lua) |
-| What undo does | [13-undo.lua](../examples/fundamentals/13-undo.lua) |
-| A script for a key, state between runs | [14-key-command.lua](../examples/fundamentals/14-key-command.lua) |
+| Noteheads and colours from a saved copy | [04-read-the-saved-copy.lua](../examples/fundamentals/04-read-the-saved-copy.lua) |
+| Titles, players, instruments and layouts from a saved copy | [05-names-and-titles.lua](../examples/fundamentals/05-names-and-titles.lua) |
+| Matching the copy to Lua by event id | [06-match-by-event-id.lua](../examples/fundamentals/06-match-by-event-id.lua) |
+| Values per layout and block instance | [07-values-per-layout.lua](../examples/fundamentals/07-values-per-layout.lua) |
+| Texts, lyrics, chord symbols and dynamics | [08-text-lyrics-chords-dynamics.lua](../examples/fundamentals/08-text-lyrics-chords-dynamics.lua) |
+| Bars, keys and time signatures | [09-bars-keys-and-times.lua](../examples/fundamentals/09-bars-keys-and-times.lua) |
+| Building and escaping commands | [10-commands.lua](../examples/fundamentals/10-commands.lua) |
+| Finding the selection, acting on it | [11-act-on-the-selection.lua](../examples/fundamentals/11-act-on-the-selection.lua) |
+| Selecting by id, colouring by command | [12-select-by-id.lua](../examples/fundamentals/12-select-by-id.lua) |
+| Setting a property by id | [13-set-a-property-by-id.lua](../examples/fundamentals/13-set-a-property-by-id.lua) |
+| Writing notes, rests and text | [14-add-notes-rests-text.lua](../examples/fundamentals/14-add-notes-rests-text.lua) |
+| Layout and notation options | [15-layout-and-notation-options.lua](../examples/fundamentals/15-layout-and-notation-options.lua) |
+| Adding flows and players, player ids | [16-flows-and-players.lua](../examples/fundamentals/16-flows-and-players.lua) |
+| A box asking the user | [17-ask-and-report.lua](../examples/fundamentals/17-ask-and-report.lua) |
+| What undo does | [18-undo.lua](../examples/fundamentals/18-undo.lua) |
+| A script for a key, state between runs | [19-key-command.lua](../examples/fundamentals/19-key-command.lua) |
 | Colouring every note | [colour-by-pitch.lua](../examples/recipes/colour-by-pitch.lua) |
 | Labels at each note | [label-notes.lua](../examples/recipes/label-notes.lua) |
 | Ranges, parallels, bar numbers from the export | [proofread.lua](../examples/recipes/proofread.lua) |
 | Naming chords, chord symbols by command | [chord-symbols.lua](../examples/recipes/chord-symbols.lua) |
 | A report on players and instruments | [instrument-report.lua](../examples/recipes/instrument-report.lua) |
 | A key that cycles colours | [hotkey-colour-cycle.lua](../examples/recipes/hotkey-colour-cycle.lua) |
-| A complete plug-in with a dialog and tests | [Handbells Used Chart](https://github.com/ThePrismSystem/handbells-used-chart-dorico) |
+| A complete plug-in with a dialog and tests | [Handbells Used Chart](https://github.com/ThePrismSystem/handbells-used-chart-dorico-plugin) |

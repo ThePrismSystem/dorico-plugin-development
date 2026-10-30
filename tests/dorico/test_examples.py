@@ -1,4 +1,4 @@
-"""Each example, run in Dorico on a scratch copy of the sample, then checked.
+"""Each example, run in Dorico on a scratch copy of the sample or the reading fixture, then checked.
 
     python tests/dorico/test_examples.py              every example
     python tests/dorico/test_examples.py -k colour    those whose name matches
@@ -8,6 +8,7 @@ examples, to show Dorico's one Lua state doesn't change what they do), and any a
 name a case to run first (to select notes, say) and steps to take afterwards on the same copy: a command sent through
 the Remote API, as a user pressing a key would, or another example with its own check.
 """
+import json
 import sys
 import time
 import unittest
@@ -20,16 +21,17 @@ import harness  # noqa: E402
 FUNDAMENTALS = "examples/fundamentals/"
 RECIPES = "examples/recipes/"
 CHECKS = "tests/dorico/checks/"
-READ_COLOURS = FUNDAMENTALS + "04-noteheads-and-colours.lua"
+READ_COLOURS = FUNDAMENTALS + "04-read-the-saved-copy.lua"
 
 EXAMPLES = []
 
 
-def row(name, example, twice=False, args=None, check=None, before=None, after=(), dialog=None):
+def row(name, example, twice=False, args=None, check=None, before=None, after=(), dialog=None, project=None):
     """dialog: {"window", "button", "text"?} for an example that waits on a box; the example then runs in the
-    background while the test answers the box."""
+    background while the test answers the box. project: None for the sample, "reading" for the reading fixture."""
     EXAMPLES.append({"name": name, "example": example, "check": check or CHECKS + Path(example).name,
-                     "twice": twice, "args": args or {}, "before": before, "after": list(after), "dialog": dialog})
+                     "twice": twice, "args": args or {}, "before": before, "after": list(after), "dialog": dialog,
+                     "project": harness.PROJECTS[project]})
 
 
 def then_check(check, example=None):
@@ -38,7 +40,21 @@ def then_check(check, example=None):
 
 
 def then_command(command):
+    """A step that sends a command through the Remote API, as a key press would; Dorico must answer kOK."""
     return {"command": command}
+
+
+def request(client, command):
+    """Dorico's reply to a command. Notices it pushes on its own (selectionchanged and the like) can come first, and
+    the reply to an earlier command can still be queued, so the queue is read until it is quiet, and the reply is the
+    next "response"."""
+    client.settle(quiet=0.5, limit=10)
+    return client.request({"message": "command", "command": command}, expect="response")
+
+
+def send(test, client, command):
+    reply = request(client, command)
+    test.assertEqual(reply.get("code"), "kOK", f"{command}: {reply}")
 
 
 def then_python(fn):
@@ -47,14 +63,18 @@ def then_python(fn):
 
 
 def then_rerun_last():
-    """A step that presses Run Last Script (Ctrl+Shift+Alt+R) through the Remote API and waits for the rerun's
-    result. Without the wait, a rerun Dorico hasn't reached yet can run nested inside the next case's commands."""
+    """A step that presses Run Last Script (Ctrl+Shift+Alt+R) through the Remote API, waits for the rerun's result
+    and checks it. Without the wait, a rerun Dorico hasn't reached yet can run nested inside the next case's
+    commands."""
     def step(test, client, printed):
         result = harness.run_lua.RUN_DIR / "result.json"
         before = result.stat().st_mtime_ns if result.exists() else 0
-        client.command("Script.RunLastScript")
+        reply = request(client, "Script.RunLastScript")
         rewritten = harness.run_lua.wait_for(lambda: result.exists() and result.stat().st_mtime_ns != before, 30)
+        # Checked after the wait: a failure closes the copy, and closing it under a rerun still to come crashed Dorico.
+        test.assertEqual(reply.get("code"), "kOK", f"Script.RunLastScript: {reply}")
         test.assertTrue(rewritten, "Run Last Script wrote no result")
+        harness.check(test, json.loads(result.read_text(encoding="utf-8")), "the rerun")
     return then_python(step)
 
 
@@ -83,42 +103,52 @@ def options_are(layout, flows, wait=10):
 row("hello", FUNDAMENTALS + "01-hello.lua", twice=True)
 row("walk_the_score", FUNDAMENTALS + "02-walk-the-score.lua", twice=True)
 row("read_notes", FUNDAMENTALS + "03-read-notes.lua", twice=True)
-row("noteheads_and_colours", FUNDAMENTALS + "04-noteheads-and-colours.lua", twice=True)
-row("noteheads_with_the_first_player_tacet", FUNDAMENTALS + "04-noteheads-and-colours.lua",
-    check=CHECKS + "04-noteheads-and-colours.tacet.lua", before={"case": "case_tacet.lua"})
-row("names_from_the_text_export", FUNDAMENTALS + "05-names-from-the-text-export.lua", twice=True)
-row("commands", FUNDAMENTALS + "06-commands.lua",
-    after=[then_command("Edit.Undo"), then_check("06-commands.undone.lua")])
-row("act_on_the_selection", FUNDAMENTALS + "07-act-on-the-selection.lua",
+row("read_the_saved_copy", READ_COLOURS, twice=True)
+# The edit before the run is an undo step of its own, so one Edit.Undo after 04 takes it back only if 04 added none.
+row("read_the_saved_copy_adds_no_undo_step", READ_COLOURS, before={"case": "case_edit.lua"},
+    after=[then_command("Edit.Undo"), then_check("04-read-the-saved-copy.undone.lua")])
+row("names_and_titles", FUNDAMENTALS + "05-names-and-titles.lua", twice=True)
+row("match_by_event_id", FUNDAMENTALS + "06-match-by-event-id.lua", twice=True)
+row("values_per_layout", FUNDAMENTALS + "07-values-per-layout.lua", twice=True, project="reading")
+row("text_lyrics_chords_dynamics", FUNDAMENTALS + "08-text-lyrics-chords-dynamics.lua", twice=True,
+    project="reading")
+row("text_flipped_in_the_full_score", FUNDAMENTALS + "08-text-lyrics-chords-dynamics.lua", project="reading",
+    args={"below": "dolce"}, before={"case": "case_flip.lua", "args": {"words": "dolce"}})
+row("bars_keys_and_times", FUNDAMENTALS + "09-bars-keys-and-times.lua", twice=True, project="reading")
+row("commands", FUNDAMENTALS + "10-commands.lua",
+    after=[then_command("Edit.Undo"), then_check("10-commands.undone.lua")])
+row("act_on_the_selection", FUNDAMENTALS + "11-act-on-the-selection.lua",
     before={"case": "case_select.lua", "args": {"player": "Violin, solo & tutti", "pos": 0, "extend": 1,
                                                 "renameSecondFlow": True}},
-    after=[then_command("Edit.Undo"), then_check("07-act-on-the-selection.undone.lua")])
-row("act_on_nothing_selected", FUNDAMENTALS + "07-act-on-the-selection.lua",
-    check=CHECKS + "07-act-on-the-selection.none.lua")
-row("select_by_id", FUNDAMENTALS + "08-select-by-id.lua",
-    after=[then_check("08-select-by-id.coloured.lua", READ_COLOURS), then_command("Edit.Undo"),
-           then_check("08-select-by-id.undone.lua", READ_COLOURS)])
-row("add_notes_rests_text", FUNDAMENTALS + "09-add-notes-rests-text.lua",
-    after=[then_command("Edit.Undo"), then_check("09-add-notes-rests-text.undone.lua")])
-row("layout_and_notation_options", FUNDAMENTALS + "10-layout-and-notation-options.lua",
+    after=[then_command("Edit.Undo"), then_check("11-act-on-the-selection.undone.lua")])
+row("act_on_nothing_selected", FUNDAMENTALS + "11-act-on-the-selection.lua",
+    check=CHECKS + "11-act-on-the-selection.none.lua")
+row("select_by_id", FUNDAMENTALS + "12-select-by-id.lua",
+    after=[then_check("12-select-by-id.coloured.lua", READ_COLOURS), then_command("Edit.Undo"),
+           then_check("12-select-by-id.undone.lua", READ_COLOURS)])
+row("set_a_property_by_id", FUNDAMENTALS + "13-set-a-property-by-id.lua",
+    after=[then_command("Edit.Undo"), then_check("13-set-a-property-by-id.undone.lua")])
+row("add_notes_rests_text", FUNDAMENTALS + "14-add-notes-rests-text.lua",
+    after=[then_command("Edit.Undo"), then_check("14-add-notes-rests-text.undone.lua")])
+row("layout_and_notation_options", FUNDAMENTALS + "15-layout-and-notation-options.lua",
     after=[options_are("kNoFlowHeadings", {0: "kDouble", 1: "kFinal"}), then_command("Edit.Undo"),
            options_are("kAlwaysInsertHeadings", {0: "kFinal", 1: "kFinal"})])
-row("flows_and_players", FUNDAMENTALS + "11-flows-and-players.lua",
-    after=[then_command("Edit.Undo"), then_check("11-flows-and-players.undone.lua")])
+row("flows_and_players", FUNDAMENTALS + "16-flows-and-players.lua",
+    after=[then_command("Edit.Undo"), then_check("16-flows-and-players.undone.lua")])
 OPEN_FIRST = {"case": "case_open.lua"}
 ANSWER = "Hello, world & Zoë"
-row("ask_and_report", FUNDAMENTALS + "12-ask-and-report.lua", args={"answer": ANSWER}, before=OPEN_FIRST,
+row("ask_and_report", FUNDAMENTALS + "17-ask-and-report.lua", args={"answer": ANSWER}, before=OPEN_FIRST,
     dialog={"window": "Ask and report", "text": ANSWER, "button": "OK"})
-row("ask_and_cancel", FUNDAMENTALS + "12-ask-and-report.lua", check=CHECKS + "12-ask-and-report.cancelled.lua",
+row("ask_and_cancel", FUNDAMENTALS + "17-ask-and-report.lua", check=CHECKS + "17-ask-and-report.cancelled.lua",
     before=OPEN_FIRST, dialog={"window": "Ask and report", "button": "Cancel"})
-# 13 can't run twice in one script run: the second run's Edit.Undo would be the run's second, and it takes back
+# 18 can't run twice in one script run: the second run's Edit.Undo would be the run's second, and it takes back
 # the earlier edit (seen when this row had twice=True).
-row("undo", FUNDAMENTALS + "13-undo.lua", before={"case": "case_edit.lua"})
-row("key_command", FUNDAMENTALS + "14-key-command.lua",
-    after=[then_check("14-key-command.again.lua", FUNDAMENTALS + "14-key-command.lua")])
+row("undo", FUNDAMENTALS + "18-undo.lua", before={"case": "case_edit.lua"})
+row("key_command", FUNDAMENTALS + "19-key-command.lua",
+    after=[then_check("19-key-command.again.lua", FUNDAMENTALS + "19-key-command.lua")])
 row("colour_by_pitch", RECIPES + "colour-by-pitch.lua",
     after=[then_check("colour-by-pitch.coloured.lua", READ_COLOURS), then_command("Edit.Undo"),
-           then_check("08-select-by-id.undone.lua", READ_COLOURS)])
+           then_check("12-select-by-id.undone.lua", READ_COLOURS)])
 row("label_notes", RECIPES + "label-notes.lua",
     after=[then_command("Edit.Undo"), then_check("label-notes.undone.lua")])
 row("chord_symbols", RECIPES + "chord-symbols.lua",
@@ -146,7 +176,7 @@ def make_test(spec):
         before = spec["before"]
         first, first_args = (before["case"], before.get("args")) if before else \
             ("case_example.lua", harness.example_args(spec))
-        with harness.scratch(self, first, args=first_args) as (client, result):
+        with harness.scratch(self, first, args=first_args, open_file=spec["project"]) as (client, result):
             if spec["dialog"]:
                 box = spec["dialog"]
                 run = harness.Background(lambda: harness.run_more(self, client, "case_example.lua",
@@ -163,7 +193,7 @@ def make_test(spec):
             printed = (result.get("facts") or {}).get("printed") or []
             for step in spec["after"]:
                 if "command" in step:
-                    client.command(step["command"])
+                    send(self, client, step["command"])
                 elif "python" in step:
                     step["python"](self, client, printed)
                 else:

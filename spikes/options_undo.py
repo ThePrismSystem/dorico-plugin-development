@@ -1,4 +1,4 @@
-"""What Edit > Undo takes back after a script sets a layout option and a notation option. Runs fundamental 10 on a
+"""What Edit > Undo takes back after a script sets a layout option and a notation option. Runs fundamental 15 on a
 scratch copy of the sample, sends one Edit.Undo through the Remote API, and reads both options every half second for
 ten seconds, printing when each comes back. Repeats on a fresh copy each time. Each copy is closed unsaved.
 
@@ -12,8 +12,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tests" / "dorico"))
 import harness  # noqa: E402
 
-ARGS = {"example": "examples/fundamentals/10-layout-and-notation-options.lua",
-        "check": "tests/dorico/checks/10-layout-and-notation-options.lua"}
+ARGS = {"example": "examples/fundamentals/15-layout-and-notation-options.lua",
+        "check": "tests/dorico/checks/15-layout-and-notation-options.lua"}
 
 
 def read(client):

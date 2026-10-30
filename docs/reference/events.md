@@ -17,9 +17,9 @@ a bad call can crash Dorico.
 | `__tostring` | operator | verified | Describes the event, as a dump line ends: `kNoteEvent (id:7932) at 0, duration 1  E5 (ends 1)`. |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
-| `id` | property | verified | What `EventEdit.Select` takes as `EventID` ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `id` | property | verified | What `EventEdit.Select` takes as `EventID` ([S8](../spikes.md#s8-reading-and-setting-note-properties)). |
 | `position` | member | not tried |  |
-| `propertyTable` | property | verified | The event's properties ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `propertyTable` | property | verified | The event's properties ([S8](../spikes.md#s8-reading-and-setting-note-properties)). |
 
 ## `DoCore.NoteEvent`
 
@@ -30,10 +30,10 @@ a bad call can crash Dorico.
 | `__tostring` | operator | verified | Describes the event, as a dump line ends: `kNoteEvent (id:7932) at 0, duration 1  E5 (ends 1)`. |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
-| `id` | property | verified | What `EventEdit.Select` takes as `EventID` ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `id` | property | verified | What `EventEdit.Select` takes as `EventID` ([S8](../spikes.md#s8-reading-and-setting-note-properties)). |
 | `pitchWithSpelling` | member | not tried |  |
 | `position` | member | not tried |  |
-| `propertyTable` | property | verified | The event's properties ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `propertyTable` | property | verified | The event's properties ([S8](../spikes.md#s8-reading-and-setting-note-properties)). |
 
 ## `DoCore.GraceNoteEvent`
 
@@ -44,10 +44,10 @@ a bad call can crash Dorico.
 | `__tostring` | operator | verified | Describes the event, as a dump line ends: `kNoteEvent (id:7932) at 0, duration 1  E5 (ends 1)`. |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
-| `id` | property | verified | What `EventEdit.Select` takes as `EventID` ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `id` | property | verified | What `EventEdit.Select` takes as `EventID` ([S8](../spikes.md#s8-reading-and-setting-note-properties)). |
 | `pitchWithSpelling` | member | not tried |  |
 | `position` | member | not tried |  |
-| `propertyTable` | property | verified | The event's properties ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
+| `propertyTable` | property | verified | The event's properties ([S8](../spikes.md#s8-reading-and-setting-note-properties)). |
 | `secondaryPosition` | member | not tried |  |
 
 ## `DoCore.RestEvent`
@@ -82,13 +82,13 @@ a bad call can crash Dorico.
 | ------ | ---- | ------ | ----- |
 | `__eq` | operator | not tried |  |
 | `__len` | operator | not tried |  |
-| `__tostring` | operator | not tried | As on the base event; no example reads this kind. |
+| `__tostring` | operator | verified | `TextEvent ID: 326 kTextEvent (id:326) at 0 : <words>`, then the paragraph style on a line of its own ([text_event.lua](../spikes.md#texteventtext)). |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
 | `id` | property | not tried | As on the base event; no example reads this kind. |
 | `position` | member | not tried |  |
 | `propertyTable` | property | not tried | As on the base event; no example reads this kind. |
-| `text` | member | not tried |  |
+| `text` | member | verified | The words, as a string. Read-only: setting it raises "property 'text' is read only" ([text_event.lua](../spikes.md#texteventtext)). |
 
 ## `DoCore.TupletEvent`
 

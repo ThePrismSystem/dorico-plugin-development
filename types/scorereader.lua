@@ -246,6 +246,7 @@
 ---@field eventsOf fun(s: scorereader.Score, flow: scorereader.Flow, player: scorereader.Player): scorereader.Event[]
 ---@field ownerOf fun(s: scorereader.Score, e: scorereader.Event): scorereader.Player|nil
 ---@field partOf fun(s: scorereader.Score, player: scorereader.Player): scorereader.Layout|nil
+---@field fullScoreOf fun(s: scorereader.Score): scorereader.Layout|nil
 ---@field entries fun(s: scorereader.Score, e: scorereader.Event): scorereader.PropertyEntry[]
 ---@field value fun(s: scorereader.Score, e: scorereader.Event, property: string, layoutId: integer): any, boolean
 ---@field above fun(s: scorereader.Score, e: scorereader.Event, layoutId: integer): boolean|nil

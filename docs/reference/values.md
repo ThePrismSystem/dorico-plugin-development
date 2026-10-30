@@ -12,7 +12,7 @@ a bad call can crash Dorico.
 
 | Member | Kind | Status | Notes |
 | ------ | ---- | ------ | ----- |
-| `__init` | constructor | verified | `RhythmicLength(n)` keeps only the whole part of n; `RhythmicLength(n, d)` is n/d quarter notes ([07-act-on-the-selection](../../examples/fundamentals/07-act-on-the-selection.lua)). |
+| `__init` | constructor | verified | `RhythmicLength(n)` keeps only the whole part of n; `RhythmicLength(n, d)` is n/d quarter notes ([11-act-on-the-selection](../../examples/fundamentals/11-act-on-the-selection.lua)). |
 | `__add` | operator | not tried |  |
 | `__div` | operator | not tried |  |
 | `__eq` | operator | not tried |  |
@@ -31,7 +31,7 @@ a bad call can crash Dorico.
 | ------ | ---- | ------ | ----- |
 | `MiddleC` | static | not tried |  |
 | `__init` | constructor | not tried |  |
-| `fromString` | static | verified | `fromString("Ab5")`: a sounding spelling, kept exactly. Can crash Dorico on input it can't read, or above MIDI 127 ([09-add-notes-rests-text](../../examples/fundamentals/09-add-notes-rests-text.lua)). |
+| `fromString` | static | verified | `fromString("Ab5")`: a sounding spelling, kept exactly. Can crash Dorico on input it can't read, or above MIDI 127 ([14-add-notes-rests-text](../../examples/fundamentals/14-add-notes-rests-text.lua)). |
 | `__eq` | operator | not tried |  |
 | `__len` | operator | not tried |  |
 | `__tostring` | operator | not tried |  |
