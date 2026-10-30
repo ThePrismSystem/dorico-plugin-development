@@ -8,6 +8,7 @@ examples, to show Dorico's one Lua state doesn't change what they do), and any a
 name a case to run first (to select notes, say) and steps to take afterwards on the same copy: a command sent through
 the Remote API, as a user pressing a key would, or another example with its own check.
 """
+import json
 import sys
 import time
 import unittest
@@ -39,7 +40,13 @@ def then_check(check, example=None):
 
 
 def then_command(command):
+    """A step that sends a command through the Remote API, as a key press would; Dorico must answer kOK."""
     return {"command": command}
+
+
+def send(test, client, command):
+    reply = client.command(command)
+    test.assertEqual(reply.get("code"), "kOK", f"{command}: {reply}")
 
 
 def then_python(fn):
@@ -48,14 +55,16 @@ def then_python(fn):
 
 
 def then_rerun_last():
-    """A step that presses Run Last Script (Ctrl+Shift+Alt+R) through the Remote API and waits for the rerun's
-    result. Without the wait, a rerun Dorico hasn't reached yet can run nested inside the next case's commands."""
+    """A step that presses Run Last Script (Ctrl+Shift+Alt+R) through the Remote API, waits for the rerun's result
+    and checks it. Without the wait, a rerun Dorico hasn't reached yet can run nested inside the next case's
+    commands."""
     def step(test, client, printed):
         result = harness.run_lua.RUN_DIR / "result.json"
         before = result.stat().st_mtime_ns if result.exists() else 0
-        client.command("Script.RunLastScript")
+        send(test, client, "Script.RunLastScript")
         rewritten = harness.run_lua.wait_for(lambda: result.exists() and result.stat().st_mtime_ns != before, 30)
         test.assertTrue(rewritten, "Run Last Script wrote no result")
+        harness.check(test, json.loads(result.read_text(encoding="utf-8")), "the rerun")
     return then_python(step)
 
 
@@ -85,11 +94,16 @@ row("hello", FUNDAMENTALS + "01-hello.lua", twice=True)
 row("walk_the_score", FUNDAMENTALS + "02-walk-the-score.lua", twice=True)
 row("read_notes", FUNDAMENTALS + "03-read-notes.lua", twice=True)
 row("read_the_saved_copy", READ_COLOURS, twice=True)
+# The edit before the run is an undo step of its own, so one Edit.Undo after 04 takes it back only if 04 added none.
+row("read_the_saved_copy_adds_no_undo_step", READ_COLOURS, before={"case": "case_edit.lua"},
+    after=[then_command("Edit.Undo"), then_check("04-read-the-saved-copy.undone.lua")])
 row("names_and_titles", FUNDAMENTALS + "05-names-and-titles.lua", twice=True)
 row("match_by_event_id", FUNDAMENTALS + "06-match-by-event-id.lua", twice=True)
 row("values_per_layout", FUNDAMENTALS + "07-values-per-layout.lua", twice=True, project="reading")
 row("text_lyrics_chords_dynamics", FUNDAMENTALS + "08-text-lyrics-chords-dynamics.lua", twice=True,
     project="reading")
+row("text_flipped_in_the_full_score", FUNDAMENTALS + "08-text-lyrics-chords-dynamics.lua", project="reading",
+    args={"below": "dolce"}, before={"case": "case_flip.lua", "args": {"words": "dolce"}})
 row("bars_keys_and_times", FUNDAMENTALS + "09-bars-keys-and-times.lua", twice=True, project="reading")
 row("commands", FUNDAMENTALS + "10-commands.lua",
     after=[then_command("Edit.Undo"), then_check("10-commands.undone.lua")])
@@ -169,7 +183,7 @@ def make_test(spec):
             printed = (result.get("facts") or {}).get("printed") or []
             for step in spec["after"]:
                 if "command" in step:
-                    client.command(step["command"])
+                    send(self, client, step["command"])
                 elif "python" in step:
                     step["python"](self, client, printed)
                 else:
