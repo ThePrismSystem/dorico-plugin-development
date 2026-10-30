@@ -1,9 +1,10 @@
 <#
 Put text in the first text box of a window, through Win32 (no keyboard focus needed).
   powershell -NoProfile -File tools/fill.ps1 -Window "Ask and report" -Text "Hello"
-Finds the window by its exact title, in any program, and its first child window whose class is an edit control
-(a Windows Forms TextBox's class is WindowsForms10.EDIT...). UI Automation shows that control as a bare pane, which
-is why this doesn't use it. Exits 3 when the window, or a text box in it, isn't found.
+Finds the window among PowerShell's visible top-level windows (the form helper's box) by its exact title, case
+included, and its first child window whose class is an edit control (a Windows Forms TextBox's class is
+WindowsForms10.EDIT...). UI Automation shows that control as a bare pane, which is why this doesn't use it. Exits 3
+when the window, or a text box in it, isn't found.
 #>
 param(
     [Parameter(Mandatory = $true)][string]$Window,
@@ -15,10 +16,27 @@ using System.Text;
 using System.Runtime.InteropServices;
 public static class ExamplesFill {
     public delegate bool EnumProc(IntPtr hwnd, IntPtr lParam);
-    [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern IntPtr FindWindow(string cls, string title);
+    [DllImport("user32.dll")] public static extern bool EnumWindows(EnumProc cb, IntPtr lParam);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetWindowText(IntPtr h, StringBuilder sb, int n);
+    [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
+    [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
     [DllImport("user32.dll")] public static extern bool EnumChildWindows(IntPtr parent, EnumProc cb, IntPtr lParam);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetClassName(IntPtr hwnd, StringBuilder sb, int max);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern IntPtr SendMessage(IntPtr hwnd, uint msg, IntPtr w, string l);
+    public static IntPtr WindowOf(uint pid, string title) {
+        IntPtr found = IntPtr.Zero;
+        EnumWindows((h, l) => {
+            uint p;
+            GetWindowThreadProcessId(h, out p);
+            if (p != pid || !IsWindowVisible(h)) return true;
+            var sb = new StringBuilder(512);
+            GetWindowText(h, sb, 512);
+            if (sb.ToString() != title) return true;
+            found = h;
+            return false;
+        }, IntPtr.Zero);
+        return found;
+    }
     public static IntPtr FirstEdit(IntPtr parent) {
         IntPtr found = IntPtr.Zero;
         EnumChildWindows(parent, (h, l) => {
@@ -32,7 +50,12 @@ public static class ExamplesFill {
     }
 }
 "@
-$hwnd = [ExamplesFill]::FindWindow([NullString]::Value, $Window)
+# FindWindow would take any program's window and ignore case, so "Find and replace" could find a word processor's.
+$hwnd = [IntPtr]::Zero
+foreach ($owner in @(Get-Process -Name powershell -ErrorAction SilentlyContinue)) {
+    $hwnd = [ExamplesFill]::WindowOf([uint32]$owner.Id, $Window)
+    if ($hwnd -ne [IntPtr]::Zero) { break }
+}
 if ($hwnd -eq [IntPtr]::Zero) { Write-Output "no window named '$Window'"; exit 3 }
 $box = [ExamplesFill]::FirstEdit($hwnd)
 if ($box -eq [IntPtr]::Zero) { Write-Output "no text box in '$Window'"; exit 3 }

@@ -1,8 +1,9 @@
 <#
 Press a named button in a window through UI Automation (no mouse needed).
   powershell -NoProfile -File tools/click.ps1 -Window "Edit Instrument Names" -Button "OK" [-OnlyButton]
-Finds top-level windows by exact name, then Dorico's owned windows (Qt dialogs). Buttons that UI Automation
-shows as Panes (WinForms) are pressed with BM_CLICK on their window handle. Exits 3 when nothing is found.
+Finds the window among Dorico's and PowerShell's (the form helper's box) visible top-level windows by its exact
+title, case included, then among Dorico's owned windows (Qt dialogs). Buttons that UI Automation shows as Panes
+(WinForms) are pressed with BM_CLICK on their window handle. Exits 3 when nothing is found.
 -OnlyButton is for answering a prompt nobody has looked at: the window must be one of Dorico's own with exactly that
 title, and the button must be its only one, so a prompt that offers a choice is never answered. Exits 3 otherwise.
 #>
@@ -19,7 +20,6 @@ using System.Text;
 public static class HbucClick {
     public delegate bool EnumProc(IntPtr hwnd, IntPtr lParam);
     [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr hwnd, uint msg, IntPtr w, IntPtr l);
-    [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern IntPtr FindWindow(string cls, string title);
     [DllImport("user32.dll")] public static extern bool EnumWindows(EnumProc cb, IntPtr lParam);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetWindowText(IntPtr h, StringBuilder sb, int n);
     [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
@@ -47,7 +47,7 @@ $byName = New-Object System.Windows.Automation.PropertyCondition ($A::NameProper
 $isButton = New-Object System.Windows.Automation.PropertyCondition ($A::ControlTypeProperty), ([System.Windows.Automation.ControlType]::Button)
 $proc = Get-Process -Name Dorico6 -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($OnlyButton) {
-    # FindWindow takes any program's window: File Explorer showing a folder named Dorico is titled "Dorico" too.
+    # Dorico's own windows only: File Explorer showing a folder named Dorico is titled "Dorico" too.
     $hwnd = if ($proc) { [HbucClick]::WindowOf([uint32]$proc.Id, $Window) } else { [IntPtr]::Zero }
     if ($hwnd -eq [IntPtr]::Zero) { Write-Output "Dorico has no window named '$Window'"; exit 3 }
     $win = $A::FromHandle($hwnd)
@@ -68,7 +68,13 @@ if ($OnlyButton) {
 } else {
     # A top-level window is found by Win32, which reads window titles without asking their programs: UI Automation's
     # search of the desktop asks every window, and a Dorico waiting on the plug-in's dialog can take minutes to answer.
-    $hwnd = [HbucClick]::FindWindow([NullString]::Value, $Window)
+    # Only Dorico's and PowerShell's windows are looked at: FindWindow took any program's and ignored case, so "Find and
+    # replace" could find a word processor's "Find and Replace".
+    $hwnd = [IntPtr]::Zero
+    foreach ($owner in @(Get-Process -Name Dorico6, powershell -ErrorAction SilentlyContinue)) {
+        $hwnd = [HbucClick]::WindowOf([uint32]$owner.Id, $Window)
+        if ($hwnd -ne [IntPtr]::Zero) { break }
+    }
     $win = if ($hwnd -ne [IntPtr]::Zero) { $A::FromHandle($hwnd) } else { $null }
     if (-not $win) {
         # Qt parents its dialogs to the main window, so look one level further down too.

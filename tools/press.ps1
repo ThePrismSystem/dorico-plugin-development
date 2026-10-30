@@ -48,10 +48,11 @@ if ($Title) {
     if ($Index -lt 0 -or $Index -ge $windows.Count) { throw "Dorico has only $($windows.Count) visible windows" }
     $h = $windows[$Index]
 }
+$name = if ($Title) { "'$Title'" } else { "window $Index" }
 # Windows only lets a process take the foreground after recent input; a lone ALT press satisfies that rule.
 [HbucPress]::keybd_event(0x12, 0, 0, [UIntPtr]::Zero); [HbucPress]::keybd_event(0x12, 0, 2, [UIntPtr]::Zero)
 [void][HbucPress]::SetForegroundWindow($h)
 Start-Sleep -Milliseconds 300
-if ([HbucPress]::GetForegroundWindow() -ne $h) { throw "could not bring window $Index to the front" }
+if ([HbucPress]::GetForegroundWindow() -ne $h) { throw "could not bring $name to the front" }
 [System.Windows.Forms.SendKeys]::SendWait($Keys)
-"sent $Keys to window $Index"
+"sent $Keys to $name"
