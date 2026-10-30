@@ -101,6 +101,37 @@ return {
     t:eq(parsed.events[4].kind, "other")
     t:eq(#dump.notes(parsed), 2)
   end,
+  the_dump_parser_reads_positions_and_durations = function(t)
+    local parsed = dump.parse(table.concat({
+      "Start block id: 7 position: 0",
+      "13/2 (6.5) dur: 1/3 (0.333333): kNoteEvent (id:5) at 13/2 (6.5), duration 1/3 (0.333333)  Cb4 "
+        .. "(ends 41/6 (6.83333))",
+      "6 (6): kGraceNoteEvent (id:6) at 6  secondary pos -1/2 (-0.5), notated duration: 1/2 (0.5), Dx4 ",
+      "Start block id: 8 position: 16",
+      "0 (0): kRestEvent (id:9) at 0, duration 4",
+      "2 (2): kTextEvent (id:10) at 2 : dolce",
+    }, "\r\n"))
+    local note, grace, rest, text = parsed.events[1], parsed.events[2], parsed.events[3], parsed.events[4]
+    t:eq(note.pos, 6.5, "the fraction, not the rounded decimal")
+    t:eq(note.duration, 1 / 3)
+    t:eq(note.spelling, "Cb4")
+    t:eq(note.instance, 7)
+    t:eq(grace.pos, 6)
+    t:eq(grace.duration, nil, "a grace note's duration is its notated one")
+    t:eq(grace.spelling, "Dx4")
+    t:eq(grace.grace, true)
+    t:eq(rest.kind, "rest")
+    t:eq(rest.duration, 4)
+    t:eq(rest.instance, 8, "the next block instance")
+    t:eq(text.text, "dolce", "no carriage return from a CRLF dump")
+  end,
+  the_block_id_of_an_event_in_a_lua_stream = function(t)
+    local parsed = dump.parse("Start block id: 1014 position: 0\n"
+      .. "4 (4): kNoteEvent (id:276) at 4, duration 1  G5 (ends 5)")
+    local stream = { blockInstances = { { id = 1013, block = { id = 9 } }, { id = 1014, block = { id = 10 } } } }
+    t:eq(edit.blockIdOf(stream, 276, parsed), 10, "the block of the instance the dump names")
+    t:eq(errorOf(function() return edit.blockIdOf(stream, 999, parsed) end), "scorereader: no block holds event 999")
+  end,
   matching_a_dump_to_the_file = function(t)
     local s = score.readFile(SAMPLE)
     local stream = s.flows[1].streams[#s.flows[1].streams]
@@ -162,6 +193,11 @@ return {
   a_save_that_fails = function(t)
     local err = errorOf(function() return savedcopy.read(stubApp(nil), { dir = DIR }) end)
     t:eq(err, "scorereader: Dorico could not save a copy of the project to read")
+  end,
+  a_save_that_writes_no_file = function(t)
+    local app = { currentScore = {}, save = function() return true end }
+    local err = errorOf(function() return savedcopy.read(app, { dir = DIR }) end)
+    t:eq(err, "scorereader: the saved copy " .. DIR .. "scorereader-copy.dorico could not be read")
   end,
   a_folder_outside_ascii_is_refused_before_saving = function(t)
     local saved = false
