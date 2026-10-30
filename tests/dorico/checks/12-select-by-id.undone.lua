@@ -1,4 +1,4 @@
--- Run with 04-noteheads-and-colours.lua after 08-select-by-id.lua and one Edit > Undo: every colour the script set
+-- Run with 04-noteheads-and-colours.lua after 12-select-by-id.lua and one Edit > Undo: every colour the script set
 -- is gone, and the styled trumpet note still has its own.
 local checks = require("checks")
 

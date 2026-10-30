@@ -6,7 +6,7 @@
 -- Undo: Edit > Undo takes the whole run back in one step: the new flow and the music in it. Everything a script run
 -- changes goes into one undo step, made by command or through the object model (createNote, createRest,
 -- createText) alike.
--- Builds on: 06-commands.lua. Open Script > Show Script Console to read what it prints.
+-- Builds on: 10-commands.lua. Open Script > Show Script Console to read what it prints.
 --
 -- Positions and durations are quarter notes from the start of the flow, and go in as DoCore.RhythmicLength values
 -- (see the length helper). Pitches go in as DoCore.MIDIPitchWithSpelling.fromString(spelling), a sounding spelling

@@ -1,4 +1,4 @@
--- 06-commands.lua renamed the first flow, ampersand, equals sign and accented letter intact, and printed the command
+-- 10-commands.lua renamed the first flow, ampersand, equals sign and accented letter intact, and printed the command
 -- with the ampersand escaped.
 local checks = require("checks")
 

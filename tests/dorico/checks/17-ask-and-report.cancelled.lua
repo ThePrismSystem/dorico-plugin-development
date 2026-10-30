@@ -1,4 +1,4 @@
--- 12-ask-and-report.lua with its box cancelled said so and changed nothing.
+-- 17-ask-and-report.lua with its box cancelled said so and changed nothing.
 local checks = require("checks")
 
 return function(p, run)

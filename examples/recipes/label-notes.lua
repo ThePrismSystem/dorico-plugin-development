@@ -4,8 +4,8 @@
 -- It prints how many labels it wrote. Change the three settings below for another player or instrument.
 -- Changes: adds a staff text at each note of that player.
 -- Undo: Edit > Undo takes all the labels back in one step.
--- Builds on: 03-read-notes.lua, 07-act-on-the-selection.lua (which labels notes the same way) and
--- 08-select-by-id.lua (for the midi helper). Open Script > Show Script Console to read what it prints.
+-- Builds on: 03-read-notes.lua, 11-act-on-the-selection.lua (which labels notes the same way) and
+-- 12-select-by-id.lua (for the midi helper). Open Script > Show Script Console to read what it prints.
 --
 -- The dump gives sounding pitch, and Lua can't read an instrument's transposition, so the script has to be told it:
 -- TRANSPOSE is how many semitones the written note sits above the sounding one. A B-flat trumpet or clarinet is 2, an

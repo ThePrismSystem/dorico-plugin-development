@@ -9,7 +9,7 @@ local COLOURS = {
 }
 
 return function(p, run)
-  local midi = checks.helper("examples/fundamentals/08-select-by-id.lua", { "midi" }, "midi")
+  local midi = checks.helper("examples/fundamentals/12-select-by-id.lua", { "midi" }, "midi")
   local counts = {}
   for _, flow in ipairs(checks.expected().flows) do
     for _, player in ipairs(flow.players) do

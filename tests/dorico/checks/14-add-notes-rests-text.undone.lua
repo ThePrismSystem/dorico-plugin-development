@@ -1,4 +1,4 @@
--- After 09-add-notes-rests-text.lua and one Edit > Undo, the new flow and its music are gone.
+-- After 14-add-notes-rests-text.lua and one Edit > Undo, the new flow and its music are gone.
 local checks = require("checks")
 
 return function(p)

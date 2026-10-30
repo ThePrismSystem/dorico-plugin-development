@@ -3,7 +3,7 @@
 -- what each edit looks like before and after.
 -- Changes: nothing that stays.
 -- Undo: nothing to undo. Don't press Edit > Redo straight afterwards: it would bring the flow and the text back.
--- Builds on: 06-commands.lua and 09-add-notes-rests-text.lua. Open Script > Show Script Console to read what it
+-- Builds on: 10-commands.lua and 14-add-notes-rests-text.lua. Open Script > Show Script Console to read what it
 -- prints.
 --
 -- What it shows, and what follows for any script that changes the score:
@@ -37,7 +37,7 @@ if #score.flows == 0 or #score.flows[1].voiceStreams == 0 then
   return
 end
 
-local MARK = "Made by 13-undo.lua"
+local MARK = "Made by 18-undo.lua"
 
 local function hasMark()
   return app.currentScore.flows[1].voiceStreams[1]:dump():find(MARK, 1, true) ~= nil

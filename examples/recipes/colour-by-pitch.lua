@@ -3,12 +3,12 @@
 -- many notes each pitch class has, with its colour. Change COLOURS below to use your own.
 -- Changes: the colour of every note, and the selection.
 -- Undo: Edit > Undo takes all the colours back in one step.
--- Builds on: 03-read-notes.lua, 06-commands.lua and 08-select-by-id.lua. Open Script > Show Script Console to read
+-- Builds on: 03-read-notes.lua, 10-commands.lua and 12-select-by-id.lua. Open Script > Show Script Console to read
 -- what it prints.
 --
 -- Classroom tuned percussion often colours each note this way, so that players can read by colour. The script reads
 -- every note from the dump, works out its pitch class from its spelling (C# and Db get the same colour), and colours
--- it as 08-select-by-id.lua does: one note at a time, since each EventEdit.Select replaces the selection. A score with
+-- it as 12-select-by-id.lua does: one note at a time, since each EventEdit.Select replaces the selection. A score with
 -- many notes takes a while, and Dorico draws each change as it goes.
 --
 -- Colours set by command can't be read back from Lua, so a script can't later tell which colour a note has, only that

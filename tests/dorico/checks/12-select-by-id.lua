@@ -1,5 +1,5 @@
--- 08-select-by-id.lua coloured exactly the sample's notes above F5, and said which. Whether they now have a colour
--- is 08-select-by-id.coloured.lua's question, since reading colours takes a paste and its Edit.Undo, which in this
+-- 12-select-by-id.lua coloured exactly the sample's notes above F5, and said which. Whether they now have a colour
+-- is 12-select-by-id.coloured.lua's question, since reading colours takes a paste and its Edit.Undo, which in this
 -- run would take the colours away again.
 local checks = require("checks")
 

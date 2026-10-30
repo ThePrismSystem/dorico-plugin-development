@@ -11,7 +11,7 @@
 -- key-command file and restarting Dorico. The user's key commands are in keycommands_en.json (one file per language)
 -- in %APPDATA%\Steinberg\Dorico 6. The file appears once you change any key command in Preferences > Key Commands.
 -- In its "kGlobal" context's "shortcuts" list, an entry like this binds a key to a script:
---   { "Script.RunScript?ScriptPath=C:/Users/you/Scripts/14-key-command.lua&ShowConsole=false": [ "Ctrl+Alt+K" ] }
+--   { "Script.RunScript?ScriptPath=C:/Users/you/Scripts/19-key-command.lua&ShowConsole=false": [ "Ctrl+Alt+K" ] }
 -- Quit Dorico before editing the file, keep a copy of it, and start Dorico again afterwards. The keycommands_en.json
 -- in Dorico's program folder shows the file's layout, including commands bound with parameters.
 --

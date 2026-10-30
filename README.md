@@ -57,7 +57,7 @@ Planets* (122,366 events) takes 7.5 s in stock Lua.
 ## Requirements
 
 - Dorico 6 Pro. Dorico Elements and SE have no Script menu.
-- Tested on Dorico 6.2.30 on Windows 11. The Mac parts (where to put scripts, the Mac box in 12) are written from
+- Tested on Dorico 6.2.30 on Windows 11. The Mac parts (where to put scripts, the Mac box in 17) are written from
   Apple's and Dorico's documentation and haven't been run on a Mac.
 
 ## Running an example
@@ -80,15 +80,15 @@ on.
 | [03-read-notes](examples/fundamentals/03-read-notes.lua) | Prints every note: flow, player, voice, position, duration, pitch. | No |
 | [04-noteheads-and-colours](examples/fundamentals/04-noteheads-and-colours.lua) | Prints each note's notehead and colour, through a pasted copy. | No, but it uses the clipboard |
 | [05-names-from-the-text-export](examples/fundamentals/05-names-from-the-text-export.lua) | Reads the title, file path, flow titles and instrument names from the text export. | No |
-| [06-commands](examples/fundamentals/06-commands.lua) | Renames the first flow by command, showing how to escape values. | Yes; one Edit > Undo |
-| [07-act-on-the-selection](examples/fundamentals/07-act-on-the-selection.lua) | Finds the selected notes and writes each one's name above it. | Yes; one Edit > Undo |
-| [08-select-by-id](examples/fundamentals/08-select-by-id.lua) | Selects each note above F5 by id and colours it red. | Yes; one Edit > Undo |
-| [09-add-notes-rests-text](examples/fundamentals/09-add-notes-rests-text.lua) | Adds a flow and writes notes, a chord, a rest and a text in it. | Yes; one Edit > Undo |
-| [10-layout-and-notation-options](examples/fundamentals/10-layout-and-notation-options.lua) | Hides the flow headings and sets a final barline. | Yes; one Edit > Undo |
-| [11-flows-and-players](examples/fundamentals/11-flows-and-players.lua) | Adds a flow and a player, names them, keeps the player to the new flow. | Yes; one Edit > Undo |
-| [12-ask-and-report](examples/fundamentals/12-ask-and-report.lua) | Asks for a word in a box, then adds a flow with it. | Yes, unless cancelled; one Edit > Undo |
-| [13-undo](examples/fundamentals/13-undo.lua) | Shows what Edit.Undo inside a script takes back. | No |
-| [14-key-command](examples/fundamentals/14-key-command.lua) | Counts its own runs, as a script on a key would; says how to bind a key. | No |
+| [10-commands](examples/fundamentals/10-commands.lua) | Renames the first flow by command, showing how to escape values. | Yes; one Edit > Undo |
+| [11-act-on-the-selection](examples/fundamentals/11-act-on-the-selection.lua) | Finds the selected notes and writes each one's name above it. | Yes; one Edit > Undo |
+| [12-select-by-id](examples/fundamentals/12-select-by-id.lua) | Selects each note above F5 by id and colours it red. | Yes; one Edit > Undo |
+| [14-add-notes-rests-text](examples/fundamentals/14-add-notes-rests-text.lua) | Adds a flow and writes notes, a chord, a rest and a text in it. | Yes; one Edit > Undo |
+| [15-layout-and-notation-options](examples/fundamentals/15-layout-and-notation-options.lua) | Hides the flow headings and sets a final barline. | Yes; one Edit > Undo |
+| [16-flows-and-players](examples/fundamentals/16-flows-and-players.lua) | Adds a flow and a player, names them, keeps the player to the new flow. | Yes; one Edit > Undo |
+| [17-ask-and-report](examples/fundamentals/17-ask-and-report.lua) | Asks for a word in a box, then adds a flow with it. | Yes, unless cancelled; one Edit > Undo |
+| [18-undo](examples/fundamentals/18-undo.lua) | Shows what Edit.Undo inside a script takes back. | No |
+| [19-key-command](examples/fundamentals/19-key-command.lua) | Counts its own runs, as a script on a key would; says how to bind a key. | No |
 | [colour-by-pitch](examples/recipes/colour-by-pitch.lua) | Colours every note by pitch class, C red through B magenta. | Yes; one Edit > Undo |
 | [label-notes](examples/recipes/label-notes.lua) | Writes trumpet valve numbers (or note names) above one player's notes. | Yes; one Edit > Undo |
 | [proofread](examples/recipes/proofread.lua) | Reports notes out of range and parallel fifths and octaves, by bar and beat. | No |
@@ -110,9 +110,9 @@ Some examples are smaller than planned, or work differently, because a probe sho
   sound, not bar by bar, and the proofreading recipe finds bar numbers through the text export.
 - A colour set by command, or in the Properties panel, can't be read back: a script can tell that a note has a
   colour, but not which. The colour recipes are checked for the colour being there.
-- Edits made through the object model are undoable, against what the handbells plug-in's guide says. So 07 finds
+- Edits made through the object model are undoable, against what the handbells plug-in's guide says. So 11 finds
   the selection by moving it an octave and back instead of undoing, which keeps its labels in one undo step.
-- Binding a script to a key of its own means editing Dorico's key-command file and restarting Dorico. 14 and the
+- Binding a script to a key of its own means editing Dorico's key-command file and restarting Dorico. 19 and the
   hotkey recipe describe that and use Run Last Script (Ctrl+Shift+Alt+R) instead, which needs no setup. The
   key-command entry hasn't been tried.
 - Working through a folder of other projects works (S5) but has no example of its own.

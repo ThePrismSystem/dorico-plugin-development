@@ -83,7 +83,7 @@ end
 
 -- "<flow>|<player>|<pos>|<spelling>" for every note in the sample higher than spelling (sounding pitch).
 function checks.notesAbove(spelling)
-  local midi = checks.helper("examples/fundamentals/08-select-by-id.lua", { "midi" }, "midi")
+  local midi = checks.helper("examples/fundamentals/12-select-by-id.lua", { "midi" }, "midi")
   local keys = {}
   for n, flow in ipairs(checks.expected().flows) do
     for _, player in ipairs(flow.players) do

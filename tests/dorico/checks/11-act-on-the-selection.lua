@@ -1,4 +1,4 @@
--- 07-act-on-the-selection.lua found the two violin notes the driver selected (G4 and A4, the first two), labelled
+-- 11-act-on-the-selection.lua found the two violin notes the driver selected (G4 and A4, the first two), labelled
 -- each, and left every note's pitch as it was after its octave up and back.
 local checks = require("checks")
 

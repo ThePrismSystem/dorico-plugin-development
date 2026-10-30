@@ -1,4 +1,4 @@
--- 10-layout-and-notation-options.lua said which options it set, and the text export showed headings going. The
+-- 15-layout-and-notation-options.lua said which options it set, and the text export showed headings going. The
 -- options' values are read back through the Remote API by the Python test, since Lua can't read them.
 return function(p, run)
   p:check("the layout option", run.printed[1] == "full score (layout 0): flowHeadingBehaviour = kNoFlowHeadings",

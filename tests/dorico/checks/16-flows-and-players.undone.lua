@@ -1,4 +1,4 @@
--- After 11-flows-and-players.lua and one Edit > Undo, the flow and the player are gone and every name is exactly as
+-- After 16-flows-and-players.lua and one Edit > Undo, the flow and the player are gone and every name is exactly as
 -- it was, the trumpet's B-flat token included.
 local checks = require("checks")
 

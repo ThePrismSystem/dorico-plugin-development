@@ -1,4 +1,4 @@
--- After 06-commands.lua and one Edit > Undo, the first flow has its old title back.
+-- After 10-commands.lua and one Edit > Undo, the first flow has its old title back.
 local checks = require("checks")
 
 return function(p)

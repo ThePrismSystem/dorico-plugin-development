@@ -1,4 +1,4 @@
--- 07-act-on-the-selection.lua with nothing selected said so, added nothing and changed no note.
+-- 11-act-on-the-selection.lua with nothing selected said so, added nothing and changed no note.
 local checks = require("checks")
 
 return function(p, run)

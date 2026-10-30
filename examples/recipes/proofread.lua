@@ -5,7 +5,7 @@
 -- and deletes them again.
 -- Undo: nothing to undo. The markers still make an undo step, so Edit > Undo straight after this script changes
 -- nothing you can see; a second press reaches your own last edit.
--- Builds on: 03-read-notes.lua, 05-names-from-the-text-export.lua and 08-select-by-id.lua (the midi helper). Open
+-- Builds on: 03-read-notes.lua, 05-names-from-the-text-export.lua and 12-select-by-id.lua (the midi helper). Open
 -- Script > Show Script Console to read what it prints.
 --
 -- Ranges are by instrument, and Lua can't name an instrument, so the script puts a marker text in each voice and reads

@@ -62,7 +62,7 @@ Probes: `players_and_options.lua` with its driver `players_and_options.py`, and 
   for it. The instrument ids are the `entityID` values in `instruments.xml` in Dorico's program folder.
 - After a run that added a player, renamed players, took the new player out of a flow and added a flow, one
   Edit > Undo took all of it back.
-- Options are in the run's undo step too. After fundamental 10 set a layout option and a notation option, one
+- Options are in the run's undo step too. After fundamental 15 set a layout option and a notation option, one
   Edit > Undo took both back in five runs out of five, with both read back 0.3 seconds after the undo. Read through
   the Remote API straight after the undo, the layout option can still show the new value, or a reply can leave an
   option out, because Dorico is still applying the undo. Earlier runs that read at once had read too early, which
@@ -152,7 +152,7 @@ put the semitone back. The Remote API's status (`hasSelection`, `selectedEventTy
 
 A later probe (`pitch_up_down.lua`) found a route with no undo. `NoteEdit.PitchUpOctave` then
 `NoteEdit.PitchDownOctave` gave every note back its exact spelling, Fb4, E#4, Ebb4 and Dx4 included, where a semitone
-up and down respelled them (G#4 came back as Ab4, E#4 as F4). Fundamental 07 uses the octave route, so the run has
+up and down respelled them (G#4 came back as Ab4, E#4 as F4). Fundamental 11 uses the octave route, so the run has
 no undo and its later edits stay in its own undo step. Moving a chord's C4 up an octave onto the chord's own C5 left
 two C5s, not one merged note, and moving it back down restored both (`tuplet_and_unison.lua`).
 
@@ -191,7 +191,7 @@ says object-model edits never enter the undo history, but on Dorico 6.2.30 they 
   included.
 - After an `Edit.Undo` inside a run, a text the run made next joined the user's previous undo step: one Edit > Undo
   afterwards took back that text and the user's own earlier rename together.
-- Two undos in one run take back the user's own edit at the second. Fundamental 13 run twice in one script run
+- Two undos in one run take back the user's own edit at the second. Fundamental 18 run twice in one script run
   (a test tried it) undid an earlier rename of the second flow.
 - A run that made a text and deleted it again still left an undo step. Edit > Undo afterwards used it up and left the
   user's earlier edit in place.

@@ -1,4 +1,4 @@
--- After 07-act-on-the-selection.lua and one Edit > Undo, the labels are gone, every note is as it was, and the edit
+-- After 11-act-on-the-selection.lua and one Edit > Undo, the labels are gone, every note is as it was, and the edit
 -- made before the run (the second flow's new title) is still there.
 local checks = require("checks")
 

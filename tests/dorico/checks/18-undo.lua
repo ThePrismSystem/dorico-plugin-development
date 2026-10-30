@@ -1,4 +1,4 @@
--- 13-undo.lua saw its one Edit.Undo take back both its command edit and its object-model edit, and that undo left
+-- 18-undo.lua saw its one Edit.Undo take back both its command edit and its object-model edit, and that undo left
 -- alone the edit made in the run before it (the second flow's new title).
 local checks = require("checks")
 

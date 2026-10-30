@@ -15,7 +15,7 @@ a bad call can crash Dorico.
 | `__eq` | operator | not tried |  |
 | `__len` | operator | not tried |  |
 | `__tostring` | operator | not tried |  |
-| `block` | property | verified | Its block, whose `id` is what `EventEdit.Select` takes ([08-select-by-id](../../examples/fundamentals/08-select-by-id.lua)). |
+| `block` | property | verified | Its block, whose `id` is what `EventEdit.Select` takes ([12-select-by-id](../../examples/fundamentals/12-select-by-id.lua)). |
 | `events` | member | not tried |  |
 | `id` | property | verified | The dump's "Start block id". |
 | `position` | member | not tried |  |
@@ -28,4 +28,4 @@ a bad call can crash Dorico.
 | `__len` | operator | not tried |  |
 | `__tostring` | operator | not tried |  |
 | `events` | member | not tried |  |
-| `id` | property | verified | `EventEdit.Select`'s `EventBlockID` ([08-select-by-id](../../examples/fundamentals/08-select-by-id.lua)). |
+| `id` | property | verified | `EventEdit.Select`'s `EventBlockID` ([12-select-by-id](../../examples/fundamentals/12-select-by-id.lua)). |

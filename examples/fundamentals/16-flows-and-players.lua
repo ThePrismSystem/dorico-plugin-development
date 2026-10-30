@@ -4,7 +4,7 @@
 -- player is in.
 -- Changes: adds a flow and a player (and the part layout Dorico makes for a new player).
 -- Undo: Edit > Undo takes all of it back in one step.
--- Builds on: 02-walk-the-score.lua and 06-commands.lua. Open Script > Show Script Console to read what it prints.
+-- Builds on: 02-walk-the-score.lua and 10-commands.lua. Open Script > Show Script Console to read what it prints.
 --
 -- score:addPlayer(instrument, false, 1) adds a player with that instrument and returns it. The instrument is one of
 -- the entityID values in instruments.xml, in Dorico's program folder, such as instrument.strings.violin. Pass only

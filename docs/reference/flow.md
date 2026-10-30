@@ -22,7 +22,7 @@ a bad call can crash Dorico.
 | `instruments` | property | verified | One per voice stream, in the same order: `instruments[i]` owns `voiceStreams[i]` ([02-walk-the-score](../../examples/fundamentals/02-walk-the-score.lua)). |
 | `playerStreams` | property | not tried |  |
 | `players` | property | verified | The players in the flow ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
-| `removePlayer` | method | verified | Takes a player out of this flow ([11-flows-and-players](../../examples/fundamentals/11-flows-and-players.lua)). |
+| `removePlayer` | method | verified | Takes a player out of this flow ([16-flows-and-players](../../examples/fundamentals/16-flows-and-players.lua)). |
 | `staveStreams` | property | verified | One per staff ([04-noteheads-and-colours](../../examples/fundamentals/04-noteheads-and-colours.lua)). |
 | `timebaseStreams` | property | not tried |  |
 | `voiceStreams` | property | verified | One per voice ([03-read-notes](../../examples/fundamentals/03-read-notes.lua)). |

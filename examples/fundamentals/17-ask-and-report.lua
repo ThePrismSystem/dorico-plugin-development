@@ -4,7 +4,7 @@
 -- typed, it changes nothing.
 -- Changes: adds a flow, with one staff text in it.
 -- Undo: Edit > Undo takes the new flow away, and the text in it goes with it.
--- Builds on: 06-commands.lua and 09-add-notes-rests-text.lua. Open Script > Show Script Console to read what it
+-- Builds on: 10-commands.lua and 14-add-notes-rests-text.lua. Open Script > Show Script Console to read what it
 -- prints.
 --
 -- Lua in Dorico has no dialogs of its own, but it can start a program and wait for it. On Windows the script writes

@@ -1,4 +1,4 @@
--- 12-ask-and-report.lua took the answer typed into its box and made a flow titled with it, with it as a staff text,
+-- 17-ask-and-report.lua took the answer typed into its box and made a flow titled with it, with it as a staff text,
 -- commas and ampersands intact. args.answer is what the test typed.
 local checks = require("checks")
 

@@ -88,38 +88,38 @@ row("noteheads_and_colours", FUNDAMENTALS + "04-noteheads-and-colours.lua", twic
 row("noteheads_with_the_first_player_tacet", FUNDAMENTALS + "04-noteheads-and-colours.lua",
     check=CHECKS + "04-noteheads-and-colours.tacet.lua", before={"case": "case_tacet.lua"})
 row("names_from_the_text_export", FUNDAMENTALS + "05-names-from-the-text-export.lua", twice=True)
-row("commands", FUNDAMENTALS + "06-commands.lua",
-    after=[then_command("Edit.Undo"), then_check("06-commands.undone.lua")])
-row("act_on_the_selection", FUNDAMENTALS + "07-act-on-the-selection.lua",
+row("commands", FUNDAMENTALS + "10-commands.lua",
+    after=[then_command("Edit.Undo"), then_check("10-commands.undone.lua")])
+row("act_on_the_selection", FUNDAMENTALS + "11-act-on-the-selection.lua",
     before={"case": "case_select.lua", "args": {"player": "Violin, solo & tutti", "pos": 0, "extend": 1,
                                                 "renameSecondFlow": True}},
-    after=[then_command("Edit.Undo"), then_check("07-act-on-the-selection.undone.lua")])
-row("act_on_nothing_selected", FUNDAMENTALS + "07-act-on-the-selection.lua",
-    check=CHECKS + "07-act-on-the-selection.none.lua")
-row("select_by_id", FUNDAMENTALS + "08-select-by-id.lua",
-    after=[then_check("08-select-by-id.coloured.lua", READ_COLOURS), then_command("Edit.Undo"),
-           then_check("08-select-by-id.undone.lua", READ_COLOURS)])
-row("add_notes_rests_text", FUNDAMENTALS + "09-add-notes-rests-text.lua",
-    after=[then_command("Edit.Undo"), then_check("09-add-notes-rests-text.undone.lua")])
-row("layout_and_notation_options", FUNDAMENTALS + "10-layout-and-notation-options.lua",
+    after=[then_command("Edit.Undo"), then_check("11-act-on-the-selection.undone.lua")])
+row("act_on_nothing_selected", FUNDAMENTALS + "11-act-on-the-selection.lua",
+    check=CHECKS + "11-act-on-the-selection.none.lua")
+row("select_by_id", FUNDAMENTALS + "12-select-by-id.lua",
+    after=[then_check("12-select-by-id.coloured.lua", READ_COLOURS), then_command("Edit.Undo"),
+           then_check("12-select-by-id.undone.lua", READ_COLOURS)])
+row("add_notes_rests_text", FUNDAMENTALS + "14-add-notes-rests-text.lua",
+    after=[then_command("Edit.Undo"), then_check("14-add-notes-rests-text.undone.lua")])
+row("layout_and_notation_options", FUNDAMENTALS + "15-layout-and-notation-options.lua",
     after=[options_are("kNoFlowHeadings", {0: "kDouble", 1: "kFinal"}), then_command("Edit.Undo"),
            options_are("kAlwaysInsertHeadings", {0: "kFinal", 1: "kFinal"})])
-row("flows_and_players", FUNDAMENTALS + "11-flows-and-players.lua",
-    after=[then_command("Edit.Undo"), then_check("11-flows-and-players.undone.lua")])
+row("flows_and_players", FUNDAMENTALS + "16-flows-and-players.lua",
+    after=[then_command("Edit.Undo"), then_check("16-flows-and-players.undone.lua")])
 OPEN_FIRST = {"case": "case_open.lua"}
 ANSWER = "Hello, world & Zoë"
-row("ask_and_report", FUNDAMENTALS + "12-ask-and-report.lua", args={"answer": ANSWER}, before=OPEN_FIRST,
+row("ask_and_report", FUNDAMENTALS + "17-ask-and-report.lua", args={"answer": ANSWER}, before=OPEN_FIRST,
     dialog={"window": "Ask and report", "text": ANSWER, "button": "OK"})
-row("ask_and_cancel", FUNDAMENTALS + "12-ask-and-report.lua", check=CHECKS + "12-ask-and-report.cancelled.lua",
+row("ask_and_cancel", FUNDAMENTALS + "17-ask-and-report.lua", check=CHECKS + "17-ask-and-report.cancelled.lua",
     before=OPEN_FIRST, dialog={"window": "Ask and report", "button": "Cancel"})
-# 13 can't run twice in one script run: the second run's Edit.Undo would be the run's second, and it takes back
+# 18 can't run twice in one script run: the second run's Edit.Undo would be the run's second, and it takes back
 # the earlier edit (seen when this row had twice=True).
-row("undo", FUNDAMENTALS + "13-undo.lua", before={"case": "case_edit.lua"})
-row("key_command", FUNDAMENTALS + "14-key-command.lua",
-    after=[then_check("14-key-command.again.lua", FUNDAMENTALS + "14-key-command.lua")])
+row("undo", FUNDAMENTALS + "18-undo.lua", before={"case": "case_edit.lua"})
+row("key_command", FUNDAMENTALS + "19-key-command.lua",
+    after=[then_check("19-key-command.again.lua", FUNDAMENTALS + "19-key-command.lua")])
 row("colour_by_pitch", RECIPES + "colour-by-pitch.lua",
     after=[then_check("colour-by-pitch.coloured.lua", READ_COLOURS), then_command("Edit.Undo"),
-           then_check("08-select-by-id.undone.lua", READ_COLOURS)])
+           then_check("12-select-by-id.undone.lua", READ_COLOURS)])
 row("label_notes", RECIPES + "label-notes.lua",
     after=[then_command("Edit.Undo"), then_check("label-notes.undone.lua")])
 row("chord_symbols", RECIPES + "chord-symbols.lua",

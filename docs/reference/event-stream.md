@@ -16,7 +16,7 @@ a bad call can crash Dorico.
 | `__len` | operator | not tried |  |
 | `__tostring` | operator | not tried |  |
 | `addBlockInstance` | member | not tried |  |
-| `blockInstances` | property | verified | The stream's block instances; `EventEdit.Select` needs one's `block.id` ([08-select-by-id](../../examples/fundamentals/08-select-by-id.lua)). |
+| `blockInstances` | property | verified | The stream's block instances; `EventEdit.Select` needs one's `block.id` ([12-select-by-id](../../examples/fundamentals/12-select-by-id.lua)). |
 | `copyRange` | method | fails | Copies nothing, within a flow or across flows. |
 | `copyRangeLinked` | member | not tried |  |
 | `createBarDivision` | member | not tried |  |
@@ -25,11 +25,11 @@ a bad call can crash Dorico.
 | `createDynamicGroup` | member | not tried |  |
 | `createFrameBreak` | member | not tried |  |
 | `createGraceNote` | member | not tried |  |
-| `createNote` | method | verified | `createNote(position, duration, pitch)`, with RhythmicLength values and a MIDIPitchWithSpelling ([09-add-notes-rests-text](../../examples/fundamentals/09-add-notes-rests-text.lua)). |
+| `createNote` | method | verified | `createNote(position, duration, pitch)`, with RhythmicLength values and a MIDIPitchWithSpelling ([14-add-notes-rests-text](../../examples/fundamentals/14-add-notes-rests-text.lua)). |
 | `createOttavaLine` | member | not tried |  |
-| `createRest` | method | verified | `createRest(position, duration)` ([09-add-notes-rests-text](../../examples/fundamentals/09-add-notes-rests-text.lua)). |
+| `createRest` | method | verified | `createRest(position, duration)` ([14-add-notes-rests-text](../../examples/fundamentals/14-add-notes-rests-text.lua)). |
 | `createSystemBreak` | method | fails | Makes a break event that doesn't take effect; use `Edit.CreateSystemBreak`. |
-| `createText` | method | verified | `createText(position, duration, text)`: a staff text above the staff ([09-add-notes-rests-text](../../examples/fundamentals/09-add-notes-rests-text.lua)). |
+| `createText` | method | verified | `createText(position, duration, text)`: a staff text above the staff ([14-add-notes-rests-text](../../examples/fundamentals/14-add-notes-rests-text.lua)). |
 | `createTonalityDivision` | member | not tried |  |
 | `createTransposingClef` | member | not tried |  |
 | `createTuplet` | member | not tried |  |

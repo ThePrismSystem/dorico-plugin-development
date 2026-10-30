@@ -1,4 +1,4 @@
--- Run with 04-noteheads-and-colours.lua after 08-select-by-id.lua: the notes above F5 have a colour (one set by
+-- Run with 04-noteheads-and-colours.lua after 12-select-by-id.lua: the notes above F5 have a colour (one set by
 -- command reads as "(unreadable)"), the styled trumpet note keeps its own, and no other note has one.
 local checks = require("checks")
 

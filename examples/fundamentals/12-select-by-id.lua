@@ -4,7 +4,7 @@
 -- with tabs between). Change ABOVE and COLOUR below to pick other notes or another colour.
 -- Changes: the colour of those notes, and the selection.
 -- Undo: Edit > Undo takes all the colours back in one step.
--- Builds on: 03-read-notes.lua and 06-commands.lua. Open Script > Show Script Console to read what it prints.
+-- Builds on: 03-read-notes.lua and 10-commands.lua. Open Script > Show Script Console to read what it prints.
 --
 -- EventEdit.Select?FlowID=&EventID=&EventBlockID= selects one event: its flow's id, its id from the dump, and the id
 -- of the block that holds it, which the blockIdOf helper looks up. Each select replaces the selection, so the

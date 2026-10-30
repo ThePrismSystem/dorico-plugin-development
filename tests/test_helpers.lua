@@ -5,9 +5,9 @@ local helpers = require("helpers")
 local READ_NOTES = "examples/fundamentals/03-read-notes.lua"
 local NAMES = "examples/fundamentals/05-names-from-the-text-export.lua"
 local HELLO = "examples/fundamentals/01-hello.lua"
-local COMMANDS = "examples/fundamentals/06-commands.lua"
-local SELECTION = "examples/fundamentals/07-act-on-the-selection.lua"
-local BY_ID = "examples/fundamentals/08-select-by-id.lua"
+local COMMANDS = "examples/fundamentals/10-commands.lua"
+local SELECTION = "examples/fundamentals/11-act-on-the-selection.lua"
+local BY_ID = "examples/fundamentals/12-select-by-id.lua"
 local CHORDS = "examples/recipes/chord-symbols.lua"
 local PROOFREAD = "examples/recipes/proofread.lua"
 

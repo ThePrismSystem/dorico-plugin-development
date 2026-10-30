@@ -1,4 +1,4 @@
--- 09-add-notes-rests-text.lua made a third flow with its title, and wrote exactly its notes, rest and text into the
+-- 14-add-notes-rests-text.lua made a third flow with its title, and wrote exactly its notes, rest and text into the
 -- flute's voice there, leaving the other flows as they were.
 local checks = require("checks")
 
