@@ -1,6 +1,7 @@
 """Where the fixtures live. Each project sits in a folder named for the Dorico version that saved it
 (fixtures/6.2.30/sample.dorico), and fixtures/versions.json lists them all with their file format version and where
-they came from."""
+they came from. A fixture tools/resave_fixtures.py saved again keeps its builder as its source, and its resavedFrom
+names the copy it was saved from."""
 import json
 import re
 import struct

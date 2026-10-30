@@ -359,7 +359,8 @@ an older project, at least for that step. The handbells plug-in found the same f
 ## Adding a Dorico version
 
 When a new Dorico comes out, `python tools/resave_fixtures.py` saves the fixtures in its format and runs the tests
-([fixtures/README.md](../fixtures/README.md)).
+([fixtures/README.md](../fixtures/README.md)). If any save fails, the run keeps none of the new fixtures and can be run
+again.
 
 - One test always fails on a new version's files: `every_fixture_is_a_known_format`, because the new `fileVersion`
   isn't in the `dorico6` profile's list yet. If that's the only failure, nothing the reader relies on changed. Add the

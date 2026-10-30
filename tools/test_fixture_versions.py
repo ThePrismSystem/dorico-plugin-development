@@ -68,6 +68,15 @@ class ManifestTests(unittest.TestCase):
                 self.assertTrue(e["source"])
                 self.assertIn("credit", e)
 
+    def test_a_resaved_fixture_comes_from_an_older_copy_of_itself(self):
+        for e in fixtures.entries():
+            if "resavedFrom" in e:
+                with self.subTest(e["path"]):
+                    folder, name = e["resavedFrom"].split("/")
+                    self.assertEqual(name, Path(e["path"]).name)
+                    self.assertLess(fixtures.version_key(folder), fixtures.version_key(e["savedBy"]))
+                    self.assertTrue(e["source"].startswith("fixtures/"), "it keeps its builder as its source")
+
     def test_manifest_is_sorted_json(self):
         text = (fixtures.FIXTURES / "versions.json").read_text(encoding="utf-8")
         entries = json.loads(text)
