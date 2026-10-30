@@ -295,17 +295,17 @@ def run(script: Path, open_file=None, keep_open=False, extra_args=None, timeout=
                                      "openScoreID": scratch_id}
         launcher = write_launcher(Path(script).resolve(), args, run_id)
         reply = client.command(f"Script.RunScript?ScriptPath={fwd(launcher)}&ShowConsole=false")
-        result, problems = None, []
         if reply.get("code") != "kOK":
-            print(f"Dorico would not run the script: {reply}", file=sys.stderr)
-        else:
-            result = wait_for(lambda: read_result(run_id, problems), timeout)
-            if result is None:
-                titles = open_windows()
-                seen = "; windows open: " + ", ".join(repr(t) for t in titles) if titles else ""
-                print(f"timed out after {timeout}s waiting for result" + "".join("; " + p for p in problems) + seen
-                      + "; Dorico may be showing a dialog", file=sys.stderr)
+            # Dorico has run the script after such a reply, and a copy closed under a script crashed it, so the run
+            # is waited for all the same.
+            print(f"Dorico answered the script run with {reply}; waiting for the result anyway", file=sys.stderr)
+        problems = []
+        result = wait_for(lambda: read_result(run_id, problems), timeout)
         if result is None:
+            titles = open_windows()
+            seen = "; windows open: " + ", ".join(repr(t) for t in titles) if titles else ""
+            print(f"timed out after {timeout}s waiting for result" + "".join("; " + p for p in problems) + seen
+                  + "; Dorico may be showing a dialog", file=sys.stderr)
             if scratch_id is not None:
                 print("the scratch copy was not closed; close it in Dorico without saving", file=sys.stderr)
             return 2, None, scratch_id

@@ -349,21 +349,21 @@ class RunTests(unittest.TestCase):
         self.assertIn("kFileNotFound", err.getvalue())
         self.assertFalse(any(c.startswith("Script.RunScript") for c in client.commands))
 
-    def test_a_script_run_dorico_refuses_is_reported_at_once(self):
-        class Refusing(FakeClient):
+    def test_a_script_run_with_an_odd_reply_is_still_waited_for(self):
+        # Dorico ran the script although the reply wasn't kOK. Giving up at once let the copy be closed under it,
+        # and Dorico crashed.
+        class OddReply(FakeClient):
             def command(self, cmd):
-                if cmd.startswith("Script.RunScript"):
-                    self.commands.append(cmd)
-                    return {"message": "response", "code": "kCommandNotAllowed"}
-                return super().command(cmd)
+                reply = super().command(cmd)
+                return {"message": "response", "code": "kCommandNotAllowed"} if cmd.startswith("Script.") else reply
 
         err = io.StringIO()
         with mock.patch.object(sys, "stderr", err):
-            code, result, _ = run_lua.run(self.script, client=Refusing(self.run_dir, None), on_active=True, timeout=1)
-        self.assertEqual(code, 2)
-        self.assertIsNone(result)
+            code, result, _ = run_lua.run(self.script, client=OddReply(self.run_dir, self.ok_result(True)),
+                                          on_active=True, timeout=1)
+        self.assertEqual(code, 0)
+        self.assertTrue(result["ok"])
         self.assertIn("kCommandNotAllowed", err.getvalue())
-        self.assertNotIn("timed out", err.getvalue())
 
     def test_active_project_needs_explicit_opt_in(self):
         client = FakeClient(self.run_dir, self.ok_result(False))
