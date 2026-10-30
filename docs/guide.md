@@ -453,6 +453,8 @@ EventEdit.ChangeProperty?FlowID=<flow id>&EventID=<event id>&EventBlockID=<block
 ```
 
 - The value has no context, so it holds in every layout, and it joins the run's one undo step.
+- The command reports nothing back. To see that a value took, read a second copy and look at the event's entries, as
+  13 does.
 - Without `Value`, the command takes the property off.
 - Dorico stores any property name it's given, without checking, and an accidental value it doesn't know becomes `kHide`.
 - `scorereader.dorico.edit` builds the commands from an event the reader found: `edit.setProperty(app, e, property,

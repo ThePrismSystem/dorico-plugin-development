@@ -1,6 +1,8 @@
 -- Set a property on notes by their ids, with nothing selected: here, colour every note above F5 blue.
--- What it does: reads a saved copy, finds every note and grace note higher than F5 (sounding pitch), sets its colour
--- by event id, and prints one line per note it coloured (flow number, player, position, spelling, with tabs between).
+-- What it does: reads a saved copy, finds every note and grace note higher than F5 (sounding pitch) and sets its
+-- colour by event id. Then it reads a second copy to see that each took, and prints one line per note (flow number,
+-- player, position, spelling, and "coloured" or "not coloured", with tabs between) and a "total" line: how many
+-- took, of how many it set.
 -- Change COLOUR below to use another colour.
 -- Changes: the colour of those notes, in every layout.
 -- Undo: Edit > Undo takes all the colours back in one step.
@@ -57,13 +59,33 @@ local edit = require("scorereader.dorico.edit")
 local score = require("scorereader.score")
 local values = require("scorereader.values")
 
+local function line(...) print(table.concat({ ... }, "\t")) end
+
+local set = {}
 for n, flow in ipairs(s.flows) do
   for _, player in ipairs(s.players) do
     for _, e in ipairs(score.eventsOf(s, flow, player)) do
       if (e.kind == "note" or e.kind == "grace") and e.pitch > ABOVE then
         edit.setProperty(app, e, "kEventColour", COLOUR)
-        print(table.concat({ n, player.name, values.toNumber(e.position), e.spelling }, "\t"))
+        set[#set + 1] = { flow = n, player = player.name, e = e }
       end
     end
   end
 end
+
+-- A command reports nothing, so read a second copy and look on each note for the colour stored for every layout and
+-- block instance, as EventEdit.ChangeProperty stores it.
+local after = readCopy(app)
+if not after then return end
+local coloured = 0
+for _, x in ipairs(set) do
+  local stored, e = false, after.events[x.e.id]
+  for _, entry in ipairs(e and score.entries(after, e) or {}) do
+    if entry.property == "kEventColour" and entry.layout == -1 and entry.instance == -1 then
+      stored = values.typed(entry.value).value == COLOUR
+    end
+  end
+  if stored then coloured = coloured + 1 end
+  line(x.flow, x.player, values.toNumber(x.e.position), x.e.spelling, stored and "coloured" or "not coloured")
+end
+line("total", coloured, #set)
