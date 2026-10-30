@@ -202,7 +202,7 @@ NAMES = RECIPES + "note-names.lua"
 NAMES_OK = box("Note names")
 row("note_names", NAMES, project="reading", before=OPEN_FIRST, dialog=NAMES_OK,
     after=[then_dialog("note-names.lua", NAMES, NAMES_OK, args={"second": True}),
-           then_dialog("note-names.none.lua", NAMES, box("Note names", ("check", 2, True)))])
+           then_dialog("note-names.none.lua", NAMES, box("Note names", ("check", 2, True)), args={"removed": True})])
 row("note_names_at_sounding_pitch", NAMES, project="reading", before=OPEN_FIRST, args={"sounding": True},
     dialog=box("Note names", ("check", 1, False)))
 row("note_names_undone", NAMES, project="reading", before=OPEN_FIRST, dialog=NAMES_OK,

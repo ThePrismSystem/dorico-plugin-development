@@ -19,17 +19,19 @@ local function copy(src, dst)
   return true
 end
 
--- Runs an example with DoApp standing in for Dorico, and puts back what it changed. What it printed, and the commands
--- it sent.
-local function run(example, fixture)
+-- Runs an example with DoApp and DoCore standing in for Dorico, and puts back what it changed. What it printed, and
+-- the commands it sent. currentScore stands in for Lua's flows, which have none unless it is given.
+local function run(example, fixture, currentScore)
   local printed, sent = {}, {}
-  local app = { currentScore = { flows = {} }, save = function(_, _, path) return copy(fixture, path) end,
+  local app = { currentScore = currentScore or { flows = {} },
+    save = function(_, _, path) return copy(fixture, path) end,
     doCommand = function(_, command) sent[#sent + 1] = command end }
   local path, realPrint = package.path, print
   DoApp = { DoApp = function() return app end }
+  DoCore = { RhythmicLength = function(num, den) return { num = num, den = den } end }
   print = function(...) printed[#printed + 1] = table.concat({ ... }, "\t") end
   local ok, err = pcall(dofile, ROOT .. example)
-  print, DoApp, package.path = realPrint, nil, path
+  print, DoApp, DoCore, package.path = realPrint, nil, nil, path
   if not ok then error(err, 0) end
   return printed, sent
 end
@@ -61,7 +63,7 @@ end
 -- Runs a script that asks through the form helper, with text standing in for what the box writes: a "key=value" line
 -- per field. The helper takes its Windows route on any system, with TEMP pointing at a temporary folder. Lua 5.2's
 -- require doesn't read package.config, so changing it changes only the route.
-local function runAnswering(example, fixture, text)
+local function runAnswering(example, fixture, text, currentScore)
   local realConfig, realGetenv, realExecute = package.config, os.getenv, os.execute
   package.config = "\\" .. realConfig:sub(2)
   os.getenv = function(name)
@@ -74,7 +76,7 @@ local function runAnswering(example, fixture, text)
     f:close()
     return true, "exit", 0
   end
-  local ok, printed, sent = pcall(run, example, fixture)
+  local ok, printed, sent = pcall(run, example, fixture, currentScore)
   package.config, os.getenv, os.execute = realConfig, realGetenv, realExecute
   if not ok then error(printed, 0) end
   return printed, sent
@@ -91,14 +93,59 @@ local CAUTIONARY_ANSWER = "lookBack=4 bars\nbrackets=Round brackets\nrestsCount=
 local TEXTS = FIXTURES .. "texts.dorico"
 local FIND_RECIPE = "examples/recipes/find-and-replace.lua"
 
--- The find and replace box's answer: the defaults, with changes.
-local function findAnswer(changes)
-  local fields = { { "mode", "Find" }, { "query", "" }, { "replacement", "" }, { "matchCase", "False" },
-    { "wholeWord", "False" }, { "pattern", "False" }, { "flow", "All flows" }, { "player", "All players" },
-    { "from", "" }, { "to", "" } }
+-- A box's answer: its fields' defaults, {{key, value}}, with changes {[key] = value}.
+local function answer(fields, changes)
   local lines = {}
   for i, f in ipairs(fields) do lines[i] = f[1] .. "=" .. (changes[f[1]] or f[2]) end
   return table.concat(lines, "\n") .. "\n"
+end
+
+local function findAnswer(changes)
+  return answer({ { "mode", "Find" }, { "query", "" }, { "replacement", "" }, { "matchCase", "False" },
+    { "wholeWord", "False" }, { "pattern", "False" }, { "flow", "All flows" }, { "player", "All players" },
+    { "from", "" }, { "to", "" } }, changes)
+end
+
+local NAMES_RECIPE = "examples/recipes/note-names.lua"
+local function namesAnswer(changes)
+  return answer({ { "system", "English (C, D, E)" }, { "place", "Above the staff" }, { "octave", "False" },
+    { "written", "True" }, { "player", "All players" }, { "flow", "All flows" }, { "remove", "False" } }, changes)
+end
+
+-- Stands in for Lua's flows, with a voice stream for each of the fixture's. createText adds the words to made and
+-- gives the text an id the fixture doesn't have.
+local function writableScore(fixture, made)
+  local s = require("scorereader.score").readFile(fixture)
+  local flows = {}
+  for i, flow in ipairs(s.flows) do
+    local voices = {}
+    for _, stream in ipairs(flow.streams) do
+      if stream.type == "voice" then
+        voices[#voices + 1] = { id = stream.id, createText = function(_, _, _, words)
+          made[#made + 1] = words
+          return { id = 100000 + #made }
+        end }
+      end
+    end
+    flows[i] = { id = flow.id, voiceStreams = voices, allStreams = voices }
+  end
+  return { flows = flows }
+end
+
+-- Adds a staff text to a voice stream of a score the reader read.
+local function addText(s, streamId, pos, words)
+  for _, flow in ipairs(s.flows) do
+    local stream = flow.streamById[streamId]
+    if stream then
+      local e = { kind = "text", id = 90000 + #stream.events, words = words, position = { num = pos, den = 1 },
+        duration = { num = 0, den = 1 }, streamId = streamId, flowId = flow.id, blockId = 1 }
+      table.insert(stream.events, e)
+      table.insert(flow.events, e)
+      s.events[e.id] = e
+      return
+    end
+  end
+  error("no stream " .. streamId)
 end
 local SOPRANO_FROM_BAR_2 = findAnswer({ mode = "Replace", query = "dolce", replacement = "sweet", wholeWord = "True",
   player = "Soprano", from = "2" })
@@ -318,5 +365,53 @@ return {
     t:eq(table.concat(printed, " / "), "The reader couldn't read this project: no copy / lyric\tflow 1\tbar 2, "
       .. "beat 1\tSoprano\tdolce -> sweet: check it, the project couldn't be read back afterwards / Replaced 0; left 0 "
       .. "as they were; 1 to check by hand.")
+  end,
+
+  -- Stream 14 is the flute's, with one note at 0 and none at 7; stream 20 is the piano's, with E5 and G5 at 0.
+  note_names_take_off_only_names_with_a_line_per_note_under_them = function(t)
+    package.preload["scorereader.dorico.savedcopy"] = changedCopy(READING, function(s)
+      addText(s, 14, 0, "C")
+      addText(s, 14, 0, "G\nE")
+      addText(s, 14, 7, "A")
+      addText(s, 20, 0, "G\nE")
+    end)
+    local ok, printed, sent = pcall(runAnswering, NAMES_RECIPE, READING, namesAnswer({ remove = "True" }))
+    package.preload["scorereader.dorico.savedcopy"] = nil
+    t:ok(ok, tostring(printed))
+    t:eq(table.concat(printed, " / "), "Removed 2 names.")
+    local deleted = 0
+    for _, command in ipairs(sent) do
+      if command == "Edit.Delete" then deleted = deleted + 1 end
+    end
+    t:eq(deleted, 2)
+  end,
+
+  -- Flow 1 changes key at position 16; made atonal, movable do names nothing after it.
+  note_names_leave_notes_under_an_atonal_key_unnamed = function(t)
+    local all, some = {}, {}
+    local printed = runAnswering(NAMES_RECIPE, READING, namesAnswer({}), writableScore(READING, all))
+    t:eq(printed[#printed], string.format("Wrote %d names; removed 0 old ones.", #all))
+    package.preload["scorereader.dorico.savedcopy"] = changedCopy(READING, function(s)
+      for _, e in ipairs(s.flows[1].events) do
+        if e.kind == "keySignature" and e.fifths == 1 then e.fifths, e.mode, e.atonal = nil, "atonal", true end
+      end
+    end)
+    local ok, printed2 = pcall(runAnswering, NAMES_RECIPE, READING, namesAnswer({ system = "Movable do" }),
+      writableScore(READING, some))
+    package.preload["scorereader.dorico.savedcopy"] = nil
+    t:ok(ok, tostring(printed2))
+    t:ok(#some > 0 and #some < #all, #some .. " of " .. #all)
+    t:eq(table.concat(printed2, " / "), string.format("Wrote %d names; removed 0 old ones. / Left %d notes or chords "
+      .. "unnamed: Movable do needs a key, and the key signature there is atonal or one this script can't read.",
+      #some, #all - #some))
+  end,
+
+  -- The stand-in's new texts aren't in the copy read back, so none can be moved below the staff.
+  note_names_say_which_names_stayed_above_the_staff = function(t)
+    local made = {}
+    local printed = runAnswering(NAMES_RECIPE, READING, namesAnswer({ place = "Below the staff" }),
+      writableScore(READING, made))
+    t:eq(table.concat(printed, " / "), string.format("Wrote %d names; removed 0 old ones. / %d of them stayed above "
+      .. "the staff: they weren't in the project read back.", #made, #made))
   end,
 }
