@@ -196,6 +196,43 @@ return {
     t:eq(rec[1].Type, "Project Info (Title)")
   end,
 
+  export_reads_what_dorico_writes_and_deletes_it = function(t)
+    local export = helpers.load(EXPORT, "export", { commands = helpers.load(EXPORT, "commands") })
+    local sent
+    local app = { doCommand = function(_, command)
+      sent = command
+      writeFile(TMP .. "/export-test.csv", HEADER .. "\n" .. PATH .. ',"","","","","","","Text Frame","Hi","N"\n')
+    end }
+    local rec = export.records(app, TMP .. "/", "export-test")
+    t:eq(sent, "File.Export.Text?File=" .. TMP .. "/export-test.txt&Show=false")
+    t:eq(rec[1].Text, "Hi")
+    t:eq(readFile(TMP .. "/export-test.csv"), nil, "deleted once read")
+  end,
+
+  export_refuses_a_last_csv_it_cant_delete = function(t)
+    local export = helpers.load(EXPORT, "export", { commands = helpers.load(EXPORT, "commands") })
+    local csv, sent = TMP .. "/export-test.csv", false
+    local realRemove = os.remove
+    os.remove = function(path)
+      if path == csv then return nil, path .. ": Permission denied", 13 end
+      return realRemove(path)
+    end
+    local ok, err = pcall(export.records, { doCommand = function() sent = true end }, TMP .. "/", "export-test")
+    os.remove = realRemove
+    t:ok(not ok, "an old export isn't read as the new one")
+    t:ok(tostring(err):find("couldn't delete the last export, " .. csv, 1, true), tostring(err))
+    t:eq(sent, false, "nothing exported")
+  end,
+
+  export_refuses_a_folder_dorico_and_lua_spell_differently = function(t)
+    local export = helpers.load(EXPORT, "export", { commands = helpers.load(EXPORT, "commands") })
+    local sent = false
+    local ok, err = pcall(export.records, { doCommand = function() sent = true end }, "C:/Users/Zo\195\171/", "x")
+    t:ok(not ok)
+    t:ok(tostring(err):find("C:/Users/Zo\195\171/, has characters outside ASCII", 1, true), tostring(err))
+    t:eq(sent, false, "nothing exported")
+  end,
+
   guard_says_to_open_a_project_when_none_is_open = function(t)
     local guard = helpers.load(HELLO, "guard")
     local app, score
