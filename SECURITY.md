@@ -104,8 +104,6 @@ CodeQL, PSScriptAnalyzer, zizmor, gitleaks and Scorecard report to the Security 
 read Lua or PowerShell. luacheck, lua-language-server and the call test cover the Lua, and PSScriptAnalyzer the
 PowerShell.
 
-`python tools/lint.py` runs every tool it finds and says how to install the ones it doesn't.
-
 ## How the repository is protected
 
 - Changes reach `main` only through pull requests whose checks pass, and every commit on `main` must be signed. Force
