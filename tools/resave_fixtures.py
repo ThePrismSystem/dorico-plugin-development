@@ -96,7 +96,7 @@ def save_copy(client, run_lua, source, out):
     try:
         code, _, _ = run_lua.run(SAVER, open_file=source, extra_args={"out": run_lua.fwd(out)}, client=client,
                                  timeout=300)
-    except TimeoutError as e:
+    except (TimeoutError, run_lua.DoricoRefused) as e:
         print(e)
         code = None
     if code == 0 and out.exists():
@@ -106,7 +106,7 @@ def save_copy(client, run_lua, source, out):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap = argparse.ArgumentParser(description=(__doc__ or "").split("\n")[0])  # python -OO drops docstrings
     ap.add_argument("--dry-run", action="store_true", help="say what would be saved, without Dorico")
     ap.add_argument("--dorico", action="store_true", help="also run the in-Dorico suites afterwards")
     ns = ap.parse_args(argv)

@@ -87,10 +87,9 @@ class DoricoClient:
         """Whether a frame has arrived, or arrives within timeout seconds, so reading it won't block."""
         if self._buf:
             return True
-        try:
-            readable, _, _ = select.select([self.sock], [], [], timeout)
-        except (TypeError, ValueError, OSError):  # no file descriptor, as with a test's fake socket
-            return False
+        # A closed or broken socket raises here: read as quiet, it would let a run carry on as though Dorico had
+        # finished.
+        readable, _, _ = select.select([self.sock], [], [], timeout)
         return bool(readable)
 
     def settle(self, quiet=2.0, limit=30.0) -> bool:
@@ -140,7 +139,11 @@ class DoricoClient:
         self.send(hello)
         reply = self.recv()
         if "sessionToken" in reply:
-            self.token_path.write_text(reply["sessionToken"])
+            # Whoever can read the token connects without Dorico asking, so only its owner may.
+            fd = os.open(self.token_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "w") as f:
+                f.write(reply["sessionToken"])
+            os.chmod(self.token_path, 0o600)  # a token file from before keeps its own mode through os.open
             self.send({"message": "acceptsessiontoken", "sessionToken": reply["sessionToken"]})
             reply = self.recv()
         if reply.get("code") != "kConnected":
@@ -158,7 +161,8 @@ class DoricoClient:
                 return reply
 
     def command(self, cmd: str) -> dict:
-        return self.request({"message": "command", "command": cmd})
+        # Dorico also sends messages such as selectionchanged unasked, so only a response answers a command.
+        return self.request({"message": "command", "command": cmd}, expect="response")
 
     def status(self) -> dict:
         """Dorico's status after merging the latest (possibly partial) status message."""

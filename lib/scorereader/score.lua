@@ -137,27 +137,31 @@ local function readFlow(ctx, flowNode)
     flow.streams[#flow.streams + 1] = stream
     flow.streamById[stream.id] = stream
   end
-  -- who owns each stream (docs/file-format.md, "Streams and what they hold")
+  -- who owns each stream (docs/file-format.md, "Streams and what they hold"). A stream the flow doesn't list, or a
+  -- stave no stave stream names, stops the read: skipped, its events would drop out of eventsOf without a word.
+  local function streamOf(node, path, what)
+    local id = ctx.int(node, path)
+    return flow.streamById[id] or ctx.fail(what .. " names stream " .. id .. ", which the flow doesn't list")
+  end
   for _, fp in ipairs(ctx.list(flowNode, "flowPlayers/array")) do
     local playerId = ctx.int(fp, "playerID")
-    local ps = flow.streamById[ctx.int(fp, "eventStreamID")]
-    if ps then ps.playerId = playerId end
+    streamOf(fp, "eventStreamID", "a flow player").playerId = playerId
     for _, inst in ipairs(ctx.list(fp, "flowPlayerInstruments")) do
       local instrumentId = ctx.int(inst, "instrumentID")
       local nth = {}
       for _, info in ipairs(ctx.list(inst, "staveStreamInfos")) do
-        local s = flow.streamById[ctx.int(info, "staveStreamID")]
+        local s = streamOf(info, "staveStreamID", "a stave")
         local staveId = ctx.int(info, "staveID")
         nth[staveId] = ctx.int(info, "nthStaveInInstrument")
-        if s then s.playerId, s.instrumentId, s.staff = playerId, instrumentId, nth[staveId] end
+        s.playerId, s.instrumentId, s.staff = playerId, instrumentId, nth[staveId]
       end
       -- A voice's staff is the stave its defaultLogicalStaveID names, counted from 0 at the top as for staves.
       for _, info in ipairs(ctx.list(inst, "voiceStreamInfos")) do
-        local s = flow.streamById[ctx.int(info, "voiceStreamID")]
-        if s then
-          s.playerId, s.instrumentId = playerId, ctx.int(info, "instrumentID")
-          s.staff = nth[ctx.int(info, "defaultLogicalStaveID")]
-        end
+        local s = streamOf(info, "voiceStreamID", "a voice")
+        local staveId = ctx.int(info, "defaultLogicalStaveID")
+        s.playerId, s.instrumentId = playerId, ctx.int(info, "instrumentID")
+        s.staff = nth[staveId] or ctx.fail("voice stream " .. s.id .. " is on stave " .. staveId
+          .. ", which its instrument doesn't have")
       end
     end
   end
@@ -269,9 +273,11 @@ end
 -- The decoded value of a property that applies to an event in a layout (the event's own block instance), then whether
 -- nothing applies there but a value is set for that layout and another block instance. The value is nil both when the
 -- property isn't set and when it is set to 'null: '; score.entries tells the two apart. A list value comes back as its
--- items, each {kind, value}.
+-- items, each {kind, value}. A value it can't read raises an error naming the event, the property and the format.
 function score.value(s, e, property, layoutId)
-  return props.get(score.entries(s, e), property, layoutId, e.instanceId)
+  local ok, v, elsewhere = pcall(props.get, score.entries(s, e), property, layoutId, e.instanceId)
+  if not ok then newContext(s).fail("event " .. e.id .. ", " .. property .. ": " .. tostring(v)) end
+  return v, elsewhere
 end
 
 -- Whether a text is above the staff in a layout. Edit.FlipItem stores the flip as kTextEventAboveOrBelow for the

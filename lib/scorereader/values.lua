@@ -113,10 +113,7 @@ function values.typed(raw)
   local s = tostring(raw)
   if sub(s, 1, #LIST) == LIST then return { kind = "list", value = values.list(raw) } end
   local kind = s:match("^(%a+): ")
-  if not kind then
-    if s == "null: " then return { kind = "null" } end
-    fail(raw, "a typed value")
-  end
+  if not kind then fail(raw, "a typed value") end
   local item, j = parseScalar(raw, s, #kind + 3, kind)
   if j <= #s then fail(raw, "a typed value") end
   return item

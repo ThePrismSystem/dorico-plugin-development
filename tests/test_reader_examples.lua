@@ -157,6 +157,18 @@ local function changedCopy(fixture, change)
   return function() return { read = function() return s end } end
 end
 
+-- Stands in for the saved copy: the fixture as the reader reads it the first time, and an error after that.
+local function readOnce(fixture)
+  local reads = 0
+  return function()
+    return { read = function()
+      reads = reads + 1
+      if reads > 1 then error("no copy", 0) end
+      return require("scorereader.score").readFile(fixture)
+    end }
+  end
+end
+
 -- Stands in for the score module, with a script's mark, value stored with no layout, added to each note that has the
 -- property stored for a layout, as a setting made in the Properties panel is.
 local function markedWithTheirOwn(property, value)
@@ -237,6 +249,26 @@ return {
     t:eq(printed[1], "1\tFlute\t4\tG5\tnot coloured")
     t:eq(#printed, 6)
     t:eq(printed[6], "total\t0\t5")
+  end,
+
+  set_a_property_by_id_says_what_it_set_when_it_cant_read_the_project_back = function(t)
+    package.preload["scorereader.dorico.savedcopy"] = readOnce(SAMPLE)
+    local ok, printed, sent = pcall(run, "examples/fundamentals/13-set-a-property-by-id.lua", SAMPLE)
+    package.preload["scorereader.dorico.savedcopy"] = nil
+    t:ok(ok, tostring(printed))
+    t:eq(#sent, 5)
+    t:eq(table.concat(printed, " / "), "The reader couldn't read this project: no copy / Set the colour of 5 notes, "
+      .. "but couldn't read the project back to check that it took.")
+  end,
+
+  chord_symbols_say_what_they_entered_when_they_cant_read_the_project_back = function(t)
+    package.preload["scorereader.dorico.savedcopy"] = readOnce(SAMPLE)
+    local ok, printed = pcall(run, "examples/recipes/chord-symbols.lua", SAMPLE)
+    package.preload["scorereader.dorico.savedcopy"] = nil
+    t:ok(ok, tostring(printed))
+    t:eq(table.concat(printed, " / "), "flow 1, bar 1: C / flow 1, bar 2: Am / flow 1, bar 3: F / flow 1, bar 4: G7"
+      .. " / The reader couldn't read this project: no copy / Entered 4 chord symbols, listed above, but couldn't read"
+      .. " the project back to check them.")
   end,
 
   chord_symbols_say_which_chords_dorico_didnt_put_in = function(t)
@@ -389,6 +421,42 @@ return {
       .. "12@23/1 2 | 12@24/1 12 | 12@28/1 1")
   end,
 
+  proofread_reports_a_grace_note_out_of_range = function(t)
+    package.preload["scorereader.dorico.savedcopy"] = changedCopy(SAMPLE, function(s)
+      local flute
+      for _, player in ipairs(s.players) do
+        if player.name == "Flute" then flute = player end
+      end
+      for _, stream in ipairs(s.flows[1].streams) do
+        if stream.type == "voice" and stream.playerId == flute.id then
+          table.insert(stream.events, { kind = "grace", id = 99999, pitch = 50, spelling = "D3",
+            position = { num = 0, den = 1 }, streamId = stream.id, flowId = stream.flowId })
+        end
+      end
+    end)
+    local ok, printed = pcall(run, "examples/recipes/proofread.lua", SAMPLE)
+    package.preload["scorereader.dorico.savedcopy"] = nil
+    t:ok(ok, tostring(printed))
+    t:eq(table.concat(printed, " / "), "1 bar 1 beat 1: Flute plays grace note D3, below its advanced range (B3 to D7)"
+      .. " / 1 bar 2 beat 3: Flute plays A3, below its advanced range (B3 to D7) / 2 findings")
+  end,
+
+  -- A grace note has its main note's position, so a label there would join the main note's and read as a chord.
+  label_notes_give_a_grace_note_no_label = function(t)
+    local made = {}
+    package.preload["scorereader.dorico.savedcopy"] = changedCopy(SAMPLE, function(s)
+      local stream = s.flows[1].streamById[12]
+      local first = stream.events[1]
+      table.insert(stream.events, 1, { kind = "grace", id = 99999, pitch = first.pitch + 2, spelling = "C5",
+        position = first.position, streamId = 12, flowId = first.flowId })
+    end)
+    local ok, printed = pcall(run, "examples/recipes/label-notes.lua", SAMPLE, writableScore(SAMPLE, made))
+    package.preload["scorereader.dorico.savedcopy"] = nil
+    t:ok(ok, tostring(printed))
+    t:eq(made[1], "12@0/1 12", "the main note's label alone")
+    t:eq(#made, 18)
+  end,
+
   -- Stream 14 is the flute's, with one note at 0 and none at 7; stream 20 is the piano's, with E5 and G5 at 0.
   note_names_take_off_only_names_with_a_line_per_note_under_them = function(t)
     package.preload["scorereader.dorico.savedcopy"] = changedCopy(READING, function(s)
@@ -400,7 +468,8 @@ return {
     local ok, printed, sent = pcall(runAnswering, NAMES_RECIPE, READING, namesAnswer({ remove = "True" }))
     package.preload["scorereader.dorico.savedcopy"] = nil
     t:ok(ok, tostring(printed))
-    t:eq(table.concat(printed, " / "), "Removed 2 names.")
+    t:eq(table.concat(printed, " / "), "Deleted in flow 1, bar 1, beat 1, Flute: C / Deleted in flow 1, bar 1, beat 1,"
+      .. " Piano: G E / Removed 2 names.")
     local deleted = 0
     for _, command in ipairs(sent) do
       if command == "Edit.Delete" then deleted = deleted + 1 end

@@ -2,10 +2,12 @@ import json
 import os
 import shutil
 import socket
+import stat
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -106,18 +108,30 @@ class ReceiveTests(unittest.TestCase):
             self.receive(raw_frame(0x88, b""))
 
 
+def connected(test, frames):
+    """A client on a real socket pair (settle and status wait on the socket itself), with frames sent from Dorico's
+    end."""
+    dorico, ours = socket.socketpair()
+    test.addCleanup(dorico.close)
+    test.addCleanup(ours.close)
+    dorico.sendall(frames)
+    return dws.DoricoClient(sock=ours)
+
+
 class SettleTests(unittest.TestCase):
     def test_settle_reads_the_burst_and_returns_once_quiet(self):
-        # a real socket pair, since settle waits on the socket itself
-        dorico, ours = socket.socketpair()
-        self.addCleanup(dorico.close)
-        self.addCleanup(ours.close)
-        dorico.sendall(server_frame({"message": "status", "activeOpenScoreID": 5}) + server_frame(
+        client = connected(self, server_frame({"message": "status", "activeOpenScoreID": 5}) + server_frame(
             {"message": "status", "canUndo": True}
         ))
-        client = dws.DoricoClient(sock=ours)
         self.assertTrue(client.settle(quiet=0.2, limit=5))
         self.assertEqual(client.state, {"message": "status", "activeOpenScoreID": 5, "canUndo": True})
+
+    def test_a_closed_socket_is_an_error_not_quiet(self):
+        # quiet would let a run carry on as though Dorico had finished
+        client = connected(self, b"")
+        client.sock.close()
+        with self.assertRaises((OSError, ValueError)):
+            client.settle(quiet=0.1, limit=1)
 
 
 class RequestTests(unittest.TestCase):
@@ -132,25 +146,47 @@ class RequestTests(unittest.TestCase):
         self.assertEqual(reply, {"message": "commandlist", "commands": []})
 
     def test_status_merges_deltas(self):
-        frames = server_frame({"message": "status", "activeOpenScoreID": 1, "hasScore": True}) + server_frame(
-            {"message": "status", "hasScore": True}
-        )
-        client = dws.DoricoClient(sock=FakeSocket(frames))
+        client = connected(self, server_frame({"message": "status", "activeOpenScoreID": 1, "hasScore": True})
+                           + server_frame({"message": "status", "hasScore": True}))
         client.request({"message": "getstatus"}, expect="status")
         self.assertEqual(client.status()["activeOpenScoreID"], 1)
 
     def test_status_reads_every_status_already_waiting(self):
         # Dorico pushes status deltas unasked: one queued before the reply must not stand in for it
-        frames = server_frame({"message": "status", "activeOpenScoreID": 1}) + server_frame(
+        client = connected(self, server_frame({"message": "status", "activeOpenScoreID": 1}) + server_frame(
             {"message": "status", "activeOpenScoreID": 2, "hasScore": True}
-        )
-        client = dws.DoricoClient(sock=FakeSocket(frames))
+        ))
         self.assertEqual(client.status()["activeOpenScoreID"], 2)
+
+    def test_a_command_skips_the_messages_dorico_sends_unasked(self):
+        # Dorico sends selectionchanged after a script selects notes; taken as the next command's reply, it ended a
+        # run early
+        client = dws.DoricoClient(sock=FakeSocket(server_frame({"message": "selectionchanged", "openScoreID": 0})
+                                                  + server_frame({"message": "response", "code": "kOK"})))
+        self.assertEqual(client.command("Edit.Undo"), {"message": "response", "code": "kOK"})
 
     def test_request_expect_status(self):
         client = dws.DoricoClient(sock=FakeSocket(self.frames()))
         reply = client.request({"message": "getstatus"}, expect="status")
         self.assertEqual(reply, {"message": "status"})
+
+
+class TokenTests(unittest.TestCase):
+    def test_the_token_is_created_for_its_owner_only(self):
+        # Whoever can read it connects without Dorico asking, and can run any Lua through Script.RunScript.
+        folder = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, folder, True)
+        token = folder / ".dorico-token"
+        frames = server_frame({"message": "response", "sessionToken": "abc"}) + server_frame(
+            {"message": "response", "code": "kConnected"})
+        client = dws.DoricoClient(sock=FakeSocket(frames), token_path=token)
+        with mock.patch.object(dws.os, "open", wraps=os.open) as opened:
+            client.connect()
+        self.assertEqual(token.read_text(), "abc")
+        modes = [c.args[2] for c in opened.call_args_list if Path(c.args[0]) == token and len(c.args) > 2]
+        self.assertEqual(modes, [0o600])
+        if os.name == "posix":
+            self.assertEqual(stat.S_IMODE(token.stat().st_mode), 0o600)
 
 
 if __name__ == "__main__":

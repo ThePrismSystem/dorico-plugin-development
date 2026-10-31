@@ -1,7 +1,9 @@
 -- Select notes by id and run a command on each: here, colour every note above F5 red.
 -- What it does: finds every note and grace note higher than F5 (sounding pitch) in every flow, selects each in turn
--- and colours it red by command, and prints one line per note it coloured (flow number, player, position, spelling,
--- with tabs between). Change ABOVE and COLOUR below to pick other notes or another colour.
+-- and colours it red by command, and prints one line per note it tried to colour (flow number, player, position,
+-- spelling, with tabs between), then how many. doCommand reports nothing, so a note the commands missed still gets its
+-- line: 13-set-a-property-by-id.lua shows how to read the colours back and check. Change ABOVE and COLOUR below to
+-- pick other notes or another colour.
 -- Changes: the colour of those notes, and the selection.
 -- Undo: Edit > Undo takes all the colours back in one step.
 -- Builds on: 03-read-notes.lua and 10-commands.lua. Open Script > Show Script Console to read what it prints.
@@ -19,12 +21,14 @@ local COLOUR = "#ffff0000" -- alpha, red, green, blue
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. The read of app.currentScore goes
--- through pcall in case it raises an error then instead of giving nil, which no run here has checked.
+-- through pcall in case it raises an error then instead of giving nil, which no run here has checked. Such an error
+-- is printed with the advice, in case it means something else.
 local function guard()
   local app = DoApp.DoApp()
   local ok, score = pcall(function() return app.currentScore end)
   if ok and score then return app, score end
-  print("Open a project first, then run this script again.")
+  local advice = "Open a project first, then run this script again."
+  print(ok and advice or advice .. " Reading the open project gave an error: " .. tostring(score))
   return app, nil
 end
 -- end helper: guard
@@ -35,7 +39,8 @@ end
 -- starts each block instance; the events after it belong to that instance (EventEdit.Select needs it).
 --   dump.parse(text) -> {events = {{kind, id, pos, duration, spelling, grace, instance, raw}}}
 --   dump.event(text, instance) -> one event from tostring(event), or nil
---   dump.notes(parsed) -> the notes and grace notes, {{id, spelling, pos, duration, grace, instance}}
+--   dump.notes(parsed) -> the notes and grace notes, {{id, spelling, pos, duration, grace, instance}}, and how
+--     many it left out because their lines have no spelling it reads
 --   dump.owners(score, flow) -> {[voice stream id] = player name}
 -- Kinds are "note", "grace", "rest", "text" and "other". Positions and durations are quarter notes.
 local dump = {}
@@ -88,14 +93,16 @@ do
   end
 
   function dump.notes(parsed)
-    local notes = {}
+    local notes, unread = {}, 0
     for _, ev in ipairs(parsed.events) do
       if (ev.kind == "note" or ev.kind == "grace") and ev.spelling then
         notes[#notes + 1] = { id = ev.id, spelling = ev.spelling, pos = ev.pos, duration = ev.duration,
           grace = ev.grace, instance = ev.instance }
+      elseif ev.kind == "note" or ev.kind == "grace" then
+        unread = unread + 1
       end
     end
-    return notes
+    return notes, unread
   end
 
   -- flow.instruments[i] owns flow.voiceStreams[i], and tostring(player) is the player's name.
@@ -172,7 +179,7 @@ if not score then return end
 app:doCommand("NoteInput.Exit")
 app:doCommand(commands.build("Window.SwitchMode", { { "WindowMode", "kWriteMode" } }))
 
-local limit = midi(ABOVE)
+local limit, tried = midi(ABOVE), 0
 for n, flow in ipairs(score.flows) do
   local owners = dump.owners(score, flow)
   for _, stream in ipairs(flow.voiceStreams) do
@@ -185,8 +192,11 @@ for n, flow in ipairs(score.flows) do
         app:doCommand(commands.build("UI.InvokePropertyChangeValue", { { "Type", "kEventColour" },
           { "Value", COLOUR } }))
         print(table.concat({ n, owners[stream.id] or "?", note.pos, note.spelling }, "\t"))
+        tried = tried + 1
       end
     end
   end
 end
 app:doCommand("Edit.SelectNone")
+print("Tried to colour " .. tried .. " notes. Dorico doesn't report which took; 13-set-a-property-by-id.lua shows"
+  .. " how to check.")

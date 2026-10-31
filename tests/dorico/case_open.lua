@@ -9,4 +9,4 @@ end
 if not package.path:find(mine, 1, true) then package.path = mine .. ";" .. package.path end
 local probe = require("probe")
 
-probe.run("case_open", function() end)
+probe.run("case_open", function() end, { scratchOnly = true })

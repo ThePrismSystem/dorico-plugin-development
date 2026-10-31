@@ -28,12 +28,14 @@ local TEXT = { 0, "Written by a script" } -- position, text
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. The read of app.currentScore goes
--- through pcall in case it raises an error then instead of giving nil, which no run here has checked.
+-- through pcall in case it raises an error then instead of giving nil, which no run here has checked. Such an error
+-- is printed with the advice, in case it means something else.
 local function guard()
   local app = DoApp.DoApp()
   local ok, score = pcall(function() return app.currentScore end)
   if ok and score then return app, score end
-  print("Open a project first, then run this script again.")
+  local advice = "Open a project first, then run this script again."
+  print(ok and advice or advice .. " Reading the open project gave an error: " .. tostring(score))
   return app, nil
 end
 -- end helper: guard
@@ -78,8 +80,11 @@ end
 
 local app, score = guard()
 if not score then return end
-if #score.players == 0 then
-  print("Add a player first, then run this script again.")
+-- The new flow has a voice for each instrument, and a player can have none, so check before adding it.
+local voiced = false
+for _, p in ipairs(score.players) do voiced = voiced or p.instruments[1] ~= nil end
+if not voiced then
+  print("Add a player with an instrument first, then run this script again.")
   return
 end
 

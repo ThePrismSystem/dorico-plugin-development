@@ -488,6 +488,17 @@ return {
     t:eq(v, nil, "a null value reads as unset")
     t:eq(elsewhere, false)
   end,
+  a_value_it_cant_read_names_the_property_and_the_event = function(t)
+    -- a score of its own, since this changes the cache
+    local s = score.readFile(fixtures .. "6.2.30/reading.dorico")
+    local e = find(s.flows[1].events, function(x) return x.kind == "note" end)
+    s.cache[e] = { { property = "kEventColour", value = "colour: red", layout = -1, frameChain = -1, instance = -1 } }
+    local ok, err = pcall(score.value, s, e, "kEventColour", s.layouts[1].id)
+    t:ok(not ok)
+    t:ok(tostring(err):find("^scorereader: event " .. e.id .. ", kEventColour: values: cannot read 'colour: red'"),
+      tostring(err))
+    t:ok(tostring(err):find("(fileVersion 1.1452", 1, true), tostring(err))
+  end,
   articulations_and_strings = function(t)
     local s = load("6.2.30/reading.dorico")
     local flute = score.eventsOf(s, s.flows[1], s.players[1])

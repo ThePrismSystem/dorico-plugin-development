@@ -2,7 +2,9 @@
 -- What it does: reads a saved copy and asks what to find, whether to replace it, and where to look (a flow, a player,
 -- a range of bars). Find lists every match (what it is, flow, bar and beat, player, the words) and selects the first.
 -- Replace rebuilds each match with the new words, lists those it can't rebuild exactly, which it leaves as they are,
--- and reads the project back to list any change Dorico didn't make as asked.
+-- and reads the project back to list any change Dorico didn't make as asked. Bars, in the box and in what it lists,
+-- are counted from 1 at the start of each flow (an opening pickup is bar 0) and take no account of bar number
+-- changes, so after a change they differ from the numbers Dorico shows.
 -- Changes: in Replace, deletes each text or lyric it replaces and enters the new one in its place, and enters each new
 -- chord symbol over the old one. Find changes nothing in the project, though it leaves note input and switches to
 -- Write mode to select the first match.
@@ -25,12 +27,14 @@
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. The read of app.currentScore goes
--- through pcall in case it raises an error then instead of giving nil, which no run here has checked.
+-- through pcall in case it raises an error then instead of giving nil, which no run here has checked. Such an error
+-- is printed with the advice, in case it means something else.
 local function guard()
   local app = DoApp.DoApp()
   local ok, score = pcall(function() return app.currentScore end)
   if ok and score then return app, score end
-  print("Open a project first, then run this script again.")
+  local advice = "Open a project first, then run this script again."
+  print(ok and advice or advice .. " Reading the open project gave an error: " .. tostring(score))
   return app, nil
 end
 -- end helper: guard
@@ -39,7 +43,8 @@ end
 -- Reads a saved copy of the open project with the reader library, or prints why it couldn't and gives nil. The
 -- library is lib/ two folders up in this repository, or a lib folder beside the script once both are copied into
 -- Script Plug-ins. Dorico keeps one Lua state, so the library's modules from an earlier run are cleared, and its
--- folders are moved to the front of the module path, where no other copy of the library can come before them.
+-- folders are moved to the front of the module path, where no other copy of the library can come before them. The
+-- library loads outside the pcall, so a missing or broken library isn't reported as a project it couldn't read.
 local function readCopy(app)
   local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])") or ""
   local paths = here .. "../../lib/?.lua;" .. here .. "lib/?.lua;"
@@ -49,9 +54,14 @@ local function readCopy(app)
   local at = package.path:find(paths, 1, true)
   if at then package.path = package.path:sub(1, at - 1) .. package.path:sub(at + #paths) end
   package.path = paths .. package.path
-  local ok, s = pcall(function() return require("scorereader.dorico.savedcopy").read(app) end)
-  if ok then return s end
-  print("The reader couldn't read this project: " .. tostring(s))
+  if package.searchpath("scorereader.dorico.savedcopy", package.path) then
+    local savedcopy = require("scorereader.dorico.savedcopy")
+    local ok, s = pcall(savedcopy.read, app)
+    if ok then return s end
+    print("The reader couldn't read this project: " .. tostring(s))
+  else
+    print("Couldn't find the reader library: copy the lib folder beside this script, then run it again.")
+  end
 end
 -- end helper: readCopy
 
@@ -180,12 +190,15 @@ do
   -- Windows paths take forward slashes too, which keeps the folder's own backslashes out of the command line.
   function form.windows(title, fields, folder)
     local script, answer = folder .. "/dorico-form.ps1", folder .. "/dorico-form.txt"
+    -- A last answer left in place would be read as this box's if PowerShell then wrote none, so no box is shown
+    -- unless it has gone. os.remove's third result is the error number, and 2 means there was no file to delete.
+    local gone, _, code = os.remove(answer)
+    if not gone and code ~= 2 then return nil, "couldn't delete the last answer, " .. answer end
     local f = io.open(script, "wb")
     if not f then return nil, "couldn't write " .. script end
     -- Windows PowerShell 5.1 reads a script with no byte order mark in the ANSI code page, which garbles accents.
     f:write("\239\187\191" .. form.script(title, fields))
     f:close()
-    os.remove(answer)
     os.execute('powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "' .. script .. '" -Out "'
       .. answer .. '"')
     local text = readFile(answer)
@@ -204,8 +217,10 @@ do
     for _, f in ipairs(fields) do
       local lines
       if f.kind == "check" then
-        lines = { '"ok:" & button returned of (display dialog ' .. apple(f.label) .. ' buttons {"No", "Yes"}'
-          .. " default button " .. apple(f.default and "Yes" or "No") .. " with title " .. apple(title) .. ")" }
+        -- A Cancel button, named as the cancel button, raises -128 as the other questions' Cancel does.
+        lines = { '"ok:" & button returned of (display dialog ' .. apple(f.label)
+          .. ' buttons {"Cancel", "No", "Yes"} default button ' .. apple(f.default and "Yes" or "No")
+          .. ' cancel button "Cancel" with title ' .. apple(title) .. ")" }
       elseif f.kind == "choice" then
         local items = {}
         for _, choice in ipairs(f.choices) do items[#items + 1] = apple(choice) end

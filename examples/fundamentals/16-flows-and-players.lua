@@ -1,7 +1,7 @@
 -- Add a flow and a player, name both, and keep the new player out of the other flows.
 -- What it does: adds a flow called "Duet", adds a violin player, renames it "Violin, solo & tutti 2", and takes it
 -- out of every flow but the new one. It prints what it added, the player id it found, and which flows the new
--- player is in.
+-- player is in. In a project with a player that has no instrument, it says so and changes nothing.
 -- Changes: adds a flow and a player (and the part layout Dorico makes for a new player).
 -- Undo: Edit > Undo takes all of it back in one step.
 -- Builds on: 02-walk-the-score.lua and 10-commands.lua. Open Script > Show Script Console to read what it prints.
@@ -24,12 +24,14 @@ local PLAYER_NAME = "Violin, solo & tutti 2"
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. The read of app.currentScore goes
--- through pcall in case it raises an error then instead of giving nil, which no run here has checked.
+-- through pcall in case it raises an error then instead of giving nil, which no run here has checked. Such an error
+-- is printed with the advice, in case it means something else.
 local function guard()
   local app = DoApp.DoApp()
   local ok, score = pcall(function() return app.currentScore end)
   if ok and score then return app, score end
-  print("Open a project first, then run this script again.")
+  local advice = "Open a project first, then run this script again."
+  print(ok and advice or advice .. " Reading the open project gave an error: " .. tostring(score))
   return app, nil
 end
 -- end helper: guard
@@ -63,6 +65,16 @@ if not score then return end
 
 -- Players have no ==, so a player is known by its first instrument's id, which is unique and doesn't change.
 local function keyOf(player) return player.instruments[1].id end
+
+-- A player with no instruments has no key. The search for the new player's id below can rename any player, and
+-- couldn't put such a player's name back, so the script stops before it changes anything.
+for _, player in ipairs(score.players) do
+  if not player.instruments[1] then
+    print(tostring(player) .. " has no instrument, and this script tells players apart by their first instrument. Give"
+      .. " it one, then run this script again.")
+    return
+  end
+end
 
 local function playerByKey(key)
   for _, player in ipairs(app.currentScore.players) do

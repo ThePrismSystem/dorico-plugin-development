@@ -85,8 +85,9 @@ def build(raw):
             classes.setdefault(fits[0], {})["instance"] = sorted(names)
         else:
             unnamed.append(sorted(names))
-    for name in PLAIN_EVENTS:
-        classes.setdefault(name, {})["instance"] = sorted(PLAIN_EVENT_MEMBERS | {"__eq", "__len", "__tostring"})
+    if plain:  # only when the scan saw such a table
+        for name in PLAIN_EVENTS:
+            classes.setdefault(name, {})["instance"] = sorted(PLAIN_EVENT_MEMBERS | {"__eq", "__len", "__tostring"})
     return {"dorico": raw["dorico"], "classes": classes, "plainEventTables": plain,
             "unnamed": sorted(unnamed)}
 

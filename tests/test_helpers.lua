@@ -16,6 +16,7 @@ local LAYOUTS = "examples/fundamentals/07-values-per-layout.lua"
 local CHORDS = "examples/recipes/chord-symbols.lua"
 local PROOFREAD = "examples/recipes/proofread.lua"
 local EXPORT = "examples/fundamentals/15-layout-and-notation-options.lua"
+local REPORT = "examples/recipes/instrument-report.lua"
 
 local function parse(lines)
   return helpers.load(READ_NOTES, "dump").parse(table.concat(lines, "\n") .. "\n")
@@ -126,6 +127,17 @@ return {
     t:eq(notes[3].spelling, "Eb4")
   end,
 
+  dump_counts_notes_it_has_no_spelling_for = function(t)
+    local notes, unread = helpers.load(READ_NOTES, "dump").notes(parse({
+      "0 (0) dur: 1: kNoteEvent (id:1) at 0, duration 1  E5 (ends 1)",
+      "1 (1) dur: 1: kNoteEvent (id:2) at 1, duration 1  ? (ends 2)",
+      "2 (2): kGraceNoteEvent (id:3) at 2  secondary pos -1/2 (-0.5), notated duration: 1/2 (0.5), ? ",
+      "2 (2) dur: 1: kRestEvent (id:4) at 2, duration 1  ",
+    }))
+    t:eq(#notes, 1)
+    t:eq(unread, 2, "a note and a grace note with no spelling, and not the rest")
+  end,
+
   dump_keeps_each_events_instance = function(t)
     local ev = parse({
       "Start block id: 1061 position: 0",
@@ -185,6 +197,43 @@ return {
     t:eq(rec[1].Type, "Project Info (Title)")
   end,
 
+  export_reads_what_dorico_writes_and_deletes_it = function(t)
+    local export = helpers.load(EXPORT, "export", { commands = helpers.load(EXPORT, "commands") })
+    local sent
+    local app = { doCommand = function(_, command)
+      sent = command
+      writeFile(TMP .. "/export-test.csv", HEADER .. "\n" .. PATH .. ',"","","","","","","Text Frame","Hi","N"\n')
+    end }
+    local rec = export.records(app, TMP .. "/", "export-test")
+    t:eq(sent, "File.Export.Text?File=" .. TMP .. "/export-test.txt&Show=false")
+    t:eq(rec[1].Text, "Hi")
+    t:eq(readFile(TMP .. "/export-test.csv"), nil, "deleted once read")
+  end,
+
+  export_refuses_a_last_csv_it_cant_delete = function(t)
+    local export = helpers.load(EXPORT, "export", { commands = helpers.load(EXPORT, "commands") })
+    local csv, sent = TMP .. "/export-test.csv", false
+    local realRemove = os.remove
+    os.remove = function(path)
+      if path == csv then return nil, path .. ": Permission denied", 13 end
+      return realRemove(path)
+    end
+    local ok, err = pcall(export.records, { doCommand = function() sent = true end }, TMP .. "/", "export-test")
+    os.remove = realRemove
+    t:ok(not ok, "an old export isn't read as the new one")
+    t:ok(tostring(err):find("couldn't delete the last export, " .. csv, 1, true), tostring(err))
+    t:eq(sent, false, "nothing exported")
+  end,
+
+  export_refuses_a_folder_dorico_and_lua_spell_differently = function(t)
+    local export = helpers.load(EXPORT, "export", { commands = helpers.load(EXPORT, "commands") })
+    local sent = false
+    local ok, err = pcall(export.records, { doCommand = function() sent = true end }, "C:/Users/Zo\195\171/", "x")
+    t:ok(not ok)
+    t:ok(tostring(err):find("C:/Users/Zo\195\171/, has characters outside ASCII", 1, true), tostring(err))
+    t:eq(sent, false, "nothing exported")
+  end,
+
   guard_says_to_open_a_project_when_none_is_open = function(t)
     local guard = helpers.load(HELLO, "guard")
     local app, score
@@ -194,13 +243,14 @@ return {
     t:eq(printed[1], "Open a project first, then run this script again.")
   end,
 
-  guard_treats_an_error_as_no_project = function(t)
+  guard_treats_an_error_as_no_project_and_prints_it = function(t)
     local guard = helpers.load(HELLO, "guard")
-    local hub = setmetatable({}, { __index = function() error("No such property: currentScore") end })
+    local hub = setmetatable({}, { __index = function() error("No such property: currentScore", 0) end })
     local score
     local printed = withDorico(hub, function() score = select(2, guard()) end)
     t:eq(score, nil)
-    t:eq(printed[1], "Open a project first, then run this script again.")
+    t:eq(printed[1], "Open a project first, then run this script again. Reading the open project gave an error: "
+      .. "No such property: currentScore")
   end,
 
   commands_escape_backslash_and_ampersand = function(t)
@@ -343,6 +393,50 @@ return {
     t:ok(not outofrange.readable({ standard = "C4 to A6" }), "a range it can't parse")
   end,
 
+  most_at_once_counts_players_sounding_together = function(t)
+    local mostAtOnce = helpers.load(REPORT, "mostAtOnce")
+    t:eq(mostAtOnce({}), 0, "no notes")
+    t:eq(mostAtOnce({ a = { { 0, 2 } }, b = { { 1, 3 } } }), 2, "overlapping")
+    t:eq(mostAtOnce({ a = { { 0, 1 } }, b = { { 1, 2 } } }), 1, "one ends where the other starts")
+    t:eq(mostAtOnce({ a = { { 0, 2 }, { 0, 2 }, { 0, 1 } }, b = { { 1, 2 } } }), 2, "a chord is one player")
+    t:eq(mostAtOnce({ a = { { 0, 8 } }, b = { { 2, 3 } }, c = { { 4, 5 } } }), 2, "a held note")
+    t:eq(mostAtOnce({ a = { { 0, 1 }, { 4, 6 } }, b = { { 4, 5 } }, c = { { 4.5, 7 } } }), 3, "later")
+  end,
+
+  most_at_once_agrees_with_checking_every_start = function(t)
+    local mostAtOnce = helpers.load(REPORT, "mostAtOnce")
+    -- Pseudo-random spans on a grid of eighth notes, so starts and ends often meet.
+    local seed, notes = 7, {}
+    local function nextInt(n)
+      seed = seed * 16807 % 2147483647
+      return seed % n
+    end
+    for i = 1, 300 do
+      local player = nextInt(6)
+      local start = nextInt(200) / 2
+      notes[player] = notes[player] or {}
+      table.insert(notes[player], { start, start + (nextInt(8) + 1) / 2 })
+      if i % 50 == 0 then
+        local most = 0
+        for _, list in pairs(notes) do
+          for _, span in ipairs(list) do
+            local playing = 0
+            for _, other in pairs(notes) do
+              for _, o in ipairs(other) do
+                if o[1] <= span[1] and span[1] < o[2] then
+                  playing = playing + 1
+                  break
+                end
+              end
+            end
+            most = math.max(most, playing)
+          end
+        end
+        t:eq(mostAtOnce(notes), most, i .. " notes")
+      end
+    end
+  end,
+
   guard_returns_the_open_project = function(t)
     local guard = helpers.load(HELLO, "guard")
     local project = { flows = {} }
@@ -368,6 +462,27 @@ return {
     t:eq(package.loaded["scorereader.fake"], nil, "an earlier run's module is cleared")
     t:eq(printed[1], "The reader couldn't read this project: "
       .. "scorereader: Dorico could not save a copy of the project to read")
+  end,
+
+  read_copy_says_to_copy_the_lib_folder_when_the_library_is_missing = function(t)
+    local readCopy = assert(load(helpers.text(SAVED_COPY, "readCopy") .. "\nreturn readCopy", "@C:/nowhere/x.lua"))()
+    local before, s = package.path, nil
+    package.path = "C:/nowhere/other/?.lua;"
+    local ok, printed = pcall(withDorico, {}, function() s = readCopy({ currentScore = {} }) end)
+    package.path = before
+    t:ok(ok, tostring(printed))
+    t:eq(s, nil)
+    t:eq(#printed, 1)
+    t:eq(printed[1], "Couldn't find the reader library: copy the lib folder beside this script, then run it again.")
+  end,
+
+  read_copy_leaves_a_broken_library_s_error_to_end_the_script = function(t)
+    local readCopy = helpers.load(SAVED_COPY, "readCopy")
+    package.preload["scorereader.dorico.savedcopy"] = function() error("broken library", 0) end
+    local ok, err = pcall(withDorico, {}, function() readCopy({ currentScore = {} }) end)
+    package.preload["scorereader.dorico.savedcopy"] = nil
+    t:ok(not ok, "the error isn't put down to the project")
+    t:ok(tostring(err):find("broken library", 1, true), tostring(err))
   end,
 
   bars_from_time_signatures = function(t)
@@ -628,6 +743,27 @@ return {
     t:eq(why2, "its answer left out words")
   end,
 
+  form_on_windows_shows_no_box_when_it_cant_delete_an_old_answer = function(t)
+    local form = helpers.load(ASK, "form")
+    local fields = { { key = "words", label = "Words", kind = "text", default = "" } }
+    local answer = TMP .. "/dorico-form.txt"
+    writeFile(answer, "words=old\n")
+    local realRemove, realExecute, ran = os.remove, os.execute, false
+    os.remove = function(path)
+      if path == answer then return nil, path .. ": Permission denied", 13 end
+      return realRemove(path)
+    end
+    os.execute = function() ran = true return true, "exit", 0 end
+    local ok, answers, why = pcall(form.windows, "Box", fields, TMP)
+    os.remove, os.execute = realRemove, realExecute
+    os.remove(answer)
+    t:ok(ok, tostring(answers))
+    t:eq(answers, nil, "the old answer isn't read as this box's")
+    t:eq(why, "couldn't delete the last answer, " .. answer)
+    t:eq(ran, false, "no box is shown")
+    t:eq(readFile(TMP .. "/dorico-form.ps1"), nil, "no script is left behind")
+  end,
+
   form_on_windows_says_why_when_it_cant_write_the_script = function(t)
     local form = helpers.load(ASK, "form")
     local folder = TMP .. "/no-such-folder-" .. os.time()
@@ -666,6 +802,8 @@ return {
     t:ok(sent[1]:find([[display dialog "it'\''s \"a\" \\ b" default answer ""]], 1, true), sent[1])
     t:ok(sent[1]:find([[with title "Zo]] .. "\195\171" .. [['\''s box"]], 1, true), sent[1])
     t:ok(sent[2]:find([[default button "No"]], 1, true), sent[2])
+    t:ok(sent[2]:find([[buttons {"Cancel", "No", "Yes"}]], 1, true), "a tick box can be cancelled: " .. sent[2])
+    t:ok(sent[2]:find([[cancel button "Cancel"]], 1, true), "Cancel raises -128 like the others: " .. sent[2])
     t:ok(sent[3]:find("-e 'if r is false then error number -128'", 1, true), sent[3])
     t:ok(sent[3]:find([[choose from list {"a", "b'\''c"}]], 1, true), sent[3])
   end,

@@ -1,4 +1,4 @@
-"""Each example, run in Dorico on a scratch copy of the sample or the reading fixture, then checked.
+"""Each example, run in Dorico on a scratch copy of a fixture (harness.PROJECTS), then checked.
 
     python tests/dorico/test_examples.py              every example
     python tests/dorico/test_examples.py -k colour    those whose name matches
@@ -58,7 +58,11 @@ def request(client, command):
     return client.request({"message": "command", "command": command}, expect="response")
 
 
-def send(test, client, command):
+def send(test, client, score_id, command):
+    """Send command to the scratch copy score_id. A command goes to whichever project is active, and only Lua runs
+    pass through the probe, so this checks the copy is still the active project first."""
+    active = client.status().get("activeOpenScoreID")
+    test.assertEqual(active, score_id, f"{command} not sent: the active project is not the scratch copy")
     reply = request(client, command)
     test.assertEqual(reply.get("code"), "kOK", f"{command}: {reply}")
 
@@ -309,6 +313,7 @@ def make_test(spec):
         first, first_args = (before["case"], before.get("args")) if before else \
             ("case_example.lua", harness.example_args(spec))
         with harness.scratch(self, first, args=first_args, open_file=spec["project"]) as (client, result):
+            score_id = result["facts"]["scratchScoreID"]
             if spec["dialog"]:
                 result = run_answering(self, client, harness.example_args(spec), spec["dialog"])
             elif before:
@@ -316,7 +321,7 @@ def make_test(spec):
             printed = (result.get("facts") or {}).get("printed") or []
             for step in spec["after"]:
                 if "command" in step:
-                    send(self, client, step["command"])
+                    send(self, client, score_id, step["command"])
                 elif "python" in step:
                     step["python"](self, client, printed)
                 elif "dialog" in step:

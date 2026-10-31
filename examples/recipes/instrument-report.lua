@@ -12,12 +12,14 @@
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. The read of app.currentScore goes
--- through pcall in case it raises an error then instead of giving nil, which no run here has checked.
+-- through pcall in case it raises an error then instead of giving nil, which no run here has checked. Such an error
+-- is printed with the advice, in case it means something else.
 local function guard()
   local app = DoApp.DoApp()
   local ok, score = pcall(function() return app.currentScore end)
   if ok and score then return app, score end
-  print("Open a project first, then run this script again.")
+  local advice = "Open a project first, then run this script again."
+  print(ok and advice or advice .. " Reading the open project gave an error: " .. tostring(score))
   return app, nil
 end
 -- end helper: guard
@@ -26,7 +28,8 @@ end
 -- Reads a saved copy of the open project with the reader library, or prints why it couldn't and gives nil. The
 -- library is lib/ two folders up in this repository, or a lib folder beside the script once both are copied into
 -- Script Plug-ins. Dorico keeps one Lua state, so the library's modules from an earlier run are cleared, and its
--- folders are moved to the front of the module path, where no other copy of the library can come before them.
+-- folders are moved to the front of the module path, where no other copy of the library can come before them. The
+-- library loads outside the pcall, so a missing or broken library isn't reported as a project it couldn't read.
 local function readCopy(app)
   local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])") or ""
   local paths = here .. "../../lib/?.lua;" .. here .. "lib/?.lua;"
@@ -36,11 +39,49 @@ local function readCopy(app)
   local at = package.path:find(paths, 1, true)
   if at then package.path = package.path:sub(1, at - 1) .. package.path:sub(at + #paths) end
   package.path = paths .. package.path
-  local ok, s = pcall(function() return require("scorereader.dorico.savedcopy").read(app) end)
-  if ok then return s end
-  print("The reader couldn't read this project: " .. tostring(s))
+  if package.searchpath("scorereader.dorico.savedcopy", package.path) then
+    local savedcopy = require("scorereader.dorico.savedcopy")
+    local ok, s = pcall(savedcopy.read, app)
+    if ok then return s end
+    print("The reader couldn't read this project: " .. tostring(s))
+  else
+    print("Couldn't find the reader library: copy the lib folder beside this script, then run it again.")
+  end
 end
 -- end helper: readCopy
+
+-- helper: mostAtOnce
+-- The most players with a note sounding at one moment. spans: {[player] = {{start, end}}}, in quarter notes; a note
+-- sounds from its start up to its end, so one that ends where another starts doesn't overlap it. It sorts every
+-- start and end once and goes through them in order, counting the players sounding, so a score twice as long takes
+-- about twice as long.
+local function mostAtOnce(spans)
+  local marks = {}
+  for player, list in pairs(spans) do
+    for _, span in ipairs(list) do
+      marks[#marks + 1] = { pos = span[1], step = 1, player = player }
+      marks[#marks + 1] = { pos = span[2], step = -1, player = player }
+    end
+  end
+  -- At the same moment, ends go first.
+  table.sort(marks, function(a, b)
+    if a.pos ~= b.pos then return a.pos < b.pos end
+    return a.step < b.step
+  end)
+  local notes, sounding, most = {}, 0, 0
+  for _, m in ipairs(marks) do
+    local before = notes[m.player] or 0
+    notes[m.player] = before + m.step
+    if before == 0 then
+      sounding = sounding + 1
+      most = math.max(most, sounding)
+    elseif notes[m.player] == 0 then
+      sounding = sounding - 1
+    end
+  end
+  return most
+end
+-- end helper: mostAtOnce
 
 local app, project = guard()
 if not project then return end
@@ -76,21 +117,5 @@ for n, flow in ipairs(s.flows) do
     print(string.format("  %s | %s | %d notes", player.name, table.concat(names, ", "), count))
   end
 
-  -- The most players sounding at once can only change where a note starts, so count at each start.
-  local most = 0
-  for _, list in pairs(spans) do
-    for _, span in ipairs(list) do
-      local at, playing = span[1], 0
-      for _, other in pairs(spans) do
-        for _, o in ipairs(other) do
-          if o[1] <= at and at < o[2] then
-            playing = playing + 1
-            break
-          end
-        end
-      end
-      if playing > most then most = playing end
-    end
-  end
-  print("  most players playing at once: " .. most)
+  print("  most players playing at once: " .. mostAtOnce(spans))
 end

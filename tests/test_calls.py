@@ -52,7 +52,7 @@ ALLOWED = {
 LUA_CALLS = [
     ("os.execute", r"\bos\.execute\b"), ("io.popen", r"\bio\.popen\b"), ("io.open", r"\bio\.open\b"),
     ("io.lines", r"\bio\.lines\b"), ("os.remove", r"\bos\.remove\b"), ("os.rename", r"\bos\.rename\b"),
-    ("os.tmpname", r"\bos\.tmpname\b"), ("os.getenv", r"\bos\.getenv\b"), ("load", r"(?<![\w.:])load\s*\("),
+    ("os.tmpname", r"\bos\.tmpname\b"), ("os.getenv", r"\bos\.getenv\b"), ("load", r"(?<![\w.:])load\s*[(\"'\[]"),
     ("io.output", r"\bio\.output\b"), ("io.input", r"\bio\.input\b"), ("io.tmpfile", r"\bio\.tmpfile\b"),
     ("loadstring", r"\bloadstring\b"), ("loadfile", r"\bloadfile\b"), ("dofile", r"\bdofile\b"),
     ("package.loadlib", r"\bpackage\.loadlib\b"),
@@ -173,6 +173,12 @@ class StripTests(unittest.TestCase):
 
     def test_package_loaded_is_not_load(self):
         self.assertEqual(calls('package.loaded["x"] = nil\n'), Counter())
+
+    def test_load_is_counted_in_every_call_form(self):
+        # Lua calls a function on a string literal without brackets: load"...", load[[...]]
+        for src in ('local f = load("return 1")', 'local f = load"return 1"', "local f = load 'return 1'",
+                    "local f = load[[return 1]] f()", "local f = load [==[return 1]==]"):
+            self.assertEqual(calls(src + "\n")["load"], 1, src)
 
     def test_require_through_pcall_is_named(self):
         self.assertEqual(calls('local ok, m = pcall(require, "lfs")\n'), Counter({"require lfs": 1}))

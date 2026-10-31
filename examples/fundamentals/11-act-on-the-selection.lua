@@ -1,7 +1,8 @@
 -- Find out which notes are selected, then act on them: here, by writing each note's name above it.
 -- What it does: prints one line per selected note or grace note (flow number, player, position, spelling, with tabs
--- between), and puts a staff text naming the note at its position. With nothing selected it says so and stops.
--- Changes: adds a staff text for each selected note.
+-- between), and puts a staff text naming the note at its position: one for a chord, and none for a grace note. With
+-- nothing selected it says so and stops.
+-- Changes: adds a staff text for each selected note or chord.
 -- Undo: Edit > Undo takes the texts back in one step.
 -- Builds on: 03-read-notes.lua. Select some notes, run the script, then open Script > Show Script Console to read
 -- what it prints.
@@ -18,12 +19,14 @@
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. The read of app.currentScore goes
--- through pcall in case it raises an error then instead of giving nil, which no run here has checked.
+-- through pcall in case it raises an error then instead of giving nil, which no run here has checked. Such an error
+-- is printed with the advice, in case it means something else.
 local function guard()
   local app = DoApp.DoApp()
   local ok, score = pcall(function() return app.currentScore end)
   if ok and score then return app, score end
-  print("Open a project first, then run this script again.")
+  local advice = "Open a project first, then run this script again."
+  print(ok and advice or advice .. " Reading the open project gave an error: " .. tostring(score))
   return app, nil
 end
 -- end helper: guard
@@ -34,7 +37,8 @@ end
 -- starts each block instance; the events after it belong to that instance (EventEdit.Select needs it).
 --   dump.parse(text) -> {events = {{kind, id, pos, duration, spelling, grace, instance, raw}}}
 --   dump.event(text, instance) -> one event from tostring(event), or nil
---   dump.notes(parsed) -> the notes and grace notes, {{id, spelling, pos, duration, grace, instance}}
+--   dump.notes(parsed) -> the notes and grace notes, {{id, spelling, pos, duration, grace, instance}}, and how
+--     many it left out because their lines have no spelling it reads
 --   dump.owners(score, flow) -> {[voice stream id] = player name}
 -- Kinds are "note", "grace", "rest", "text" and "other". Positions and durations are quarter notes.
 local dump = {}
@@ -87,14 +91,16 @@ do
   end
 
   function dump.notes(parsed)
-    local notes = {}
+    local notes, unread = {}, 0
     for _, ev in ipairs(parsed.events) do
       if (ev.kind == "note" or ev.kind == "grace") and ev.spelling then
         notes[#notes + 1] = { id = ev.id, spelling = ev.spelling, pos = ev.pos, duration = ev.duration,
           grace = ev.grace, instance = ev.instance }
+      elseif ev.kind == "note" or ev.kind == "grace" then
+        unread = unread + 1
       end
     end
-    return notes
+    return notes, unread
   end
 
   -- flow.instruments[i] owns flow.voiceStreams[i], and tostring(player) is the player's name.
@@ -169,16 +175,19 @@ table.sort(selected, function(a, b)
   return a.spelling < b.spelling
 end)
 
--- One text for each position in a voice, naming every selected note there, so a chord gets one text.
+-- One text for each position in a voice, naming every selected note there, so a chord gets one text. A grace note
+-- has its main note's position, so its name would join the main note's and read as a chord: it gets none.
 local labels, order = {}, {}
 for _, note in ipairs(selected) do
   print(table.concat({ note.flow, note.player, note.pos, note.spelling }, "\t"))
-  local key = note.flow .. "/" .. note.voice .. "/" .. note.pos
-  if not labels[key] then
-    labels[key] = { note = note, names = {} }
-    order[#order + 1] = key
+  if not note.grace then
+    local key = note.flow .. "/" .. note.voice .. "/" .. note.pos
+    if not labels[key] then
+      labels[key] = { note = note, names = {} }
+      order[#order + 1] = key
+    end
+    table.insert(labels[key].names, note.spelling)
   end
-  table.insert(labels[key].names, note.spelling)
 end
 for _, key in ipairs(order) do
   local note = labels[key].note

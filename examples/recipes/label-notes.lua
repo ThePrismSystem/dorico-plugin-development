@@ -11,7 +11,8 @@
 -- note is 2 semitones above the sounding one, and an instrument in C's is the same note. Valves are looked up for the
 -- written pitch, since that's what the player reads, and names are printed at sounding pitch.
 --
--- A chord gets one label, with its notes' labels in a row. A note the valve table doesn't cover gets "?".
+-- A chord gets one label, with its notes' labels in a row. A note the valve table doesn't cover gets "?". Grace notes
+-- get none: a grace note has its main note's position, so its label would join the main note's and read as a chord.
 
 local PLAYER = "Trumpet"
 local LABELS = "valves" -- or "names"
@@ -28,12 +29,14 @@ local VALVES = {
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. The read of app.currentScore goes
--- through pcall in case it raises an error then instead of giving nil, which no run here has checked.
+-- through pcall in case it raises an error then instead of giving nil, which no run here has checked. Such an error
+-- is printed with the advice, in case it means something else.
 local function guard()
   local app = DoApp.DoApp()
   local ok, score = pcall(function() return app.currentScore end)
   if ok and score then return app, score end
-  print("Open a project first, then run this script again.")
+  local advice = "Open a project first, then run this script again."
+  print(ok and advice or advice .. " Reading the open project gave an error: " .. tostring(score))
   return app, nil
 end
 -- end helper: guard
@@ -42,7 +45,8 @@ end
 -- Reads a saved copy of the open project with the reader library, or prints why it couldn't and gives nil. The
 -- library is lib/ two folders up in this repository, or a lib folder beside the script once both are copied into
 -- Script Plug-ins. Dorico keeps one Lua state, so the library's modules from an earlier run are cleared, and its
--- folders are moved to the front of the module path, where no other copy of the library can come before them.
+-- folders are moved to the front of the module path, where no other copy of the library can come before them. The
+-- library loads outside the pcall, so a missing or broken library isn't reported as a project it couldn't read.
 local function readCopy(app)
   local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])") or ""
   local paths = here .. "../../lib/?.lua;" .. here .. "lib/?.lua;"
@@ -52,9 +56,14 @@ local function readCopy(app)
   local at = package.path:find(paths, 1, true)
   if at then package.path = package.path:sub(1, at - 1) .. package.path:sub(at + #paths) end
   package.path = paths .. package.path
-  local ok, s = pcall(function() return require("scorereader.dorico.savedcopy").read(app) end)
-  if ok then return s end
-  print("The reader couldn't read this project: " .. tostring(s))
+  if package.searchpath("scorereader.dorico.savedcopy", package.path) then
+    local savedcopy = require("scorereader.dorico.savedcopy")
+    local ok, s = pcall(savedcopy.read, app)
+    if ok then return s end
+    print("The reader couldn't read this project: " .. tostring(s))
+  else
+    print("Couldn't find the reader library: copy the lib folder beside this script, then run it again.")
+  end
 end
 -- end helper: readCopy
 
@@ -91,11 +100,11 @@ local written = 0
 for _, flow in ipairs(s.flows) do
   for _, stream in ipairs(flow.streams) do
     if stream.type == "voice" and stream.playerId == player.id then
-      local transposition = (s.instruments[stream.instrumentId] or {}).transposition
+      local transposition = s.instruments[stream.instrumentId].transposition
       -- One label per position, so a chord gets one.
       local at, order = {}, {}
       for _, e in ipairs(stream.events) do
-        if e.kind == "note" or e.kind == "grace" then
+        if e.kind == "note" then
           local pos = values.positionText(e.position)
           if not at[pos] then
             at[pos] = { position = e.position, labels = {} }

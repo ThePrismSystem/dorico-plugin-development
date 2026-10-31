@@ -51,6 +51,30 @@ class SyntaxCheckTests(unittest.TestCase):
         self.assertIn("broken.lua", err)
 
 
+class FindLuacTests(unittest.TestCase):
+    def test_only_luac_5_2_is_taken(self):
+        # A 5.3 or 5.4 luac -p accepts //, & and <const>, which Dorico's 5.2 then skips without a word.
+        versions = {"luac": "Lua 5.4.6  Copyright (C) 1994-2023 Lua.org, PUC-Rio"}
+
+        def ran(command, **kwargs):
+            return subprocess.CompletedProcess(command, 0, stdout=versions[command[0]] + "\n", stderr="")
+
+        with mock.patch.object(run_lua, "LUAC_CANDIDATES", ["luac52", "luac"]), \
+                mock.patch.object(run_lua.shutil, "which", side_effect=lambda c: c if c in versions else None), \
+                mock.patch.object(run_lua.subprocess, "run", side_effect=ran):
+            self.assertIsNone(run_lua.find_luac())
+            versions["luac52"] = "Lua 5.2.4  Copyright (C) 1994-2015 Lua.org, PUC-Rio"
+            self.assertEqual(run_lua.find_luac(), "luac52")
+
+
+class OptimisedTests(unittest.TestCase):
+    def test_help_works_without_docstrings(self):
+        # python -OO drops docstrings; a crash would exit 1, which says "checks failed"
+        proc = subprocess.run([sys.executable, "-OO", str(Path(run_lua.__file__)), "--help"], capture_output=True,
+                              text=True, timeout=60)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+
+
 class ScriptHeaderTests(unittest.TestCase):
     def test_scripts_add_to_package_path_only_once(self):
         # Dorico keeps one Lua state for every script run, so a bare prepend grows package.path on each run
@@ -61,6 +85,12 @@ class ScriptHeaderTests(unittest.TestCase):
                     if line.startswith("package.path = "):
                         bare.append(f"{path.relative_to(run_lua.REPO)}:{n}")
         self.assertEqual(bare, [])
+
+    def test_the_cases_run_only_on_a_scratch_copy(self):
+        # Run from Script > Run Script, or with --on-active, a case would change the user's own project.
+        loose = [path.name for path in sorted((run_lua.REPO / "tests" / "dorico").glob("case_*.lua"))
+                 if "{ scratchOnly = true })" not in path.read_text(encoding="utf-8")]
+        self.assertEqual(loose, [])
 
 
 class FakeClient:
@@ -155,7 +185,7 @@ class RunTests(unittest.TestCase):
         self.assertEqual(len(client.closes()), 5)
 
     def test_a_close_that_cant_be_confirmed_exits_2(self):
-        # With no Dorico6 process (a later Dorico) capture.ps1 fails, and an empty list would read as a closed copy.
+        # With no Dorico6 process (a later Dorico) titles.ps1 fails, and an empty list would read as a closed copy.
         listed = iter([[]])
 
         def titles():
@@ -206,6 +236,21 @@ class RunTests(unittest.TestCase):
 
         run_lua.run(self.script, open_file=self.source, client=FakeClient(self.run_dir, capture))
         self.assertTrue(seen["expectScratch"]["path"].endswith("/scratch.dorico"))
+        self.assertEqual(seen["expectScratch"]["openScoreID"], 7)
+
+    def test_an_import_is_named_by_the_id_it_opened_as(self):
+        # An import has no path yet, like any project never saved, so the probe needs the id to tell it from the
+        # user's own.
+        seen = {}
+
+        def capture(args):
+            seen.update(args)
+            return {"runId": args["runId"], "ok": True, "checks": [], "facts": {"scratchVerified": True}}
+
+        source = Path(self.tmp.name) / "fixture.musicxml"
+        source.write_text("<score-partwise/>")
+        run_lua.run(self.script, open_file=source, client=FakeClient(self.run_dir, capture))
+        self.assertEqual(seen["expectScratch"], {"path": "", "openScoreID": 7})
 
     def test_timeout_returns_2_and_does_not_close(self):
         client = FakeClient(self.run_dir, result_for=None)
@@ -280,6 +325,46 @@ class RunTests(unittest.TestCase):
         self.assertEqual(run_lua.run_dir_for({"TMPDIR": "/var/T"}), Path("/var/T") / "dorico-examples-run")
         self.assertEqual(run_lua.run_dir_for({}), Path("/tmp") / "dorico-examples-run")
 
+    def test_an_open_dorico_refuses_is_reported_at_once(self):
+        # not after 60s, as "Dorico may be showing a dialog"
+        class Refusing(FakeClient):
+            def connect(self):
+                pass
+
+            def close(self):
+                pass
+
+            def command(self, cmd):
+                if cmd.startswith("File.Open"):
+                    self.commands.append(cmd)
+                    return {"message": "response", "code": "kError", "detail": "kFileNotFound"}
+                return super().command(cmd)
+
+        client = Refusing(self.run_dir, self.ok_result(True))
+        err = io.StringIO()
+        with mock.patch.object(run_lua.dws, "DoricoClient", return_value=client), \
+                mock.patch.object(run_lua, "wait_for", side_effect=lambda predicate, timeout, interval=0.5: predicate()), \
+                mock.patch.object(sys, "stderr", err):
+            self.assertEqual(run_lua.main([str(self.script), "--open", str(self.source)]), 2)
+        self.assertIn("kFileNotFound", err.getvalue())
+        self.assertFalse(any(c.startswith("Script.RunScript") for c in client.commands))
+
+    def test_a_script_run_with_an_odd_reply_is_still_waited_for(self):
+        # Dorico ran the script although the reply wasn't kOK. Giving up at once let the copy be closed under it,
+        # and Dorico crashed.
+        class OddReply(FakeClient):
+            def command(self, cmd):
+                reply = super().command(cmd)
+                return {"message": "response", "code": "kCommandNotAllowed"} if cmd.startswith("Script.") else reply
+
+        err = io.StringIO()
+        with mock.patch.object(sys, "stderr", err):
+            code, result, _ = run_lua.run(self.script, client=OddReply(self.run_dir, self.ok_result(True)),
+                                          on_active=True, timeout=1)
+        self.assertEqual(code, 0)
+        self.assertTrue(result["ok"])
+        self.assertIn("kCommandNotAllowed", err.getvalue())
+
     def test_active_project_needs_explicit_opt_in(self):
         client = FakeClient(self.run_dir, self.ok_result(False))
         code, result, sid = run_lua.run(self.script, client=client)
@@ -289,17 +374,35 @@ class RunTests(unittest.TestCase):
 
 class WindowTitleTests(unittest.TestCase):
     def test_a_failed_listing_is_an_error_not_an_empty_list(self):
-        failed = subprocess.CompletedProcess([], 1, stdout="",
-                                             stderr="Get-Process : Cannot find a process with the name \"Dorico6\".\n")
+        failed = subprocess.CompletedProcess([], 3, stdout="", stderr="no process named Dorico6 is running\n")
         with mock.patch.object(run_lua.subprocess, "run", return_value=failed), \
                 self.assertRaises(run_lua.WindowListError) as raised:
             run_lua.window_titles()
         self.assertIn("Dorico6", str(raised.exception))
 
-    def test_lists_the_titles(self):
-        listed = subprocess.CompletedProcess([], 0, stdout="w-0.png\t800 x 600\tSong in scratch*\n", stderr="")
-        with mock.patch.object(run_lua.subprocess, "run", return_value=listed):
-            self.assertEqual(run_lua.window_titles(), ["Song in scratch*"])
+    def test_lists_the_titles_through_win32(self):
+        # capture.ps1 -All waits on a busy Dorico, and saved a picture of each of the user's own windows.
+        listed = subprocess.CompletedProcess([], 0, stdout="Song in scratch*\r\nFugue in Bach\r\n", stderr="")
+        with mock.patch.object(run_lua.subprocess, "run", return_value=listed) as ran:
+            self.assertEqual(run_lua.window_titles(), ["Song in scratch*", "Fugue in Bach"])
+        command = ran.call_args.args[0]
+        self.assertEqual(Path(command[command.index("-File") + 1]).name, "titles.ps1")
+        self.assertEqual(command[command.index("-Process") + 1], "Dorico6")
+        self.assertIsNotNone(ran.call_args.kwargs.get("timeout"))
+
+    def test_a_listing_that_hangs_is_an_error(self):
+        with mock.patch.object(run_lua.subprocess, "run", side_effect=subprocess.TimeoutExpired("powershell", 30)), \
+                self.assertRaises(run_lua.WindowListError):
+            run_lua.window_titles()
+
+    @unittest.skipUnless(os.name == "nt", "titles.ps1 needs Windows")
+    def test_titles_fails_when_the_process_isnt_running(self):
+        # an empty list would read as "no scratch copy open"
+        proc = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(run_lua.TITLES),
+                               "-Process", "NoSuchProcessForTheTitlesTest"], capture_output=True, text=True, timeout=60)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertEqual(proc.stdout.strip(), "")
+        self.assertIn("NoSuchProcessForTheTitlesTest", proc.stderr)
 
     @unittest.skipUnless(os.name == "nt", "capture.ps1 needs Windows")
     def test_capture_lists_nothing_for_a_process_with_no_windows(self):
@@ -331,6 +434,23 @@ class PromptTests(unittest.TestCase):
         self.assertEqual(clicks[0][clicks[0].index("-Window") + 1], "Dorico")
         self.assertEqual(clicks[0][clicks[0].index("-Button") + 1], "OK")
         self.assertIn("-OnlyButton", clicks[0])
+
+    def test_each_prompt_answered_is_reported(self):
+        # The "Dorico" notice could be about the user's own project, which they would then never see.
+        pressed = mock.Mock(return_value=subprocess.CompletedProcess([], 0, stdout="pressed 'OK' in 'Dorico'\r\n",
+                                                                     stderr=""))
+        err = io.StringIO()
+        with mock.patch.object(sys, "stderr", err):
+            self.answer(["Dorico"], pressed)
+        self.assertIn("pressed 'OK' in 'Dorico'", err.getvalue())
+
+    def test_a_prompt_left_alone_is_not_reported(self):
+        refused = mock.Mock(return_value=subprocess.CompletedProcess([], 3, stdout="'Dorico' has the buttons ...",
+                                                                     stderr=""))
+        err = io.StringIO()
+        with mock.patch.object(sys, "stderr", err):
+            self.answer(["Dorico"], refused)
+        self.assertEqual(err.getvalue(), "")
 
     def test_runs_nothing_while_dorico_has_no_prompt_open(self):
         # Without a window titled exactly "Dorico", click.ps1 would search Dorico's whole UI Automation tree on every

@@ -41,4 +41,4 @@ probe.run("case_select", function(p)
     end
   end
   p:check("a note to select", false, tostring(p.args.player) .. " at " .. tostring(p.args.pos))
-end)
+end, { scratchOnly = true })

@@ -23,12 +23,14 @@ local FLOW_OPTION = { "barlineOptions.finalBarlineType", "kDouble" }
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. The read of app.currentScore goes
--- through pcall in case it raises an error then instead of giving nil, which no run here has checked.
+-- through pcall in case it raises an error then instead of giving nil, which no run here has checked. Such an error
+-- is printed with the advice, in case it means something else.
 local function guard()
   local app = DoApp.DoApp()
   local ok, score = pcall(function() return app.currentScore end)
   if ok and score then return app, score end
-  print("Open a project first, then run this script again.")
+  local advice = "Open a project first, then run this script again."
+  print(ok and advice or advice .. " Reading the open project gave an error: " .. tostring(score))
   return app, nil
 end
 -- end helper: guard
@@ -61,7 +63,8 @@ end
 -- File > Export > Text from a script: Dorico writes <name>.csv beside the <name>.txt it is given, without asking
 -- anything. Fields can hold quoted commas, doubled quotes and newlines, so a row can run over several lines; the
 -- reader below keeps track of quotes to find where each field and row ends. A column the export leaves out reads as "".
---   export.records(app, folder, name) -> the rows, as tables keyed by column name (the file is deleted afterwards)
+--   export.records(app, folder, name) -> the rows, as tables keyed by column name (the file is deleted afterwards);
+--     raises an error for a folder that isn't all ASCII, an old CSV it can't delete, or no CSV
 --   export.parse(csv) -> the same, from CSV text
 --   export.folder() -> the temporary folder, ending in a slash
 -- Needs the commands helper above it.
@@ -128,8 +131,17 @@ do
   end
 
   function export.records(app, folder, name)
+    -- Dorico takes the path in UTF-8 and io.open in the code page, and the two agree only on ASCII, so another folder
+    -- would give a missing CSV with no reason.
+    if folder:find("[\128-\255]") then
+      error("the folder for the export, " .. folder .. ", has characters outside ASCII, which Dorico and Lua spell"
+        .. " differently")
+    end
     local base = folder .. name
-    os.remove(base .. ".csv")
+    -- doCommand reports nothing, so a CSV left from before would be read as this export's if Dorico wrote none.
+    -- os.remove's third result is the error number, and 2 means there was no file to delete.
+    local gone, _, code = os.remove(base .. ".csv")
+    if not gone and code ~= 2 then error("couldn't delete the last export, " .. base .. ".csv") end
     app:doCommand(commands.build("File.Export.Text", { { "File", base .. ".txt" }, { "Show", "false" } }))
     local f = io.open(base .. ".csv", "rb")
     if not f then error("File.Export.Text wrote no " .. base .. ".csv") end
@@ -153,15 +165,18 @@ local function dictionary(path, value)
 end
 
 -- The full score is the layout that holds every player; Dorico makes it first, so it has the lowest id. Layouts have
--- players but no name Lua can read, and players have no ==, so they're matched by their first instrument's id.
+-- players but no name Lua can read, and players have no ==, so they're matched by their first instrument's id. A
+-- player with no instruments can't be matched, so it's left out.
 local function fullScore()
   local best
   for _, layout in ipairs(score.layouts) do
     local has = {}
-    for _, player in ipairs(layout.players) do has[player.instruments[1].id] = true end
+    for _, player in ipairs(layout.players) do
+      if player.instruments[1] then has[player.instruments[1].id] = true end
+    end
     local all = true
     for _, player in ipairs(score.players) do
-      if not has[player.instruments[1].id] then all = false end
+      if player.instruments[1] and not has[player.instruments[1].id] then all = false end
     end
     if all and (not best or layout.id < best.id) then best = layout end
   end

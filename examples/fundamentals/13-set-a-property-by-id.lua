@@ -2,7 +2,7 @@
 -- What it does: reads a saved copy, finds every note and grace note higher than F5 (sounding pitch) and sets its
 -- colour by event id. Then it reads a second copy to see that each took, and prints one line per note (flow number,
 -- player, position, spelling, and "coloured" or "not coloured", with tabs between) and a "total" line: how many
--- took, of how many it set.
+-- took, of how many it set. When it can't read the second copy, it says how many it set instead.
 -- Change COLOUR below to use another colour.
 -- Changes: the colour of those notes, in every layout.
 -- Undo: Edit > Undo takes all the colours back in one step.
@@ -18,12 +18,14 @@
 
 -- helper: guard
 -- The app and the open project, or the app and nil when no project is open. The read of app.currentScore goes
--- through pcall in case it raises an error then instead of giving nil, which no run here has checked.
+-- through pcall in case it raises an error then instead of giving nil, which no run here has checked. Such an error
+-- is printed with the advice, in case it means something else.
 local function guard()
   local app = DoApp.DoApp()
   local ok, score = pcall(function() return app.currentScore end)
   if ok and score then return app, score end
-  print("Open a project first, then run this script again.")
+  local advice = "Open a project first, then run this script again."
+  print(ok and advice or advice .. " Reading the open project gave an error: " .. tostring(score))
   return app, nil
 end
 -- end helper: guard
@@ -32,7 +34,8 @@ end
 -- Reads a saved copy of the open project with the reader library, or prints why it couldn't and gives nil. The
 -- library is lib/ two folders up in this repository, or a lib folder beside the script once both are copied into
 -- Script Plug-ins. Dorico keeps one Lua state, so the library's modules from an earlier run are cleared, and its
--- folders are moved to the front of the module path, where no other copy of the library can come before them.
+-- folders are moved to the front of the module path, where no other copy of the library can come before them. The
+-- library loads outside the pcall, so a missing or broken library isn't reported as a project it couldn't read.
 local function readCopy(app)
   local here = debug.getinfo(1, "S").source:match("^@(.*[/\\])") or ""
   local paths = here .. "../../lib/?.lua;" .. here .. "lib/?.lua;"
@@ -42,9 +45,14 @@ local function readCopy(app)
   local at = package.path:find(paths, 1, true)
   if at then package.path = package.path:sub(1, at - 1) .. package.path:sub(at + #paths) end
   package.path = paths .. package.path
-  local ok, s = pcall(function() return require("scorereader.dorico.savedcopy").read(app) end)
-  if ok then return s end
-  print("The reader couldn't read this project: " .. tostring(s))
+  if package.searchpath("scorereader.dorico.savedcopy", package.path) then
+    local savedcopy = require("scorereader.dorico.savedcopy")
+    local ok, s = pcall(savedcopy.read, app)
+    if ok then return s end
+    print("The reader couldn't read this project: " .. tostring(s))
+  else
+    print("Couldn't find the reader library: copy the lib folder beside this script, then run it again.")
+  end
 end
 -- end helper: readCopy
 
@@ -76,7 +84,10 @@ end
 -- A command reports nothing, so read a second copy and look on each note for the colour stored for every layout and
 -- block instance, as EventEdit.ChangeProperty stores it.
 local after = readCopy(app)
-if not after then return end
+if not after then
+  print("Set the colour of " .. #set .. " notes, but couldn't read the project back to check that it took.")
+  return
+end
 local coloured = 0
 for _, x in ipairs(set) do
   local stored, e = false, after.events[x.e.id]
