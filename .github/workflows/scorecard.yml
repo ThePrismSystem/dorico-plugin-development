@@ -11,8 +11,6 @@ permissions: {}
 
 jobs:
   analysis:
-    # Scorecard only rates public repositories, so the job is skipped while this one is private.
-    if: github.event.repository.private == false
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -11,8 +11,6 @@ permissions: {}
 
 jobs:
   analyze:
-    # Code scanning isn't available to this repository while it's private, so the analysis waits until it's public.
-    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
