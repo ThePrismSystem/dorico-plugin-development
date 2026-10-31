@@ -69,22 +69,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python tools/lint.py --strict --sarif sarif
-      # Code scanning isn't available to this repository while it's private, so the uploads wait until it's public.
-      # The lint step above still fails the job on any finding.
       - name: Upload PSScriptAnalyzer results
-        if: always() && !github.event.repository.private && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
           sarif_file: sarif/psscriptanalyzer.sarif
           category: psscriptanalyzer
       - name: Upload zizmor results
-        if: always() && !github.event.repository.private && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
           sarif_file: sarif/zizmor.sarif
           category: zizmor
       - name: Upload gitleaks results
-        if: always() && !github.event.repository.private && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
           sarif_file: sarif/gitleaks.sarif
