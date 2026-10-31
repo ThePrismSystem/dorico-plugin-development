@@ -2,11 +2,8 @@
 
 The events in a stream. Every kind has the base event's members; some add their own.
 
-Members come from `spikes/class_members.lua`'s scan of Lua's registry, sorted by `tools/members.py` into
-[members.json](members.json). "Member" in the Kind column means the scan can't tell a property from a method, since
-luabind stores both as functions, and nobody has tried it. Status says whether an example or probe has used a member
-(verified), found it broken (fails), or left it alone (not tried). Don't try a member on a project you care about:
-a bad call can crash Dorico.
+[The reference's index](README.md#reading-the-tables) explains the Kind and Status columns. Don't try a member
+marked "not tried" on a project you care about: a bad call can crash Dorico.
 
 ## `DoCore.Event`
 
@@ -56,12 +53,12 @@ a bad call can crash Dorico.
 | ------ | ---- | ------ | ----- |
 | `__eq` | operator | not tried |  |
 | `__len` | operator | not tried |  |
-| `__tostring` | operator | not tried | As on the base event; no example reads this kind. |
+| `__tostring` | operator | not tried | As on the base event; not tried on this kind. |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
-| `id` | property | not tried | As on the base event; no example reads this kind. |
+| `id` | property | not tried | As on the base event; not tried on this kind. |
 | `position` | member | not tried |  |
-| `propertyTable` | property | not tried | As on the base event; no example reads this kind. |
+| `propertyTable` | property | not tried | As on the base event; not tried on this kind. |
 
 ## `DoCore.BarRestEvent`
 
@@ -69,12 +66,12 @@ a bad call can crash Dorico.
 | ------ | ---- | ------ | ----- |
 | `__eq` | operator | not tried |  |
 | `__len` | operator | not tried |  |
-| `__tostring` | operator | not tried | As on the base event; no example reads this kind. |
+| `__tostring` | operator | not tried | As on the base event; not tried on this kind. |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
-| `id` | property | not tried | As on the base event; no example reads this kind. |
+| `id` | property | not tried | As on the base event; not tried on this kind. |
 | `position` | member | not tried |  |
-| `propertyTable` | property | not tried | As on the base event; no example reads this kind. |
+| `propertyTable` | property | not tried | As on the base event; not tried on this kind. |
 
 ## `DoCore.TextEvent`
 
@@ -85,9 +82,9 @@ a bad call can crash Dorico.
 | `__tostring` | operator | verified | `TextEvent ID: 326 kTextEvent (id:326) at 0 : <words>`, then the paragraph style on a line of its own ([text_event.lua](../spikes.md#texteventtext)). |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
-| `id` | property | not tried | As on the base event; no example reads this kind. |
+| `id` | property | not tried | As on the base event; not tried on this kind. |
 | `position` | member | not tried |  |
-| `propertyTable` | property | not tried | As on the base event; no example reads this kind. |
+| `propertyTable` | property | not tried | As on the base event; not tried on this kind. |
 | `text` | member | verified | The words, as a string. Read-only: setting it raises "property 'text' is read only" ([text_event.lua](../spikes.md#texteventtext)). |
 
 ## `DoCore.TupletEvent`
@@ -96,12 +93,12 @@ a bad call can crash Dorico.
 | ------ | ---- | ------ | ----- |
 | `__eq` | operator | not tried |  |
 | `__len` | operator | not tried |  |
-| `__tostring` | operator | not tried | As on the base event; no example reads this kind. |
+| `__tostring` | operator | not tried | As on the base event; not tried on this kind. |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
-| `id` | property | not tried | As on the base event; no example reads this kind. |
+| `id` | property | not tried | As on the base event; not tried on this kind. |
 | `position` | member | not tried |  |
-| `propertyTable` | property | not tried | As on the base event; no example reads this kind. |
+| `propertyTable` | property | not tried | As on the base event; not tried on this kind. |
 | `tupletDef` | member | not tried |  |
 
 ## `DoCore.ClefEvent`
@@ -110,13 +107,13 @@ a bad call can crash Dorico.
 | ------ | ---- | ------ | ----- |
 | `__eq` | operator | not tried |  |
 | `__len` | operator | not tried |  |
-| `__tostring` | operator | not tried | As on the base event; no example reads this kind. |
+| `__tostring` | operator | not tried | As on the base event; not tried on this kind. |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
-| `id` | property | not tried | As on the base event; no example reads this kind. |
+| `id` | property | not tried | As on the base event; not tried on this kind. |
 | `nonTransposingClefEntity` | member | not tried |  |
 | `position` | member | not tried |  |
-| `propertyTable` | property | not tried | As on the base event; no example reads this kind. |
+| `propertyTable` | property | not tried | As on the base event; not tried on this kind. |
 | `transposingClefEntity` | member | not tried |  |
 
 ## `DoCore.OttavaLineEvent`
@@ -125,13 +122,13 @@ a bad call can crash Dorico.
 | ------ | ---- | ------ | ----- |
 | `__eq` | operator | not tried |  |
 | `__len` | operator | not tried |  |
-| `__tostring` | operator | not tried | As on the base event; no example reads this kind. |
+| `__tostring` | operator | not tried | As on the base event; not tried on this kind. |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
-| `id` | property | not tried | As on the base event; no example reads this kind. |
+| `id` | property | not tried | As on the base event; not tried on this kind. |
 | `ottavaLineDefinitionID` | member | not tried |  |
 | `position` | member | not tried |  |
-| `propertyTable` | property | not tried | As on the base event; no example reads this kind. |
+| `propertyTable` | property | not tried | As on the base event; not tried on this kind. |
 
 ## `DoCore.BreakEvent`
 
@@ -139,15 +136,15 @@ a bad call can crash Dorico.
 | ------ | ---- | ------ | ----- |
 | `__eq` | operator | not tried |  |
 | `__len` | operator | not tried |  |
-| `__tostring` | operator | not tried | As on the base event; no example reads this kind. |
+| `__tostring` | operator | not tried | As on the base event; not tried on this kind. |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
-| `id` | property | not tried | As on the base event; no example reads this kind. |
+| `id` | property | not tried | As on the base event; not tried on this kind. |
 | `isFrameBreak` | member | not tried |  |
 | `isSystemBreak` | member | not tried |  |
 | `layoutID` | member | not tried |  |
 | `position` | member | not tried |  |
-| `propertyTable` | property | not tried | As on the base event; no example reads this kind. |
+| `propertyTable` | property | not tried | As on the base event; not tried on this kind. |
 
 ## `DoCore.BarDivisionEvent`
 
@@ -155,12 +152,12 @@ a bad call can crash Dorico.
 | ------ | ---- | ------ | ----- |
 | `__eq` | operator | not tried |  |
 | `__len` | operator | not tried |  |
-| `__tostring` | operator | not tried | As on the base event; no example reads this kind. |
+| `__tostring` | operator | not tried | As on the base event; not tried on this kind. |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
-| `id` | property | not tried | As on the base event; no example reads this kind. |
+| `id` | property | not tried | As on the base event; not tried on this kind. |
 | `position` | member | not tried |  |
-| `propertyTable` | property | not tried | As on the base event; no example reads this kind. |
+| `propertyTable` | property | not tried | As on the base event; not tried on this kind. |
 
 ## `DoCore.TonalityDivisionEvent`
 
@@ -168,12 +165,12 @@ a bad call can crash Dorico.
 | ------ | ---- | ------ | ----- |
 | `__eq` | operator | not tried |  |
 | `__len` | operator | not tried |  |
-| `__tostring` | operator | not tried | As on the base event; no example reads this kind. |
+| `__tostring` | operator | not tried | As on the base event; not tried on this kind. |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
-| `id` | property | not tried | As on the base event; no example reads this kind. |
+| `id` | property | not tried | As on the base event; not tried on this kind. |
 | `position` | member | not tried |  |
-| `propertyTable` | property | not tried | As on the base event; no example reads this kind. |
+| `propertyTable` | property | not tried | As on the base event; not tried on this kind. |
 | `tonalityDivisionElementID` | member | not tried |  |
 
 ## `DoCore.DynamicGroupEvent`
@@ -182,9 +179,9 @@ a bad call can crash Dorico.
 | ------ | ---- | ------ | ----- |
 | `__eq` | operator | not tried |  |
 | `__len` | operator | not tried |  |
-| `__tostring` | operator | not tried | As on the base event; no example reads this kind. |
+| `__tostring` | operator | not tried | As on the base event; not tried on this kind. |
 | `duration` | member | not tried |  |
 | `endPosition` | member | not tried |  |
-| `id` | property | not tried | As on the base event; no example reads this kind. |
+| `id` | property | not tried | As on the base event; not tried on this kind. |
 | `position` | member | not tried |  |
-| `propertyTable` | property | not tried | As on the base event; no example reads this kind. |
+| `propertyTable` | property | not tried | As on the base event; not tried on this kind. |

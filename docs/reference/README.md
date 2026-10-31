@@ -26,7 +26,7 @@ The classes the examples use each have a page:
 ## Commands and the Remote Control API
 
 - [Commands](commands.md): the commands the examples and probes have run, with their parameters and what they did.
-- [The Remote Control API](remote-api.md): the messages the tests use to drive Dorico from outside.
+- [The Remote Control API](remote-api.md): the messages a program outside Dorico can send it.
 
 ## How the reference is made
 
@@ -37,7 +37,14 @@ The classes the examples use each have a page:
 3. The pages and `types/dorico.lua` give each member a kind, a status and a note. `tests/test_reference.py` fails if
    a class or member in `members.json` is missing from them.
 
-Each member's status is one of:
+## Reading the tables
+
+Kind is constructor, operator, property, method or member. luabind stores properties and methods alike as
+functions, so the scan can't tell them apart. A member that has been used has the kind it showed. An untried one has
+a kind guessed from its name, or from a member of the same name in another class, and "member" means there's no
+guess.
+
+Status is one of:
 
 - verified: an example or probe used it, and it did what the note says;
 - fails: it was tried and doesn't work, with what happened;

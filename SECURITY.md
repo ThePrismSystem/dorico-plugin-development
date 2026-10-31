@@ -60,6 +60,9 @@ All of these go in the temp folder: `%TEMP%` on Windows, `$TMPDIR` on a Mac.
 - `dorico-form.ps1` and `dorico-form.txt`, the form helper's script and your answers, on Windows.
 - `layout-and-notation-options.csv`, fundamental 15's export.
 
+The form helper and fundamental 15 delete the last answer or export before they start, and stop if they can't, so
+an old file is never read as a new one. Fundamental 15 also refuses a temp folder whose path isn't all ASCII.
+
 In the library, only two files open files: `lib/scorereader/project.lua` reads the `.dorico` file it's given, and
 `lib/scorereader/dorico/savedcopy.lua` saves, reads and deletes the copy.
 
@@ -75,7 +78,8 @@ socket library), `curl` or `wget`, or a web address.
 one. They drive Dorico on the developer's own computer:
 
 - They talk to Dorico's Remote Control API on `127.0.0.1:4560`. Dorico asks you to allow the client the first time,
-  and the session token is kept in `.dorico-token`, which git ignores.
+  and the session token is kept in `.dorico-token`, which git ignores. On a Mac or Linux the file is readable by
+  its owner only; on Windows the folder's permissions decide.
 - The tests run each example on a scratch copy of a fixture, in `%TEMP%\dorico-examples-run`, and close the copy
   unsaved.
 - They find, fill in and press things in Dorico's windows through UI Automation and Win32 calls.
@@ -103,8 +107,6 @@ one. They drive Dorico on the developer's own computer:
 CodeQL, PSScriptAnalyzer, zizmor, gitleaks and Scorecard report to the Security tab's code scanning page. CodeQL can't
 read Lua or PowerShell. luacheck, lua-language-server and the call test cover the Lua, and PSScriptAnalyzer the
 PowerShell.
-
-`python tools/lint.py` runs every tool it finds and says how to install the ones it doesn't.
 
 ## How the repository is protected
 

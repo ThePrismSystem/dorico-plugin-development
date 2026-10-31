@@ -6,7 +6,9 @@ not available to a script inside Dorico. `tools/dws.py` is a client using only t
 
 Turn it on in Dorico's preferences (Remote Control), then connect to `ws://127.0.0.1:4560`. Every message is JSON.
 
-## Messages the tests use
+## Messages
+
+The tests send `connect`, `command`, `getstatus` and `getoptions`. The rest come from the handbells plug-in.
 
 | Message | Fields | What comes back |
 | ------- | ------ | --------------- |
@@ -14,15 +16,18 @@ Turn it on in Dorico's preferences (Remote Control), then connect to `ws://127.0
 | `command` | `command`: a command string, as for `app:doCommand` | A `response` with a `code`. `Script.RunScript` and `Script.RunLastScript` answer before the script has run. |
 | `getstatus` | | A `status` message: `activeOpenScoreID`, `hasSelection`, `selectedEventType` (`kNoteEvent`, `kMixed`, `kNone`) and more. |
 | `getoptions` | `optionsType` (`kLayout` or `kNotation`), and `layoutID` or `flowID` | An `optionslist` with each option's `path` and `currentValue`. |
-| `setoptions` | | Not used: with `flowIDs` it changed flow 0 instead of the flow named. Set options by command from Lua. |
+| `setoptions` | | With `flowIDs` it changed flow 0 instead of the flow named. Set options by command from Lua instead. |
 | `getcommands`, `getflows` | | Every command's name; every flow's id and name. |
 
 ## Things to know
 
 - Status messages are partial: each is a change to merge into what you have, and Dorico sends them unasked. Read any
   already waiting before trusting the state.
+- Dorico sends other messages unasked too. After a script changed the selection, the next command's `response` came
+  after a `{"message": "selectionchanged", "openScoreID": 0}`, so wait for the `response` itself.
 - Lua's ids for flows and layouts are the ids `getoptions` takes.
 - Straight after an `Edit.Undo`, `getoptions` can answer `kCommandNotAllowed`, leave an option out, or show a value
   from before the undo, while Dorico finishes. Ask again a moment later.
-- Some commands that work from Lua are refused here: a player rename came back `kError`.
-- A command sent while a script waits on a dialog runs only once the dialog closes.
+- Some commands that work from Lua are refused here: a player rename came back `kError` (the handbells plug-in).
+- A script waiting on a dialog holds up every later script and command until the dialog closes, so the tests run
+  such a script on a thread of their own and answer the dialog from outside.

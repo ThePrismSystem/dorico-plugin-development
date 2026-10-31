@@ -40,7 +40,7 @@ by id.
 This script sits two folders below the repository's root, as the examples do, so `../../lib` is the library. Dorico
 keeps one Lua state, so it clears the library's modules an earlier run loaded. The saved copy goes in the temp folder,
 whose path must be all ASCII: `app:save` and Lua's `io.open` spell other characters differently. If it isn't, pass
-another folder as `savedcopy.read(app, { dir = ... })`.
+another folder, ending in a slash, as `savedcopy.read(app, { dir = "C:/scratch/" })`.
 
 ```lua
 local lib = debug.getinfo(1, "S").source:match("^@(.*[/\\])") .. "../../lib/?.lua"
@@ -101,7 +101,7 @@ folder into Script Plug-ins beside them.
 | [12-select-by-id](examples/fundamentals/12-select-by-id.lua) | Selects each note above F5 by id and colours it red. | Yes; one Edit > Undo |
 | [13-set-a-property-by-id](examples/fundamentals/13-set-a-property-by-id.lua) | Colours each note above F5 by event id, in every layout. | Yes; one Edit > Undo |
 | [14-add-notes-rests-text](examples/fundamentals/14-add-notes-rests-text.lua) | Adds a flow and writes notes, a chord, a rest and a text in it. | Yes; one Edit > Undo |
-| [15-layout-and-notation-options](examples/fundamentals/15-layout-and-notation-options.lua) | Hides the flow headings and sets a final barline. | Yes; one Edit > Undo |
+| [15-layout-and-notation-options](examples/fundamentals/15-layout-and-notation-options.lua) | Hides the flow headings and ends the first flow with a double barline. | Yes; one Edit > Undo |
 | [16-flows-and-players](examples/fundamentals/16-flows-and-players.lua) | Adds a flow and a player, names them, keeps the player to the new flow. | Yes; one Edit > Undo |
 | [17-ask-and-report](examples/fundamentals/17-ask-and-report.lua) | Asks for a word in a box, then adds a flow with it. | Yes, unless cancelled; one Edit > Undo |
 | [18-undo](examples/fundamentals/18-undo.lua) | Shows what Edit.Undo inside a script takes back. | No |
@@ -109,7 +109,7 @@ folder into Script Plug-ins beside them.
 | [colour-by-pitch](examples/recipes/colour-by-pitch.lua) | Colours every note by pitch class, C red through B magenta. | Yes; one Edit > Undo |
 | [label-notes](examples/recipes/label-notes.lua) | Writes trumpet valve numbers (or note names) above one player's notes. | Yes; one Edit > Undo |
 | [proofread](examples/recipes/proofread.lua) | Reports notes outside their instrument's ranges, by bar and beat. | No |
-| [chord-symbols](examples/recipes/chord-symbols.lua) | Names the piano's chords bar by bar and writes them in as chord symbols. | Yes; three Edit > Undo presses per chord symbol |
+| [chord-symbols](examples/recipes/chord-symbols.lua) | Names the piano's chords bar by bar and writes them in as chord symbols. | Yes; about three Edit > Undo presses per chord symbol |
 | [instrument-report](examples/recipes/instrument-report.lua) | Lists each flow's players, instruments, note counts and the most playing at once. | No |
 | [hotkey-colour-cycle](examples/recipes/hotkey-colour-cycle.lua) | Colours the selection, moving to the next colour on each quick rerun. | Yes; one Edit > Undo per run |
 | [parallel-fifths](examples/recipes/parallel-fifths.lua) | Flags consecutive fifths and octaves between every pair of parts, colouring the notes and listing them. | Yes, unless cancelled; one Edit > Undo |
@@ -117,21 +117,13 @@ folder into Script Plug-ins beside them.
 | [cautionary-accidentals](examples/recipes/cautionary-accidentals.lua) | Adds cautionary accidentals by your own rules (bars back, rests, ties, other staves), and can take them back. | Yes, unless cancelled; one Edit > Undo |
 | [find-and-replace](examples/recipes/find-and-replace.lua) | Finds words in texts, lyrics and chord symbols, and replaces them where a script can. | Replace only; one Edit > Undo, and more for each chord symbol. Find changes nothing |
 
-## What the probes changed
+## What the examples leave out
 
-Some examples are smaller than planned, or work differently, because a probe showed what Dorico allows
-([docs/spikes.md](docs/spikes.md)):
-
-- The proofreading recipe has no check for incomplete bars. Rests removed with Edit > Remove Rests leave no trace a
-  script can see.
-- A colour set by command, or in the Properties panel, can't be read back from Lua, because Dorico stores it for the
-  layout on screen. A saved copy reads it, and the colour recipes' tests check the exact colour through fundamental 04.
-- Edits made through the object model are undoable, against what the handbells plug-in's guide says. So 11 finds
-  the selection by moving it an octave and back instead of undoing, which keeps its labels in one undo step.
-- Binding a script to a key of its own means editing Dorico's key-command file and restarting Dorico. 19 and the
-  hotkey recipe describe that and use Run Last Script (Ctrl+Shift+Alt+R) instead, which needs no setup. The
-  key-command entry hasn't been tried.
-- Working through a folder of other projects works (S5) but has no example of its own.
+The proofreading recipe has no check for incomplete bars: rests removed with Edit > Remove Rests leave no trace a
+script can see. Fundamental 19 and the hotkey recipe use Run Last Script (Ctrl+Shift+Alt+R) rather than a key of
+their own, which would mean editing Dorico's key-command file and restarting it. Working through a folder of other
+projects works ([S5](docs/spikes.md#s5-working-through-other-projects)) but has no example.
+[The guide's gotchas](docs/guide.md#12-gotchas-in-one-list) list what else Dorico doesn't allow.
 
 ## Running the tests
 
@@ -146,17 +138,17 @@ and Lua 5.2 (`lua52` on the path, or `C:/ProgramData/chocolatey/lib/lua52/tools/
 python tools/run_tests.py --dorico
 ```
 
-That also runs every example in Dorico and checks what it did, which takes a while. It needs Dorico 6 running with
-Remote Control turned on in its preferences. The first time, Dorico asks you to allow the test client, and the session
+That also runs every example in Dorico and checks what it did, which takes a while. It needs Dorico 6 running, with
+a project open and Remote Control turned on in its preferences. The first time, Dorico asks you to allow the test client, and the session
 token is kept in `.dorico-token`. To use a client name Dorico already allows, set `DORICO_CLIENT_NAME` or put the name
 in `.dorico-client-name`.
 
-The tests never touch your own projects. Each copies a fixture from the newest version's folder (now
-`fixtures/6.2.30`) into a scratch folder, `%TEMP%\dorico-examples-run`: `reading.dorico` for 07 to 09 and
-`sample.dorico` for the rest. It opens the copy and closes it unsaved. The script inside Dorico checks that the active
-project is that copy before changing anything, and refuses if it isn't. Your own projects can stay open; Dorico goes
-back to them when the tests close their copy. The test for 17 answers the example's box itself, and Dorico runs nothing
-else while the box is open.
+The tests never touch your own projects. Each copies one of the fixtures, most from the newest version's folder
+(now `fixtures/6.2.30`), into a scratch folder, `%TEMP%\dorico-examples-run`, opens the copy and closes it unsaved.
+The script inside Dorico checks that the active project is that copy, by its path and its id, before changing
+anything, and refuses if it isn't. Your own projects can stay open; Dorico goes back to them when the tests close
+their copy. The tests for the examples that ask for options answer the box themselves, and Dorico runs nothing else
+while a box is open.
 
 ### Linting and security scans
 
