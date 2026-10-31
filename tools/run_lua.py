@@ -33,7 +33,7 @@ import dws  # noqa: E402
 def run_dir_for(env):
     """<temp>/dorico-examples-run, finding the temp folder as spikes/lib/rundir.lua does (the launcher tells the Lua
     side anyway)."""
-    temp = env.get("TEMP") or env.get("TMP") or env.get("TMPDIR") or "/tmp"
+    temp = env.get("TEMP") or env.get("TMP") or env.get("TMPDIR") or "/tmp"  # noqa: S108 - the folder the Lua side picks
     return Path(temp) / "dorico-examples-run"
 
 

@@ -31,7 +31,7 @@ local function guard()
 end
 -- end helper: guard
 
-local app, score = guard()
+local _, score = guard()
 if not score then return end
 
 DoricoExamplesKeyCommandRuns = (DoricoExamplesKeyCommandRuns or 0) + 1

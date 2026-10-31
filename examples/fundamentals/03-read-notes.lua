@@ -106,7 +106,7 @@ do
 end
 -- end helper: dump
 
-local app, score = guard()
+local _, score = guard()
 if not score then return end
 
 local count = 0

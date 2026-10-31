@@ -3,7 +3,7 @@
 -- another paragraph style, was listed and left as it was.
 local checks = require("checks")
 
-return function(p, run, args)
+return function(p, run)
   local replaced, left = false, false
   for _, line in ipairs(run.printed) do
     if line:find("\tflow 10\t", 1, true) then

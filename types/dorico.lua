@@ -281,8 +281,6 @@
 
 ---@class DoAppNamespace
 ---@field DoApp fun(): DoApp
-
----@type DoAppNamespace
 DoApp = {}
 
 ---@class DoCoreNamespace
@@ -290,6 +288,4 @@ DoApp = {}
 ---@field PropertyContext fun(): PropertyContext
 ---@field MIDIPitchWithSpelling { fromString: fun(spelling: string): MIDIPitchWithSpelling }
 ---@field Variant { createString: fun(text: string): Variant, createBool: fun(b: boolean): Variant, createInt: fun(n: integer): Variant, createDouble: fun(x: number): Variant }
-
----@type DoCoreNamespace
 DoCore = {}

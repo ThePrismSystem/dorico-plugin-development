@@ -218,7 +218,8 @@ do
       end
       local command = "osascript"
       for _, line in ipairs(lines) do command = command .. " -e '" .. line:gsub("'", "'\\''") .. "'" end
-      local p = io.popen(command .. " 2>&1")
+      local p, err = io.popen(command .. " 2>&1")
+      if not p then return nil, "couldn't start osascript: " .. tostring(err) end
       local text = p:read("*a")
       p:close()
       local value = text:match("^ok:(.-)\r?\n?$")
@@ -356,9 +357,9 @@ do
     for i, n in ipairs(notes) do
       local letter, alter, octave = parse(n.spelling)
       all[i] = { n = n, letter = letter, alter = alter, octave = octave, order = i }
-      local bars = playing[n.instrument] or {}
-      playing[n.instrument] = bars
-      for b = n.bar, n.endBar do bars[b] = true end
+      local sounding = playing[n.instrument] or {}
+      playing[n.instrument] = sounding
+      for b = n.bar, n.endBar do sounding[b] = true end
     end
     table.sort(all, function(a, b)
       if a.n.pos ~= b.n.pos then return a.n.pos < b.n.pos end
