@@ -332,6 +332,16 @@ class LintWorkflowTests(unittest.TestCase):
         self.assertIn("run: npm ci --ignore-scripts\n", workflow)
         self.assertNotIn("run: npm ci\n", workflow)
 
+    def test_python_tools_install_only_by_hash(self):
+        # the same job installs them, so a changed file on PyPI must fail the install instead of running
+        workflow = (self.WORKFLOWS / "lint.yml").read_text(encoding="utf-8")
+        self.assertIn("run: python -m pip install --require-hashes -r requirements-dev.txt\n", workflow)
+        pins = [line for line in (lint.ROOT / "requirements-dev.txt").read_text(encoding="utf-8").splitlines()
+                if line and not line.startswith(" ")]
+        self.assertTrue(pins)
+        for pin in pins:
+            self.assertRegex(pin, r"^[a-z0-9-]+==[0-9.]+ \\$")
+
     def test_sarif_uploads_skip_fork_pull_requests(self):
         # a fork's pull request gets a token that can't write to code scanning
         workflow = (self.WORKFLOWS / "lint.yml").read_text(encoding="utf-8")
