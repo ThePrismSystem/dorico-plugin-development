@@ -3,5 +3,9 @@
   "description": "Development tools only: markdownlint, which python tools/lint.py runs on the Markdown files.",
   "devDependencies": {
     "markdownlint-cli2": "0.24.0"
+  },
+  "overrides": {
+    "katex": "^0.18.2",
+    "re2js": "~2.8.7"
   }
 }
