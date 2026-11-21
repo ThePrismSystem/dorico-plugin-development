@@ -2,7 +2,7 @@
   "private": true,
   "description": "Development tools only: markdownlint, which python tools/lint.py runs on the Markdown files.",
   "devDependencies": {
-    "markdownlint-cli2": "0.24.0"
+    "markdownlint-cli2": "0.24.1"
   },
   "overrides": {
     "katex": "^0.18.2",
